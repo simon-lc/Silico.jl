@@ -21,7 +21,7 @@ using Plots
 using Polyhedra
 using Quaternions
 using RobotVisualizer
-
+using Mehrotra
 
 include("rotate.jl")
 include("quaternion.jl")
@@ -61,3 +61,7 @@ include("../environment/sphere_collision.jl")
 include("../environment/sphere_drop.jl")
 
 end
+
+
+# using Pkg
+# Pkg.add(path="/home/simon/.julia/dev/Mehrotra.jl")

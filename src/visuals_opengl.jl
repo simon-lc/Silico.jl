@@ -49,7 +49,7 @@ end
 # shape
 ######################################################################
 function build_shape!(vis::GLVisualizer.Visualizer, parent::Symbol, name::Symbol,
-        shape::PolytopeShape1170; collider_color=RGBA(0.2, 0.2, 0.2, 0.8),
+        shape::PolytopeShape; collider_color=RGBA(0.2, 0.2, 0.2, 0.8),
         ) where T
 
     A = shape.A
@@ -60,7 +60,7 @@ function build_shape!(vis::GLVisualizer.Visualizer, parent::Symbol, name::Symbol
 end
 
 function build_shape!(vis::GLVisualizer.Visualizer, parent::Symbol, name::Symbol,
-        shape::SphereShape1170; collider_color=RGBA(0.2, 0.2, 0.2, 0.8),
+        shape::SphereShape; collider_color=RGBA(0.2, 0.2, 0.2, 0.8),
         ) where T
 
     GLVisualizer.setobject!(vis, parent, name,
@@ -111,7 +111,7 @@ end
 ######################################################################
 # mechanism
 ######################################################################
-function build_mechanism!(vis::GLVisualizer.Visualizer, mechanism::Mechanism1170;
+function build_mechanism!(vis::GLVisualizer.Visualizer, mechanism::Mechanism;
         color=RGBA(0.2, 0.2, 0.2, 0.8))
     for body in mechanism.bodies
         build_body!(vis, body, collider_color=color)
@@ -119,14 +119,14 @@ function build_mechanism!(vis::GLVisualizer.Visualizer, mechanism::Mechanism1170
     return nothing
 end
 
-function set_mechanism!(vis::GLVisualizer.Visualizer, mechanism::Mechanism1170, storage::Storage116, i::Int)
+function set_mechanism!(vis::GLVisualizer.Visualizer, mechanism::Mechanism, storage::Storage116, i::Int)
     for (j,body) in enumerate(mechanism.bodies)
         set_body!(vis, body, storage.x[i][j])
     end
     return nothing
 end
 
-function set_mechanism!(vis::GLVisualizer.Visualizer, mechanism::Mechanism1170, z)
+function set_mechanism!(vis::GLVisualizer.Visualizer, mechanism::Mechanism, z)
     off = 0
     for (j,body) in enumerate(mechanism.bodies)
         nz = state_dimension(body)
@@ -135,7 +135,7 @@ function set_mechanism!(vis::GLVisualizer.Visualizer, mechanism::Mechanism1170, 
     return nothing
 end
 
-function Base.delete!(vis::GLVisualizer.Visualizer, mechanism::Mechanism1170)
+function Base.delete!(vis::GLVisualizer.Visualizer, mechanism::Mechanism)
     for body in mechanism.bodies
         delete!(vis, body.name)
     end

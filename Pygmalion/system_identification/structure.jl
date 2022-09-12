@@ -65,12 +65,12 @@ end
 
 ## context
 struct CvxContext1320{T} <: Context{T}
-    mechanism::Mechanism1170
+    mechanism::Mechanism
     cameras::Vector{Camera1320{T}}
     polytope_dimensions::Vector{Int}
 end
 
-function CvxContext1320(mechanism::Mechanism1170, cameras::Vector{Camera1320{T}}) where T
+function CvxContext1320(mechanism::Mechanism, cameras::Vector{Camera1320{T}}) where T
     z = zeros(mechanism.dimensions.state)
     A, b, o = get_halfspaces(mechanism, z)
     θ_geometry, polytope_dimensions = pack_halfspaces(A, b, o)

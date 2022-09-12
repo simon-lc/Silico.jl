@@ -23,7 +23,7 @@ function measure(context::CvxContext1320, state::Vector)
     return measurement
 end
 
-function get_point_cloud(mechanism::Mechanism1170, cameras::Vector{Camera1320{T}}, z) where T
+function get_point_cloud(mechanism::Mechanism, cameras::Vector{Camera1320{T}}, z) where T
     d = Vector{Matrix{T}}()
     for camera in cameras
         nr = length(camera.camera_rays)
@@ -36,7 +36,7 @@ function get_point_cloud(mechanism::Mechanism1170, cameras::Vector{Camera1320{T}
     return d
 end
 
-function get_halfspaces(mechanism::Mechanism1170, z::Vector{T}) where T
+function get_halfspaces(mechanism::Mechanism, z::Vector{T}) where T
     A = Vector{Matrix{T}}()
     b = Vector{Vector{T}}()
     o = Vector{Vector{T}}()
@@ -53,7 +53,7 @@ function get_halfspaces(mechanism::Mechanism1170, z::Vector{T}) where T
     return A, b, o
 end
 
-function set_halfspaces!(mechanism::Mechanism1170,
+function set_halfspaces!(mechanism::Mechanism,
         A::Vector{<:Matrix}, b::Vector{<:Vector}, o::Vector{<:Vector}) where T
 
     bodies = mechanism.bodies

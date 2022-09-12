@@ -11,7 +11,7 @@ function find_body(bodies::AbstractVector{<:Body}, name::Symbol)
     return bodies[idx]
 end
 
-mutable struct NodeIndices1170
+mutable struct NodeIndices
     optimality::Vector{Int}
     slackness::Vector{Int}
     equality::Vector{Int}
@@ -22,8 +22,8 @@ mutable struct NodeIndices1170
     parameters::Vector{Int}
 end
 
-function NodeIndices1170()
-    return NodeIndices1170(
+function NodeIndices()
+    return NodeIndices(
         collect(1:0),
         collect(1:0),
         collect(1:0),

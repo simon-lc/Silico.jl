@@ -1,11 +1,11 @@
 ################################################################################
 # contact
 ################################################################################
-struct PolySphere1170{T,D,NP} <: Node{T}
+struct PolySphere{T,D,NP} <: Node{T}
     name::Symbol
     parent_name::Symbol
     child_name::Symbol
-    index::NodeIndices1170
+    index::NodeIndices
     friction_coefficient::Vector{T}
     A_parent_collider::Matrix{T}
     b_parent_collider::Vector{T}
@@ -13,7 +13,7 @@ struct PolySphere1170{T,D,NP} <: Node{T}
     child_position_offset::Vector{T}
 end
 
-function PolySphere1170(parent_body::Body{T}, child_body::Body{T};
+function PolySphere(parent_body::Body{T}, child_body::Body{T};
         parent_collider_id::Int=1,
         child_collider_id::Int=1,
         name::Symbol=:contact,
@@ -26,11 +26,11 @@ function PolySphere1170(parent_body::Body{T}, child_body::Body{T};
     radc = copy(child_body.shapes[child_collider_id].radius)
     offc = copy(child_body.shapes[child_collider_id].position_offset)
 
-    return PolySphere1170(parent_name, child_name, friction_coefficient, Ap, bp, radc, offc;
+    return PolySphere(parent_name, child_name, friction_coefficient, Ap, bp, radc, offc;
         name=name)
 end
 
-function PolySphere1170(
+function PolySphere(
         parent_name::Symbol,
         child_name::Symbol,
         friction_coefficient,
@@ -42,8 +42,8 @@ function PolySphere1170(
 
     d = size(Ap, 2)
     np = size(Ap, 1)
-    index = NodeIndices1170()
-    return PolySphere1170{T,d,np}(
+    index = NodeIndices()
+    return PolySphere{T,d,np}(
         name,
         parent_name,
         child_name,
@@ -56,17 +56,17 @@ function PolySphere1170(
     )
 end
 
-primal_dimension(contact::PolySphere1170{T,D}) where {T,D} = D # c
-cone_dimension(contact::PolySphere1170{T,D,NP}) where {T,D,NP} = 1 + 1 + 2 + NP # γ ψ β λp
+primal_dimension(contact::PolySphere{T,D}) where {T,D} = D # c
+cone_dimension(contact::PolySphere{T,D,NP}) where {T,D,NP} = 1 + 1 + 2 + NP # γ ψ β λp
 
-function parameter_dimension(contact::PolySphere1170{T,D}) where {T,D}
+function parameter_dimension(contact::PolySphere{T,D}) where {T,D}
     nAp = length(contact.A_parent_collider)
     nbp = length(contact.b_parent_collider)
     nθ = 1 + nAp + nbp + 1 + D
     return nθ
 end
 
-function unpack_variables(x::Vector, contact::PolySphere1170{T,D,NP}) where {T,D,NP}
+function unpack_variables(x::Vector, contact::PolySphere{T,D,NP}) where {T,D,NP}
     num_cone = cone_dimension(contact)
     off = 0
     c = x[off .+ (1:2)]; off += 2
@@ -83,7 +83,7 @@ function unpack_variables(x::Vector, contact::PolySphere1170{T,D,NP}) where {T,D
     return c, γ, ψ, β, λp, sγ, sψ, sβ, sp
 end
 
-function get_parameters(contact::PolySphere1170{T,D}) where {T,D}
+function get_parameters(contact::PolySphere{T,D}) where {T,D}
     θ = [
         contact.friction_coefficient;
         vec(contact.A_parent_collider); contact.b_parent_collider;
@@ -92,7 +92,7 @@ function get_parameters(contact::PolySphere1170{T,D}) where {T,D}
     return θ
 end
 
-function set_parameters!(contact::PolySphere1170{T,D,NP}, θ) where {T,D,NP}
+function set_parameters!(contact::PolySphere{T,D,NP}, θ) where {T,D,NP}
     friction_coefficient, A_parent_collider, b_parent_collider, child_radius, child_position_offset =
         unpack_parameters(θ, contact)
     contact.friction_coefficient .= friction_coefficient
@@ -103,7 +103,7 @@ function set_parameters!(contact::PolySphere1170{T,D,NP}, θ) where {T,D,NP}
     return nothing
 end
 
-function unpack_parameters(θ::Vector, contact::PolySphere1170{T,D,NP}) where {T,D,NP}
+function unpack_parameters(θ::Vector, contact::PolySphere{T,D,NP}) where {T,D,NP}
     @assert D == 2
     off = 0
     friction_coefficient = θ[off .+ (1:1)]; off += 1
@@ -114,7 +114,7 @@ function unpack_parameters(θ::Vector, contact::PolySphere1170{T,D,NP}) where {T
     return friction_coefficient, A_parent_collider, b_parent_collider, child_radius, child_position_offset
 end
 
-function residual!(e, x, θ, contact::PolySphere1170{T,D,NP},
+function residual!(e, x, θ, contact::PolySphere{T,D,NP},
         pbody::Body, cbody::Body) where {T,D,NP}
 
     # unpack parameters
@@ -193,7 +193,7 @@ function residual!(e, x, θ, contact::PolySphere1170{T,D,NP},
     return nothing
 end
 
-function residual!(e, x, θ, contact::PolySphere1170, bodies::Vector)
+function residual!(e, x, θ, contact::PolySphere, bodies::Vector)
     pbody = find_body(bodies, contact.parent_name)
     cbody = find_body(bodies, contact.child_name)
     residual!(e, x, θ, contact, pbody, cbody)

@@ -11,7 +11,7 @@ mutable struct Storage116{T,H}
     iterations::Vector{Int} # H
 end
 
-function Storage(dim::MechanismDimensions1170, H::Int, T=Float64)
+function Storage(dim::MechanismDimensions, H::Int, T=Float64)
     z = [zeros(T, dim.state) for i = 1:H]
     u = [zeros(T, dim.input) for i = 1:H]
     x = [[zeros(T, dim.body_configuration) for j = 1:dim.bodies] for i = 1:H]
@@ -25,7 +25,7 @@ function Storage(dim::MechanismDimensions1170, H::Int, T=Float64)
     return storage
 end
 
-function record!(storage::Storage116{T,H}, mechanism::Mechanism1170{T,D,NB,NC}, i::Int) where {T,H,D,NB,NC}
+function record!(storage::Storage116{T,H}, mechanism::Mechanism{T,D,NB,NC}, i::Int) where {T,H,D,NB,NC}
     storage.z[i] .= get_current_state(mechanism)
     storage.u[i] .= get_input(mechanism)
 

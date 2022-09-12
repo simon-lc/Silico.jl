@@ -33,33 +33,33 @@ function get_quasistatic_manipulation(;
     finger_radius = 0.2
 
     # nodes
-    object_shapes = [PolytopeShape1170(Ap1, bp1)]
-    finger1_shapes = [SphereShape1170(finger_radius)]
-    finger2_shapes = [SphereShape1170(finger_radius)]
+    object_shapes = [PolytopeShape(Ap1, bp1)]
+    finger1_shapes = [SphereShape(finger_radius)]
+    finger2_shapes = [SphereShape(finger_radius)]
     bodies = [
-        QuasistaticObject1170(timestep, mass, inertia, object_shapes, gravity=gravity, name=:object),
-        # QuasistaticObject1170(timestep, mass, inertia, finger1_shapes, gravity=gravity, name=:finger1),
-        # QuasistaticObject1170(timestep, mass, inertia, finger2_shapes, gravity=gravity, name=:finger2),
-        QuasistaticRobot1170(timestep, mass, inertia, finger1_shapes, gravity=gravity, name=:finger1),
-        QuasistaticRobot1170(timestep, mass, inertia, finger2_shapes, gravity=gravity, name=:finger2),
+        QuasistaticObject(timestep, mass, inertia, object_shapes, gravity=gravity, name=:object),
+        # QuasistaticObject(timestep, mass, inertia, finger1_shapes, gravity=gravity, name=:finger1),
+        # QuasistaticObject(timestep, mass, inertia, finger2_shapes, gravity=gravity, name=:finger2),
+        QuasistaticRobot(timestep, mass, inertia, finger1_shapes, gravity=gravity, name=:finger1),
+        QuasistaticRobot(timestep, mass, inertia, finger2_shapes, gravity=gravity, name=:finger2),
         ]
     contacts = [
-        PolySphere1170(bodies[1], bodies[2],
+        PolySphere(bodies[1], bodies[2],
             friction_coefficient=finger_friction_coefficient,
             name=:object_finger1),
-        PolySphere1170(bodies[1], bodies[3],
+        PolySphere(bodies[1], bodies[3],
             friction_coefficient=finger_friction_coefficient,
             name=:object_finger2),
-        SphereSphere1170(bodies[2], bodies[3],
+        SphereSphere(bodies[2], bodies[3],
             friction_coefficient=friction_coefficient,
             name=:object_finger2),
-        PolyHalfSpace1170(bodies[1], Af, bf,
+        PolyHalfSpace(bodies[1], Af, bf,
             friction_coefficient=friction_coefficient,
             name=:object_halfspace),
-        SphereHalfSpace1170(bodies[2], Af, bf,
+        SphereHalfSpace(bodies[2], Af, bf,
             friction_coefficient=friction_coefficient,
             name=:finger1_halfspace),
-        SphereHalfSpace1170(bodies[3], Af, bf,
+        SphereHalfSpace(bodies[3], Af, bf,
             friction_coefficient=friction_coefficient,
             name=:finger2_halfspace),
         ]
@@ -68,7 +68,7 @@ function get_quasistatic_manipulation(;
     local_mechanism_residual(primals, duals, slacks, parameters) =
         mechanism_residual(primals, duals, slacks, parameters, bodies, contacts)
 
-    mechanism = Mechanism1170(
+    mechanism = Mechanism(
         local_mechanism_residual,
         bodies,
         contacts,

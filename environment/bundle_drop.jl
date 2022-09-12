@@ -88,19 +88,19 @@ function get_bundle_drop(;
     #     ];
 
     # nodes
-    parent_shapes = [PolytopeShape1170(Ap1, bp1), PolytopeShape1170(Ap2, bp2), PolytopeShape1170(Ap3, bp3)]
+    parent_shapes = [PolytopeShape(Ap1, bp1), PolytopeShape(Ap2, bp2), PolytopeShape(Ap3, bp3)]
     bodies = [
-        Body1170(timestep, mass, inertia, parent_shapes, gravity=+gravity, name=:pbody),
+        Body(timestep, mass, inertia, parent_shapes, gravity=+gravity, name=:pbody),
         ]
     contacts = [
-        PolyHalfSpace1170(bodies[1], Af, bf,
+        PolyHalfSpace(bodies[1], Af, bf,
             friction_coefficient=friction_coefficient,
             name=:halfspace_p1),
-        PolyHalfSpace1170(bodies[1], Af, bf,
+        PolyHalfSpace(bodies[1], Af, bf,
             parent_collider_id=2,
             friction_coefficient=friction_coefficient,
             name=:halfspace_p2),
-        PolyHalfSpace1170(bodies[1], Af, bf,
+        PolyHalfSpace(bodies[1], Af, bf,
             parent_collider_id=3,
             friction_coefficient=friction_coefficient,
             name=:halfspace_p3),
@@ -110,7 +110,7 @@ function get_bundle_drop(;
     local_mechanism_residual(primals, duals, slacks, parameters) =
         mechanism_residual(primals, duals, slacks, parameters, bodies, contacts)
 
-    mechanism = Mechanism1170(
+    mechanism = Mechanism(
         local_mechanism_residual,
         bodies,
         contacts,

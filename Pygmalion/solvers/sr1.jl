@@ -34,13 +34,6 @@ function trust_region_solve!(tr_model::Tuple, g::AbstractVector, H::AbstractMatr
 	return Δ .* result.minimizer .* ineq_scale
 end
 
-# n = 10
-# g0 = 100 * ones(n)
-# H0 = Matrix(Diagonal(ones(n)))
-# Δ0 = 1e3
-# tr_model = trust_region_model(n, max_cpu_time=0.30)
-# norm(trust_region_solve!(tr_model, g0, H0, Δ0))
-
 function sr1_solver!(xinit, loss, grad, projection, step_projection;
         max_iterations=20,
         reg_min=1e-4,

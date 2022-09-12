@@ -1,13 +1,13 @@
 ################################################################################
 # Indices
 ################################################################################
-struct MechanismIndices1170
+struct MechanismIndices
     solution_state::Vector{Int}
     parameter_state::Vector{Int}
     input::Vector{Int}
 end
 
-function MechanismIndices1170(bodies::Vector, contacts::Vector)
+function MechanismIndices(bodies::Vector, contacts::Vector)
     solution_state = zeros(Int,0)
     parameter_state = zeros(Int,0)
     input = zeros(Int,0)
@@ -18,7 +18,7 @@ function MechanismIndices1170(bodies::Vector, contacts::Vector)
         input = vcat(input, body.index.parameters[parameter_input_indices(body)]) # input
     end
 
-    return MechanismIndices1170(
+    return MechanismIndices(
         solution_state,
         parameter_state,
         input,
@@ -28,7 +28,7 @@ end
 ################################################################################
 # dimensions
 ################################################################################
-struct MechanismDimensions1170
+struct MechanismDimensions
     body_configuration::Int
     body_velocity::Int
     body_state::Int
@@ -46,7 +46,7 @@ struct MechanismDimensions1170
     # equality::Int
 end
 
-function MechanismDimensions1170(bodies::Vector, contacts::Vector)
+function MechanismDimensions(bodies::Vector, contacts::Vector)
     # dimensions
     body_configuration = 3 # in 2D
     body_velocity = 3 # in 2D
@@ -69,7 +69,7 @@ function MechanismDimensions1170(bodies::Vector, contacts::Vector)
     # num_slacks = num_cone
     # num_equality = sum(equality_dimension.(nodes))
 
-    return MechanismDimensions1170(
+    return MechanismDimensions(
         body_configuration,
         body_velocity,
         body_state,
@@ -91,27 +91,27 @@ end
 ################################################################################
 # mechanism
 ################################################################################
-struct Mechanism1170{T,D,NB,NC,B,C}
+struct Mechanism{T,D,NB,NC,B,C}
     variables::Vector{T}
     parameters::Vector{T}
     solver::Solver{T}
     bodies::Vector{B}
     contacts::Vector{C}
-    dimensions::MechanismDimensions1170
-    indices::MechanismIndices1170
+    dimensions::MechanismDimensions
+    indices::MechanismIndices
     # equalities::Vector{Equality{T}}
     # inequalities::Vector{Inequality{T}}
 end
 
-function Mechanism1170(residual, bodies::Vector, contacts::Vector;
+function Mechanism(residual, bodies::Vector, contacts::Vector;
         options::Options{T}=Options(),
         D::Int=2,
         method_type::Symbol=:finite_difference) where {T}
 
     # # Dimensions
     nodes = [bodies; contacts]
-    dim = MechanismDimensions1170(bodies, contacts)
-    idx = MechanismIndices1170(bodies, contacts)
+    dim = MechanismDimensions(bodies, contacts)
+    idx = MechanismIndices(bodies, contacts)
     num_primals = sum(primal_dimension.(nodes))
     num_cone = sum(cone_dimension.(nodes))
 
@@ -139,7 +139,7 @@ function Mechanism1170(residual, bodies::Vector, contacts::Vector;
 
     nb = length(bodies)
     nc = length(contacts)
-    mechanism = Mechanism1170{T,D,nb,nc,eltype(bodies),eltype(contacts)}(
+    mechanism = Mechanism{T,D,nb,nc,eltype(bodies),eltype(contacts)}(
         variables,
         parameters,
         solver,
@@ -176,7 +176,7 @@ function mechanism_residual(primals::Vector, duals::Vector,
 end
 
 function mechanism_residual(primals::Vector, duals::Vector,
-        slacks::Vector, mechanism::Mechanism1170)
+        slacks::Vector, mechanism::Mechanism)
     mechanism_residual(primals, duals, slacks,
         mechanism.parameters,
         mechanism.bodies,

@@ -1,9 +1,9 @@
 ################################################################################
 # body
 ################################################################################
-struct QuasistaticRobot1170{T,D} <: Body{T}
+struct QuasistaticRobot{T,D} <: Body{T}
     name::Symbol
-    index::NodeIndices1170
+    index::NodeIndices
     pose::Vector{T}
     input::Vector{T}
     gravity::Vector{T}
@@ -14,7 +14,7 @@ struct QuasistaticRobot1170{T,D} <: Body{T}
     shapes::Vector
 end
 
-function QuasistaticRobot1170(timestep::T, mass, inertia::Matrix,
+function QuasistaticRobot(timestep::T, mass, inertia::Matrix,
         shapes::Vector;
         gravity=-9.81,
         # stiffness=1/timestep^2*[mass, mass, inertia[1]],
@@ -23,10 +23,10 @@ function QuasistaticRobot1170(timestep::T, mass, inertia::Matrix,
         # stiffness=1e-1 * mass * gravity * ones(3),
         stiffness=[1e+2, 1e+2, 1e+2],
         name::Symbol=:body,
-        index::NodeIndices1170=NodeIndices1170()) where T
+        index::NodeIndices=NodeIndices()) where T
 
     D = 2
-    return QuasistaticRobot1170{T,D}(
+    return QuasistaticRobot{T,D}(
         name,
         index,
         zeros(D+1),
@@ -40,10 +40,10 @@ function QuasistaticRobot1170(timestep::T, mass, inertia::Matrix,
     )
 end
 
-primal_dimension(body::QuasistaticRobot1170{T,D}) where {T,D} = 3
-cone_dimension(body::QuasistaticRobot1170{T,D}) where {T,D} = 0
+primal_dimension(body::QuasistaticRobot{T,D}) where {T,D} = 3
+cone_dimension(body::QuasistaticRobot{T,D}) where {T,D} = 0
 
-function parameter_dimension(body::QuasistaticRobot1170{T,D}) where {T,D}
+function parameter_dimension(body::QuasistaticRobot{T,D}) where {T,D}
     @assert D == 2
     nq = 3 # configuration
     nu = 3 # input
@@ -56,11 +56,11 @@ function parameter_dimension(body::QuasistaticRobot1170{T,D}) where {T,D}
     return nθ
 end
 
-function unpack_variables(x::Vector, body::QuasistaticRobot1170{T}) where T
+function unpack_variables(x::Vector, body::QuasistaticRobot{T}) where T
     return x
 end
 
-function get_parameters(body::QuasistaticRobot1170{T,D}) where {T,D}
+function get_parameters(body::QuasistaticRobot{T,D}) where {T,D}
     @assert D == 2
     pose = body.pose
     input = body.input
@@ -74,7 +74,7 @@ function get_parameters(body::QuasistaticRobot1170{T,D}) where {T,D}
     return θ
 end
 
-function set_parameters!(body::QuasistaticRobot1170{T,D}, θ) where {T,D}
+function set_parameters!(body::QuasistaticRobot{T,D}, θ) where {T,D}
     pose, input, timestep, gravity, mass, inertia, stiffness = unpack_parameters(θ, body)
     body.pose .= pose
     body.input .= input
@@ -87,7 +87,7 @@ function set_parameters!(body::QuasistaticRobot1170{T,D}, θ) where {T,D}
     return nothing
 end
 
-function unpack_parameters(θ::Vector, body::QuasistaticRobot1170{T,D}) where {T,D}
+function unpack_parameters(θ::Vector, body::QuasistaticRobot{T,D}) where {T,D}
     @assert D == 2
     off = 0
     pose = θ[off .+ (1:D+1)]; off += D+1
@@ -100,15 +100,15 @@ function unpack_parameters(θ::Vector, body::QuasistaticRobot1170{T,D}) where {T
     stiffness = θ[off .+ (1:D+1)]; off += D+1
     return pose, input, timestep, gravity, mass, inertia, stiffness
 end
-parameter_state_indices(body::QuasistaticRobot1170) = Vector(1:3)
-parameter_input_indices(body::QuasistaticRobot1170) = Vector(4:6)
+parameter_state_indices(body::QuasistaticRobot) = Vector(1:3)
+parameter_input_indices(body::QuasistaticRobot) = Vector(4:6)
 
-function unpack_pose_timestep(θ::Vector, body::QuasistaticRobot1170{T,D}) where {T,D}
+function unpack_pose_timestep(θ::Vector, body::QuasistaticRobot{T,D}) where {T,D}
     pose, input, timestep, gravity, mass, inertia, stiffness = unpack_parameters(θ, body)
     return pose, timestep
 end
 
-function residual!(e, x, θ, body::QuasistaticRobot1170)
+function residual!(e, x, θ, body::QuasistaticRobot)
     index = body.index
     # variables = primals = velocity
     v25 = unpack_variables(x[index.variables], body)
@@ -125,7 +125,7 @@ function residual!(e, x, θ, body::QuasistaticRobot1170)
     return nothing
 end
 
-function get_current_state(body::QuasistaticRobot1170{T}) where T
+function get_current_state(body::QuasistaticRobot{T}) where T
     nz = length(body.pose)
 
     off = 0
@@ -134,12 +134,12 @@ function get_current_state(body::QuasistaticRobot1170{T}) where T
     return z
 end
 
-function set_current_state!(body::QuasistaticRobot1170, z)
+function set_current_state!(body::QuasistaticRobot, z)
     body.pose .= z
     return nothing
 end
 
-function get_next_state!(z, variables, body::QuasistaticRobot1170{T}) where T
+function get_next_state!(z, variables, body::QuasistaticRobot{T}) where T
     p2 = body.pose
     timestep = body.timestep
     v25 = unpack_variables(variables[body.index.variables], body)
@@ -149,5 +149,5 @@ function get_next_state!(z, variables, body::QuasistaticRobot1170{T}) where T
     return nothing
 end
 
-state_dimension(body::QuasistaticRobot1170) = 3
-input_dimension(body::QuasistaticRobot1170) = 3
+state_dimension(body::QuasistaticRobot) = 3
+input_dimension(body::QuasistaticRobot) = 3

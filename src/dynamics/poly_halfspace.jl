@@ -1,10 +1,10 @@
 ################################################################################
 # contact
 ################################################################################
-struct PolyHalfSpace1170{T,D,NP} <: Node{T}
+struct PolyHalfSpace{T,D,NP} <: Node{T}
     name::Symbol
     parent_name::Symbol
-    index::NodeIndices1170
+    index::NodeIndices
     friction_coefficient::Vector{T}
     A_parent_collider::Matrix{T} #polytope
     b_parent_collider::Vector{T} #polytope
@@ -12,7 +12,7 @@ struct PolyHalfSpace1170{T,D,NP} <: Node{T}
     b_child_collider::Vector{T} #polytope
 end
 
-function PolyHalfSpace1170(parent_body::Body{T}, Ac::AbstractMatrix, bc::AbstractVector;
+function PolyHalfSpace(parent_body::Body{T}, Ac::AbstractMatrix, bc::AbstractVector;
         parent_collider_id::Int=1,
         name::Symbol=:halfspace,
         friction_coefficient=0.2) where {T}
@@ -21,11 +21,11 @@ function PolyHalfSpace1170(parent_body::Body{T}, Ac::AbstractMatrix, bc::Abstrac
     Ap = copy(parent_body.shapes[parent_collider_id].A)
     bp = copy(parent_body.shapes[parent_collider_id].b)
 
-    return PolyHalfSpace1170(parent_name, friction_coefficient, Ap, bp, Ac, bc;
+    return PolyHalfSpace(parent_name, friction_coefficient, Ap, bp, Ac, bc;
         name=name)
 end
 
-function PolyHalfSpace1170(
+function PolyHalfSpace(
         parent_name::Symbol,
         friction_coefficient,
         Ap::Matrix{T},
@@ -36,8 +36,8 @@ function PolyHalfSpace1170(
 
     d = size(Ap, 2)
     np = size(Ap, 1)
-    index = NodeIndices1170()
-    return PolyHalfSpace1170{T,d,np}(
+    index = NodeIndices()
+    return PolyHalfSpace{T,d,np}(
         name,
         parent_name,
         index,
@@ -49,10 +49,10 @@ function PolyHalfSpace1170(
     )
 end
 
-primal_dimension(contact::PolyHalfSpace1170{T,D}) where {T,D} = D + 1 # x, ϕ
-cone_dimension(contact::PolyHalfSpace1170{T,D,NP}) where {T,D,NP} = 1 + 1 + 2 + NP + 1 # γ ψ β λp, λc
+primal_dimension(contact::PolyHalfSpace{T,D}) where {T,D} = D + 1 # x, ϕ
+cone_dimension(contact::PolyHalfSpace{T,D,NP}) where {T,D,NP} = 1 + 1 + 2 + NP + 1 # γ ψ β λp, λc
 
-function parameter_dimension(contact::PolyHalfSpace1170{T,D}) where {T,D}
+function parameter_dimension(contact::PolyHalfSpace{T,D}) where {T,D}
     nAp = length(contact.A_parent_collider)
     nbp = length(contact.b_parent_collider)
     nAc = length(contact.A_child_collider)
@@ -61,7 +61,7 @@ function parameter_dimension(contact::PolyHalfSpace1170{T,D}) where {T,D}
     return nθ
 end
 
-function unpack_variables(x::Vector, contact::PolyHalfSpace1170{T,D,NP}) where {T,D,NP}
+function unpack_variables(x::Vector, contact::PolyHalfSpace{T,D,NP}) where {T,D,NP}
     num_cone = cone_dimension(contact)
     NC = 1
     off = 0
@@ -82,7 +82,7 @@ function unpack_variables(x::Vector, contact::PolyHalfSpace1170{T,D,NP}) where {
     return c, ϕ, γ, ψ, β, λp, λc, sγ, sψ, sβ, sp, sc
 end
 
-function get_parameters(contact::PolyHalfSpace1170{T,D}) where {T,D}
+function get_parameters(contact::PolyHalfSpace{T,D}) where {T,D}
     θ = [
         contact.friction_coefficient;
         vec(contact.A_parent_collider); contact.b_parent_collider;
@@ -91,7 +91,7 @@ function get_parameters(contact::PolyHalfSpace1170{T,D}) where {T,D}
     return θ
 end
 
-function set_parameters!(contact::PolyHalfSpace1170{T,D,NP}, θ) where {T,D,NP}
+function set_parameters!(contact::PolyHalfSpace{T,D,NP}, θ) where {T,D,NP}
     friction_coefficient, A_parent_collider, b_parent_collider, A_child_collider, b_child_collider =
         unpack_parameters(θ, contact)
     contact.friction_coefficient .= friction_coefficient
@@ -102,7 +102,7 @@ function set_parameters!(contact::PolyHalfSpace1170{T,D,NP}, θ) where {T,D,NP}
     return nothing
 end
 
-function unpack_parameters(θ::Vector, contact::PolyHalfSpace1170{T,D,NP}) where {T,D,NP}
+function unpack_parameters(θ::Vector, contact::PolyHalfSpace{T,D,NP}) where {T,D,NP}
     @assert D == 2
     NC = 1
     off = 0
@@ -114,7 +114,7 @@ function unpack_parameters(θ::Vector, contact::PolyHalfSpace1170{T,D,NP}) where
     return friction_coefficient, A_parent_collider, b_parent_collider, A_child_collider, b_child_collider
 end
 
-function residual!(e, x, θ, contact::PolyHalfSpace1170{T,D,NP},
+function residual!(e, x, θ, contact::PolyHalfSpace{T,D,NP},
         pbody::Body) where {T,D,NP}
     NC = 1
     # unpack parameters
@@ -179,7 +179,7 @@ function residual!(e, x, θ, contact::PolyHalfSpace1170{T,D,NP},
     return nothing
 end
 
-function residual!(e, x, θ, contact::PolyHalfSpace1170, bodies::Vector)
+function residual!(e, x, θ, contact::PolyHalfSpace, bodies::Vector)
     pbody = find_body(bodies, contact.parent_name)
     residual!(e, x, θ, contact, pbody)
     return nothing

@@ -55,7 +55,7 @@ end
 ######################################################################
 # shape
 ######################################################################
-function build_shape!(vis::Visualizer, shape::PolytopeShape1170;
+function build_shape!(vis::Visualizer, shape::PolytopeShape;
         collider_color=RGBA(0.2, 0.2, 0.2, 0.8),
         ) where T
 
@@ -66,7 +66,7 @@ function build_shape!(vis::Visualizer, shape::PolytopeShape1170;
     return nothing
 end
 
-function build_shape!(vis::Visualizer, shape::SphereShape1170;
+function build_shape!(vis::Visualizer, shape::SphereShape;
         collider_color=RGBA(0.2, 0.2, 0.2, 0.8),
         ) where T
 
@@ -172,7 +172,7 @@ end
 ######################################################################
 # mechanism
 ######################################################################
-function build_mechanism!(vis::Visualizer, mechanism::Mechanism1170;
+function build_mechanism!(vis::Visualizer, mechanism::Mechanism;
         show_contact::Bool=true,
         color=RGBA(0.2, 0.2, 0.2, 0.8),
         center_of_mass_color=RGBA(1,1,1,1.0),
@@ -189,7 +189,7 @@ function build_mechanism!(vis::Visualizer, mechanism::Mechanism1170;
     return nothing
 end
 
-function set_mechanism!(vis::Visualizer, mechanism::Mechanism1170, storage::Storage116,
+function set_mechanism!(vis::Visualizer, mechanism::Mechanism, storage::Storage116,
         i::Int; show_contact::Bool=true, name::Symbol=:robot)
 
     for (j,body) in enumerate(mechanism.bodies)
@@ -207,7 +207,7 @@ function set_mechanism!(vis::Visualizer, mechanism::Mechanism1170, storage::Stor
     return nothing
 end
 
-function set_mechanism!(vis::Visualizer, mechanism::Mechanism1170, z; name::Symbol=:robot)
+function set_mechanism!(vis::Visualizer, mechanism::Mechanism, z; name::Symbol=:robot)
     off = 0
     for (j,body) in enumerate(mechanism.bodies)
         nz = state_dimension(body)
@@ -216,7 +216,7 @@ function set_mechanism!(vis::Visualizer, mechanism::Mechanism1170, z; name::Symb
     return nothing
 end
 
-function visualize!(vis::Visualizer, mechanism::Mechanism1170, storage::Storage116{T,H};
+function visualize!(vis::Visualizer, mechanism::Mechanism, storage::Storage116{T,H};
         build::Bool=true,
         show_contact::Bool=true,
         name::Symbol=:robot,
@@ -233,7 +233,7 @@ function visualize!(vis::Visualizer, mechanism::Mechanism1170, storage::Storage1
 end
 
 
-function visualize!(vis::Visualizer, mechanism::Mechanism1170, z;
+function visualize!(vis::Visualizer, mechanism::Mechanism, z;
         build::Bool=true,
         name::Symbol=:robot,
         animation=MeshCat.Animation(Int(floor(1/mechanism.bodies[1].timestep[1])))) where {T}

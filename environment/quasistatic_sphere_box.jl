@@ -33,23 +33,23 @@ function get_quasistatic_sphere_box2(;
     child_radius = 0.1
 
     # nodes
-    parent_shapes = [PolytopeShape1170(Ap1, bp1)]
-    child_shapes = [SphereShape1170(child_radius)]
+    parent_shapes = [PolytopeShape(Ap1, bp1)]
+    child_shapes = [SphereShape(child_radius)]
 
-    box = QuasistaticObject1170(timestep, mass, inertia, parent_shapes, gravity=+gravity, name=:box)
+    box = QuasistaticObject(timestep, mass, inertia, parent_shapes, gravity=+gravity, name=:box)
     sphere = (control_mode == :robot) ?
-        QuasistaticRobot1170(timestep, mass, inertia, child_shapes, gravity=+0.000000000000000000000*gravity, name=:sphere) :
-        QuasistaticObject1170(timestep, mass, inertia, child_shapes, gravity=+gravity, name=:sphere)
+        QuasistaticRobot(timestep, mass, inertia, child_shapes, gravity=+0.000000000000000000000*gravity, name=:sphere) :
+        QuasistaticObject(timestep, mass, inertia, child_shapes, gravity=+gravity, name=:sphere)
     bodies = [box, sphere]
 
     contacts = [
-        PolySphere1170(bodies[1], bodies[2],
+        PolySphere(bodies[1], bodies[2],
             friction_coefficient=friction_coefficient,
             name=:box_sphere),
-        PolyHalfSpace1170(bodies[1], Af, bf,
+        PolyHalfSpace(bodies[1], Af, bf,
             friction_coefficient=friction_coefficient,
             name=:halfspace_box),
-        SphereHalfSpace1170(bodies[2], Af, bf,
+        SphereHalfSpace(bodies[2], Af, bf,
             friction_coefficient=friction_coefficient,
             name=:halfspace_sphere),
         ]
@@ -58,7 +58,7 @@ function get_quasistatic_sphere_box2(;
     local_mechanism_residual(primals, duals, slacks, parameters) =
         mechanism_residual(primals, duals, slacks, parameters, bodies, contacts)
 
-    mechanism = Mechanism1170(
+    mechanism = Mechanism(
         local_mechanism_residual,
         bodies,
         contacts,

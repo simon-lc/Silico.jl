@@ -22,12 +22,12 @@ function get_learned_bundle(
     bf = [0.0]
 
     # nodes
-    parent_shapes = [PolytopeShape1170(A[i], b[i]) for i = 1:nb]
+    parent_shapes = [PolytopeShape(A[i], b[i]) for i = 1:nb]
     bodies = [
-        Body1170(timestep, mass, inertia, parent_shapes, gravity=+gravity, name=:pbody),
+        Body(timestep, mass, inertia, parent_shapes, gravity=+gravity, name=:pbody),
         ]
     contacts = [
-        PolyHalfSpace1170(bodies[1], Af, bf,
+        PolyHalfSpace(bodies[1], Af, bf,
             parent_collider_id=i,
             friction_coefficient=friction_coefficient,
             name=Symbol(i))
@@ -37,7 +37,7 @@ function get_learned_bundle(
     local_mechanism_residual(primals, duals, slacks, parameters) =
         mechanism_residual(primals, duals, slacks, parameters, bodies, contacts)
 
-    mechanism = Mechanism1170(
+    mechanism = Mechanism(
         local_mechanism_residual,
         bodies,
         contacts,

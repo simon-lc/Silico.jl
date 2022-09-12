@@ -1,5 +1,5 @@
 # for visualization
-function contact_frame(contact::PolyPoly1170, mechanism::Mechanism1170)
+function contact_frame(contact::PolyPoly, mechanism::Mechanism)
     pbody = find_body(mechanism.bodies, contact.parent_name)
     cbody = find_body(mechanism.bodies, contact.child_name)
 
@@ -26,7 +26,7 @@ function contact_frame(contact::PolyPoly1170, mechanism::Mechanism1170)
 end
 
 # for visualization
-function contact_frame(contact::PolyHalfSpace1170, mechanism::Mechanism1170)
+function contact_frame(contact::PolyHalfSpace, mechanism::Mechanism)
     pbody = find_body(mechanism.bodies, contact.parent_name)
 
     variables = mechanism.solver.solution.all
@@ -49,7 +49,7 @@ function contact_frame(contact::PolyHalfSpace1170, mechanism::Mechanism1170)
 end
 
 # for visualization
-function contact_frame(contact::SphereHalfSpace1170, mechanism::Mechanism1170)
+function contact_frame(contact::SphereHalfSpace, mechanism::Mechanism)
     pbody = find_body(mechanism.bodies, contact.parent_name)
 
     variables = mechanism.solver.solution.all
@@ -79,7 +79,7 @@ function contact_frame(contact::SphereHalfSpace1170, mechanism::Mechanism1170)
 end
 
 # for visualization
-function contact_frame(contact::SphereSphere1170, mechanism::Mechanism1170)
+function contact_frame(contact::SphereSphere, mechanism::Mechanism)
     pbody = find_body(mechanism.bodies, contact.parent_name)
     cbody = find_body(mechanism.bodies, contact.child_name)
 
@@ -107,7 +107,7 @@ function contact_frame(contact::SphereSphere1170, mechanism::Mechanism1170)
 end
 
 # for visualization
-function contact_frame(contact::PolySphere1170, mechanism::Mechanism1170)
+function contact_frame(contact::PolySphere, mechanism::Mechanism)
     pbody = find_body(mechanism.bodies, contact.parent_name)
     cbody = find_body(mechanism.bodies, contact.child_name)
 

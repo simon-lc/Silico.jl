@@ -163,11 +163,11 @@ inertia=0.2 * ones(1,1)
 friction_coefficient=0.9
 Af = [0.0  +1.0]
 bf = [0.0]
-parent_shapes = [PolytopeShape1170(Af, bf),]
-body = Body1170(timestep, mass, inertia, parent_shapes, gravity=+gravity, name=:pbody)
+parent_shapes = [PolytopeShape(Af, bf),]
+body = Body(timestep, mass, inertia, parent_shapes, gravity=+gravity, name=:pbody)
 indexing!([body])
 
-function residual!(e, x, θ, body::Body1170; symbolic_parsing=false)
+function residual!(e, x, θ, body::Body; symbolic_parsing=false)
     @rootlayer x
     @layer θ
     @layer e
@@ -261,14 +261,14 @@ function generate_gradients(func::Function, num_equality::Int, num_variables::In
     return f_expr, fx_expr, fθ_expr, fx_sparsity, fθ_sparsity
 end
 
-abstract type NodeMethods1170{T,E,EX,Eθ} end
+abstract type NodeMethods{T,E,EX,Eθ} end
 
-struct DynamicsMethods1170{T} <: AbstractProblemMethods{T,E,EX,EP}
-    methods::Vector{NodeMethods1170}
+struct DynamicsMethods{T} <: AbstractProblemMethods{T,E,EX,EP}
+    methods::Vector{NodeMethods}
     α::T
 end
 
-struct BodyMethods1170{T,E,EX,Eθ} <: NodeMethods1170{T,E,EX,Eθ}
+struct BodyMethods{T,E,EX,Eθ} <: NodeMethods{T,E,EX,Eθ}
     equality_constraint::E
     equality_jacobian_variables::EX
     equality_jacobian_parameters::Eθ
@@ -278,11 +278,11 @@ struct BodyMethods1170{T,E,EX,Eθ} <: NodeMethods1170{T,E,EX,Eθ}
     equality_jacobian_parameters_sparsity::Vector{Tuple{Int,Int}}
 end
 
-function BodyMethods1170(body::Body1170, dimensions::MechanismDimensions1170)
+function BodyMethods(body::Body, dimensions::MechanismDimensions)
     r!(e, x, θ) = body_residual!(e, x, θ, body)
     f, fx, fθ, fx_sparsity, fθ_sparsity = generate_gradients(r!, dimensions.equality,
         dimensions.variables, dimensions.parameters)
-    return BodyMethods1170(
+    return BodyMethods(
         f,
         fx,
         fθ,
@@ -293,7 +293,7 @@ function BodyMethods1170(body::Body1170, dimensions::MechanismDimensions1170)
         )
 end
 
-struct ContactMethods1170{T,E,EX,Eθ,C,S} <: NodeMethods1170{T,E,EX,Eθ}
+struct ContactMethods{T,E,EX,Eθ,C,S} <: NodeMethods{T,E,EX,Eθ}
     contact_solver::C
     subvariables::Vector{T}
     subparameters::Vector{T}
@@ -308,8 +308,8 @@ struct ContactMethods1170{T,E,EX,Eθ,C,S} <: NodeMethods1170{T,E,EX,Eθ}
     equality_jacobian_parameters_sparsity::Vector{Tuple{Int,Int}}
 end
 
-function ContactMethods1170(contact::PolyPoly1170, pbody::Body1170, cbody::Body1170,
-        dimensions::MechanismDimensions1170;
+function ContactMethods(contact::PolyPoly, pbody::Body, cbody::Body,
+        dimensions::MechanismDimensions;
         checkbounds=true,
         threads=false)
 
@@ -384,7 +384,7 @@ function ContactMethods1170(contact::PolyPoly1170, pbody::Body1170, cbody::Body1
         checkbounds=checkbounds,
         expression=Val{false})[2]
 
-    return ContactMethods1170(
+    return ContactMethods(
         contact_solver,
         subvariables,
         subparameters,
@@ -399,21 +399,21 @@ function ContactMethods1170(contact::PolyPoly1170, pbody::Body1170, cbody::Body1
     )
 end
 
-function mechanism_methods(bodies::Vector, contacts::Vector, dimensions::MechanismDimensions1170)
-    methods = Vector{NodeMethods1170}()
+function mechanism_methods(bodies::Vector, contacts::Vector, dimensions::MechanismDimensions)
+    methods = Vector{NodeMethods}()
 
     # body
     for body in bodies
-        push!(methods, BodyMethods1170(body, dimensions))
+        push!(methods, BodyMethods(body, dimensions))
     end
 
     # contact
     for contact in contacts
         # TODO here we need to avoid hardcoding body1 and body2 as paretn and child
-        push!(methods, ContactMethods1170(contact, bodies[1], bodies[2], dimensions))
+        push!(methods, ContactMethods(contact, bodies[1], bodies[2], dimensions))
     end
 
-    return DynamicsMethods1170(methods, 1.0)
+    return DynamicsMethods(methods, 1.0)
 end
 
 ################################################################################
@@ -421,7 +421,7 @@ end
 ################################################################################
 
 # function evaluate!(e::Vector{T}, ex::Matrix{T}, eθ::Matrix{T},
-#         x::Vector{T}, θ::Vector{T}, methods::Vector{NodeMethods1170}) where T
+#         x::Vector{T}, θ::Vector{T}, methods::Vector{NodeMethods}) where T
 #     e .= 0.0
 #     ex .= 0.0
 #     eθ .= 0.0
@@ -431,7 +431,7 @@ end
 # end
 #
 # function evaluate!(e::Vector{T}, ex::Matrix{T}, eθ::Matrix{T},
-#         x::Vector{T}, θ::Vector{T}, methods::BodyMethods1170{T,E,EX,Eθ}) where {T,E,EX,Eθ}
+#         x::Vector{T}, θ::Vector{T}, methods::BodyMethods{T,E,EX,Eθ}) where {T,E,EX,Eθ}
 #
 #     methods.equality_constraint(e, e, x, θ)
 #     methods.equality_jacobian_variables(methods.equality_jacobian_variables_cache, x, θ)
@@ -446,7 +446,7 @@ end
 # end
 #
 # function evaluate!(e::Vector{T}, ex::Matrix{T}, eθ::Matrix{T},
-#         x::Vector{T}, θ::Vector{T}, methods::ContactMethods1170{T,S}) where {T,S}
+#         x::Vector{T}, θ::Vector{T}, methods::ContactMethods{T,S}) where {T,S}
 #
 #     contact_solver = methods.contact_solver
 #     xl = methods.subvariables
@@ -471,7 +471,7 @@ end
 
 function evaluate!(
         problem::ProblemData{T},
-        methods::DynamicsMethods1170{T},
+        methods::DynamicsMethods{T},
         cone_methods::ConeMethods{T,B,BX,P,PX},
         solution::Point{T},
         parameters::Vector{T};
@@ -507,7 +507,7 @@ function evaluate!(
 end
 
 function evaluate!(problem::ProblemData{T},
-        methods::BodyMethods1170{T,E,EX,Eθ},
+        methods::BodyMethods{T,E,EX,Eθ},
         solution::Point{T},
         parameters::Vector{T};
         equality_constraint=false,
@@ -544,8 +544,8 @@ function evaluate!(problem::ProblemData{T},
 end
 
 function evaluate!(problem::ProblemData{T},
-        # methods::ContactMethods1170{T,E,EX,Eθ},
-        methods::ContactMethods1170{T,S},
+        # methods::ContactMethods{T,E,EX,Eθ},
+        methods::ContactMethods{T,S},
         solution::Point{T},
         parameters::Vector{T};
         equality_constraint=false,

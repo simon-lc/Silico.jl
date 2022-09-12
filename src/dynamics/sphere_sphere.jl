@@ -1,11 +1,11 @@
 ################################################################################
 # contact
 ################################################################################
-struct SphereSphere1170{T,D} <: Node{T}
+struct SphereSphere{T,D} <: Node{T}
     name::Symbol
     parent_name::Symbol
     child_name::Symbol
-    index::NodeIndices1170
+    index::NodeIndices
     friction_coefficient::Vector{T}
     parent_radius::Vector{T}
     parent_position_offset::Vector{T}
@@ -13,7 +13,7 @@ struct SphereSphere1170{T,D} <: Node{T}
     child_position_offset::Vector{T}
 end
 
-function SphereSphere1170(parent_body::Body{T}, child_body::Body{T};
+function SphereSphere(parent_body::Body{T}, child_body::Body{T};
         parent_collider_id::Int=1,
         child_collider_id::Int=1,
         name::Symbol=:contact,
@@ -26,12 +26,12 @@ function SphereSphere1170(parent_body::Body{T}, child_body::Body{T};
     radc = copy(child_body.shapes[child_collider_id].radius)
     offc = copy(child_body.shapes[child_collider_id].position_offset)
 
-    return SphereSphere1170(parent_name, child_name, friction_coefficient,
+    return SphereSphere(parent_name, child_name, friction_coefficient,
         radp, offp, radc, offc;
         name=name)
 end
 
-function SphereSphere1170(
+function SphereSphere(
         parent_name::Symbol,
         child_name::Symbol,
         friction_coefficient,
@@ -41,8 +41,8 @@ function SphereSphere1170(
         offc::Vector{T};
         name::Symbol=:contact) where {T}
 
-    index = NodeIndices1170()
-    return SphereSphere1170{T,2}(
+    index = NodeIndices()
+    return SphereSphere{T,2}(
         name,
         parent_name,
         child_name,
@@ -55,15 +55,15 @@ function SphereSphere1170(
     )
 end
 
-primal_dimension(contact::SphereSphere1170{T,D}) where {T,D} = 0
-cone_dimension(contact::SphereSphere1170{T,D}) where {T,D} = 1 + 1 + 2 # γ ψ β
+primal_dimension(contact::SphereSphere{T,D}) where {T,D} = 0
+cone_dimension(contact::SphereSphere{T,D}) where {T,D} = 1 + 1 + 2 # γ ψ β
 
-function parameter_dimension(contact::SphereSphere1170{T,D}) where {T,D}
+function parameter_dimension(contact::SphereSphere{T,D}) where {T,D}
     nθ = 1 + 1 + D + 1 + D
     return nθ
 end
 
-function unpack_variables(x::Vector, contact::SphereSphere1170{T,D}) where {T,D}
+function unpack_variables(x::Vector, contact::SphereSphere{T,D}) where {T,D}
     num_cone = cone_dimension(contact)
     off = 0
 
@@ -77,7 +77,7 @@ function unpack_variables(x::Vector, contact::SphereSphere1170{T,D}) where {T,D}
     return γ, ψ, β, sγ, sψ, sβ
 end
 
-function get_parameters(contact::SphereSphere1170{T,D}) where {T,D}
+function get_parameters(contact::SphereSphere{T,D}) where {T,D}
     θ = [
         contact.friction_coefficient;
         vec(contact.parent_radius); contact.parent_position_offset;
@@ -86,7 +86,7 @@ function get_parameters(contact::SphereSphere1170{T,D}) where {T,D}
     return θ
 end
 
-function set_parameters!(contact::SphereSphere1170{T,D}, θ) where {T,D}
+function set_parameters!(contact::SphereSphere{T,D}, θ) where {T,D}
     friction_coefficient, parent_radius, parent_position_offset, child_radius, child_position_offset =
         unpack_parameters(θ, contact)
     contact.friction_coefficient .= friction_coefficient
@@ -97,7 +97,7 @@ function set_parameters!(contact::SphereSphere1170{T,D}, θ) where {T,D}
     return nothing
 end
 
-function unpack_parameters(θ::Vector, contact::SphereSphere1170{T,D}) where {T,D}
+function unpack_parameters(θ::Vector, contact::SphereSphere{T,D}) where {T,D}
     @assert D == 2
     off = 0
     friction_coefficient = θ[off .+ (1:1)]; off += 1
@@ -108,7 +108,7 @@ function unpack_parameters(θ::Vector, contact::SphereSphere1170{T,D}) where {T,
     return friction_coefficient, parent_radius, parent_position_offset, child_radius, child_position_offset
 end
 
-function residual!(e, x, θ, contact::SphereSphere1170{T,D},
+function residual!(e, x, θ, contact::SphereSphere{T,D},
         pbody::Body, cbody::Body) where {T,D}
 
     # unpack parameters
@@ -176,7 +176,7 @@ function residual!(e, x, θ, contact::SphereSphere1170{T,D},
     return nothing
 end
 
-function residual!(e, x, θ, contact::SphereSphere1170, bodies::Vector)
+function residual!(e, x, θ, contact::SphereSphere, bodies::Vector)
     pbody = find_body(bodies, contact.parent_name)
     cbody = find_body(bodies, contact.child_name)
     residual!(e, x, θ, contact, pbody, cbody)

@@ -1,11 +1,11 @@
 ################################################################################
 # contact
 ################################################################################
-struct PolyPoly1170{T,D,NP,NC} <: Node{T}
+struct PolyPoly{T,D,NP,NC} <: Node{T}
     name::Symbol
     parent_name::Symbol
     child_name::Symbol
-    index::NodeIndices1170
+    index::NodeIndices
     friction_coefficient::Vector{T}
     A_parent_collider::Matrix{T} #polytope
     b_parent_collider::Vector{T} #polytope
@@ -13,7 +13,7 @@ struct PolyPoly1170{T,D,NP,NC} <: Node{T}
     b_child_collider::Vector{T} #polytope
 end
 
-function PolyPoly1170(parent_body::Body{T}, child_body::Body{T};
+function PolyPoly(parent_body::Body{T}, child_body::Body{T};
         parent_collider_id::Int=1,
         child_collider_id::Int=1,
         name::Symbol=:contact,
@@ -26,11 +26,11 @@ function PolyPoly1170(parent_body::Body{T}, child_body::Body{T};
     Ac = copy(child_body.shapes[child_collider_id].A)
     bc = copy(child_body.shapes[child_collider_id].b)
 
-    return PolyPoly1170(parent_name, child_name, friction_coefficient, Ap, bp, Ac, bc;
+    return PolyPoly(parent_name, child_name, friction_coefficient, Ap, bp, Ac, bc;
         name=name)
 end
 
-function PolyPoly1170(
+function PolyPoly(
         parent_name::Symbol,
         child_name::Symbol,
         friction_coefficient,
@@ -43,8 +43,8 @@ function PolyPoly1170(
     d = size(Ap, 2)
     np = size(Ap, 1)
     nc = size(Ac, 1)
-    index = NodeIndices1170()
-    return PolyPoly1170{T,d,np,nc}(
+    index = NodeIndices()
+    return PolyPoly{T,d,np,nc}(
         name,
         parent_name,
         child_name,
@@ -57,10 +57,10 @@ function PolyPoly1170(
     )
 end
 
-primal_dimension(contact::PolyPoly1170{T,D}) where {T,D} = D + 1 # x, ϕ
-cone_dimension(contact::PolyPoly1170{T,D,NP,NC}) where {T,D,NP,NC} = 1 + 1 + 2 + NP + NC # γ ψ β λp, λc
+primal_dimension(contact::PolyPoly{T,D}) where {T,D} = D + 1 # x, ϕ
+cone_dimension(contact::PolyPoly{T,D,NP,NC}) where {T,D,NP,NC} = 1 + 1 + 2 + NP + NC # γ ψ β λp, λc
 
-function parameter_dimension(contact::PolyPoly1170{T,D}) where {T,D}
+function parameter_dimension(contact::PolyPoly{T,D}) where {T,D}
     nAp = length(contact.A_parent_collider)
     nbp = length(contact.b_parent_collider)
     nAc = length(contact.A_child_collider)
@@ -69,7 +69,7 @@ function parameter_dimension(contact::PolyPoly1170{T,D}) where {T,D}
     return nθ
 end
 
-function unpack_variables(x::Vector, contact::PolyPoly1170{T,D,NP,NC}) where {T,D,NP,NC}
+function unpack_variables(x::Vector, contact::PolyPoly{T,D,NP,NC}) where {T,D,NP,NC}
     num_cone = cone_dimension(contact)
     off = 0
     c = x[off .+ (1:2)]; off += 2
@@ -89,7 +89,7 @@ function unpack_variables(x::Vector, contact::PolyPoly1170{T,D,NP,NC}) where {T,
     return c, ϕ, γ, ψ, β, λp, λc, sγ, sψ, sβ, sp, sc
 end
 
-function get_parameters(contact::PolyPoly1170{T,D}) where {T,D}
+function get_parameters(contact::PolyPoly{T,D}) where {T,D}
     θ = [
         contact.friction_coefficient;
         vec(contact.A_parent_collider); contact.b_parent_collider;
@@ -98,7 +98,7 @@ function get_parameters(contact::PolyPoly1170{T,D}) where {T,D}
     return θ
 end
 
-function set_parameters!(contact::PolyPoly1170{T,D,NP,NC}, θ) where {T,D,NP,NC}
+function set_parameters!(contact::PolyPoly{T,D,NP,NC}, θ) where {T,D,NP,NC}
     friction_coefficient, A_parent_collider, b_parent_collider, A_child_collider, b_child_collider =
         unpack_parameters(θ, contact)
     contact.friction_coefficient .= friction_coefficient
@@ -109,7 +109,7 @@ function set_parameters!(contact::PolyPoly1170{T,D,NP,NC}, θ) where {T,D,NP,NC}
     return nothing
 end
 
-function unpack_parameters(θ::Vector, contact::PolyPoly1170{T,D,NP,NC}) where {T,D,NP,NC}
+function unpack_parameters(θ::Vector, contact::PolyPoly{T,D,NP,NC}) where {T,D,NP,NC}
     @assert D == 2
     off = 0
     friction_coefficient = θ[off .+ (1:1)]; off += 1
@@ -120,7 +120,7 @@ function unpack_parameters(θ::Vector, contact::PolyPoly1170{T,D,NP,NC}) where {
     return friction_coefficient, A_parent_collider, b_parent_collider, A_child_collider, b_child_collider
 end
 
-function residual!(e, x, θ, contact::PolyPoly1170{T,D,NP,NC},
+function residual!(e, x, θ, contact::PolyPoly{T,D,NP,NC},
         pbody::Body, cbody::Body) where {T,D,NP,NC}
 
     # unpack parameters
@@ -196,7 +196,7 @@ function residual!(e, x, θ, contact::PolyPoly1170{T,D,NP,NC},
     return nothing
 end
 
-function residual!(e, x, θ, contact::PolyPoly1170, bodies::Vector)
+function residual!(e, x, θ, contact::PolyPoly, bodies::Vector)
     pbody = find_body(bodies, contact.parent_name)
     cbody = find_body(bodies, contact.child_name)
     residual!(e, x, θ, contact, pbody, cbody)

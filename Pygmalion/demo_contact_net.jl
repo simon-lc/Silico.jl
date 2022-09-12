@@ -105,7 +105,7 @@ plot(hcat([x[mech.solver.indices.cone_product] for x in storage.variables]...)')
 ################################################################################
 # camera parameters
 ################################################################################
-function implicit_residual(primals, duals, parameters, mechanism::Mechanism1170)
+function implicit_residual(primals, duals, parameters, mechanism::Mechanism)
 	num_slacks = mechanism.solver.dimensions.slacks
 	indices = mechanism.solver.indices
 	slacks = zeros(num_slacks)
@@ -144,7 +144,7 @@ FiniteDiff.finite_difference_gradient(parameters -> implicit_residual(primals, d
 
 
 
-function dynamics_cost(state, next_state, contact_primals, duals, learnable_parameters, mechanism::Mechanism1170)
+function dynamics_cost(state, next_state, contact_primals, duals, learnable_parameters, mechanism::Mechanism)
 	# learnable_parameters = [friction_coefficient]
 
 	parameters = mechanism.parameters

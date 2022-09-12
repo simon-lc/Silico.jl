@@ -20,12 +20,12 @@ function get_sphere_drop(;
     bf = [0.0]
 
     # nodes
-    shapes = [SphereShape1170(sphere_radius)]
+    shapes = [SphereShape(sphere_radius)]
     bodies = [
-        Body1170(timestep, mass, inertia, shapes, gravity=+gravity, name=:pbody),
+        Body(timestep, mass, inertia, shapes, gravity=+gravity, name=:pbody),
         ]
     contacts = [
-        SphereHalfSpace1170(bodies[1], Af, bf,
+        SphereHalfSpace(bodies[1], Af, bf,
             friction_coefficient=friction_coefficient,
             name=:halfspace_p1),
         ]
@@ -34,7 +34,7 @@ function get_sphere_drop(;
     local_mechanism_residual(primals, duals, slacks, parameters) =
         mechanism_residual(primals, duals, slacks, parameters, bodies, contacts)
 
-    mechanism = Mechanism1170(
+    mechanism = Mechanism(
         local_mechanism_residual,
         bodies,
         contacts,

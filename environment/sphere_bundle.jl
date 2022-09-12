@@ -44,28 +44,28 @@ function get_sphere_bundle(;
     child_radius = 0.2
 
     # nodes
-    parent_shapes = [PolytopeShape1170(Ap1, bp1), PolytopeShape1170(Ap2, bp2)]
-    child_shapes = [SphereShape1170(child_radius)]
+    parent_shapes = [PolytopeShape(Ap1, bp1), PolytopeShape(Ap2, bp2)]
+    child_shapes = [SphereShape(child_radius)]
     bodies = [
-        Body1170(timestep, mass, inertia, parent_shapes, gravity=+gravity, name=:pbody),
-        Body1170(timestep, mass, inertia, child_shapes, gravity=+gravity, name=:cbody),
+        Body(timestep, mass, inertia, parent_shapes, gravity=+gravity, name=:pbody),
+        Body(timestep, mass, inertia, child_shapes, gravity=+gravity, name=:cbody),
         ]
     contacts = [
-        PolySphere1170(bodies[1], bodies[2],
+        PolySphere(bodies[1], bodies[2],
             friction_coefficient=friction_coefficient,
             name=:contact_1),
-        PolySphere1170(bodies[1], bodies[2],
+        PolySphere(bodies[1], bodies[2],
             parent_collider_id=2,
             friction_coefficient=friction_coefficient,
             name=:contact_2),
-        PolyHalfSpace1170(bodies[1], Af, bf,
+        PolyHalfSpace(bodies[1], Af, bf,
             friction_coefficient=friction_coefficient,
             name=:halfspace_p1),
-        PolyHalfSpace1170(bodies[1], Af, bf,
+        PolyHalfSpace(bodies[1], Af, bf,
             parent_collider_id=2,
             friction_coefficient=friction_coefficient,
             name=:halfspace_p2),
-        SphereHalfSpace1170(bodies[2], Af, bf,
+        SphereHalfSpace(bodies[2], Af, bf,
             friction_coefficient=friction_coefficient,
             name=:halfspace_c),
         ]
@@ -74,7 +74,7 @@ function get_sphere_bundle(;
     local_mechanism_residual(primals, duals, slacks, parameters) =
         mechanism_residual(primals, duals, slacks, parameters, bodies, contacts)
 
-    mechanism = Mechanism1170(
+    mechanism = Mechanism(
         local_mechanism_residual,
         bodies,
         contacts,

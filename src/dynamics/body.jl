@@ -1,9 +1,9 @@
 ################################################################################
 # body
 ################################################################################
-struct Body1170{T,D} <: Body{T}
+struct Body{T,D} <: Body{T}
     name::Symbol
-    index::NodeIndices1170
+    index::NodeIndices
     pose::Vector{T}
     velocity::Vector{T}
     input::Vector{T}
@@ -14,14 +14,14 @@ struct Body1170{T,D} <: Body{T}
     shapes::Vector
 end
 
-function Body1170(timestep::T, mass, inertia::Matrix,
+function Body(timestep::T, mass, inertia::Matrix,
         shapes::Vector;
         gravity=-9.81,
         name::Symbol=:body,
-        index::NodeIndices1170=NodeIndices1170()) where T
+        index::NodeIndices=NodeIndices()) where T
 
     D = 2
-    return Body1170{T,D}(
+    return Body{T,D}(
         name,
         index,
         zeros(D+1),
@@ -35,10 +35,10 @@ function Body1170(timestep::T, mass, inertia::Matrix,
     )
 end
 
-primal_dimension(body::Body1170{T,D}) where {T,D} = 3
-cone_dimension(body::Body1170{T,D}) where {T,D} = 0
+primal_dimension(body::Body{T,D}) where {T,D} = 3
+cone_dimension(body::Body{T,D}) where {T,D} = 0
 
-function parameter_dimension(body::Body1170{T,D}) where {T,D}
+function parameter_dimension(body::Body{T,D}) where {T,D}
     @assert D == 2
     nq = 3 # configuration
     nv = 3 # velocity
@@ -51,11 +51,11 @@ function parameter_dimension(body::Body1170{T,D}) where {T,D}
     return nθ
 end
 
-function unpack_variables(x::Vector, body::Body1170{T}) where T
+function unpack_variables(x::Vector, body::Body{T}) where T
     return x
 end
 
-function get_parameters(body::Body1170{T,D}) where {T,D}
+function get_parameters(body::Body{T,D}) where {T,D}
     @assert D == 2
     pose = body.pose
     velocity = body.velocity
@@ -69,7 +69,7 @@ function get_parameters(body::Body1170{T,D}) where {T,D}
     return θ
 end
 
-function set_parameters!(body::Body1170{T,D}, θ) where {T,D}
+function set_parameters!(body::Body{T,D}, θ) where {T,D}
     pose, velocity, input, timestep, gravity, mass, inertia = unpack_parameters(θ, body)
     body.pose .= pose
     body.velocity .= velocity
@@ -82,7 +82,7 @@ function set_parameters!(body::Body1170{T,D}, θ) where {T,D}
     return nothing
 end
 
-function unpack_parameters(θ::Vector, body::Body1170{T,D}) where {T,D}
+function unpack_parameters(θ::Vector, body::Body{T,D}) where {T,D}
     @assert D == 2
     off = 0
     pose = θ[off .+ (1:D+1)]; off += D+1
@@ -95,20 +95,20 @@ function unpack_parameters(θ::Vector, body::Body1170{T,D}) where {T,D}
     inertia = θ[off .+ 1] * ones(1,1); off += 1
     return pose, velocity, input, timestep, gravity, mass, inertia
 end
-parameter_state_indices(body::Body1170) = Vector(1:6)
-parameter_input_indices(body::Body1170) = Vector(7:9)
+parameter_state_indices(body::Body) = Vector(1:6)
+parameter_input_indices(body::Body) = Vector(7:9)
 
-function unpack_pose_timestep(θ::Vector, body::Body1170{T,D}) where {T,D}
+function unpack_pose_timestep(θ::Vector, body::Body{T,D}) where {T,D}
     pose, velocity, input, timestep, gravity, mass, inertia = unpack_parameters(θ, body)
     return pose, timestep
 end
 
-function find_body(bodies::AbstractVector{<:Body1170}, name::Symbol)
+function find_body(bodies::AbstractVector{<:Body}, name::Symbol)
     idx = findfirst(x -> x == name, getfield.(bodies, :name))
     return bodies[idx]
 end
 
-function residual!(e, x, θ, body::Body1170)
+function residual!(e, x, θ, body::Body)
     index = body.index
     # variables = primals = velocity
     v25 = unpack_variables(x[index.variables], body)
@@ -126,7 +126,7 @@ function residual!(e, x, θ, body::Body1170)
     return nothing
 end
 
-function get_current_state(body::Body1170{T}) where T
+function get_current_state(body::Body{T}) where T
     nx = length(body.pose)
     nv = length(body.velocity)
 
@@ -137,7 +137,7 @@ function get_current_state(body::Body1170{T}) where T
     return z
 end
 
-function set_current_state!(body::Body1170, z)
+function set_current_state!(body::Body, z)
     nx = length(body.pose)
     nv = length(body.velocity)
 
@@ -147,7 +147,7 @@ function set_current_state!(body::Body1170, z)
     return nothing
 end
 
-function get_next_state!(z, variables, body::Body1170{T}) where T
+function get_next_state!(z, variables, body::Body{T}) where T
     p2 = body.pose
     timestep = body.timestep
     v25 = unpack_variables(variables[body.index.variables], body)
@@ -160,5 +160,5 @@ function get_next_state!(z, variables, body::Body1170{T}) where T
     return nothing
 end
 
-state_dimension(body::Body1170) = 3 + 3
-input_dimension(body::Body1170) = 3
+state_dimension(body::Body) = 3 + 3
+input_dimension(body::Body) = 3

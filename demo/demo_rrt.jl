@@ -105,7 +105,7 @@ visualize!(vis, mech, storage, build=true)
 ################################################################################
 # RRT
 ################################################################################
-function mahalanobis_metric(mechanism::Mechanism1170, q̄, q; γ=1e-5, ρ=3e-4)
+function mahalanobis_metric(mechanism::Mechanism, q̄, q; γ=1e-5, ρ=3e-4)
     # set the complementarity_tolerance to ρ
     old_complementarity_tolerance = mechanism.solver.options.complementarity_tolerance
     mechanism.solver.options.complementarity_tolerance = ρ
@@ -142,12 +142,12 @@ function mahalanobis_evaluation(q, Σγ, μu)
     return d
 end
 
-function mahalanobis_evaluation(mechanism::Mechanism1170, q̄, q; γ=1e-5, ρ=3e-4)
+function mahalanobis_evaluation(mechanism::Mechanism, q̄, q; γ=1e-5, ρ=3e-4)
     Σγ, μu, _ = mahalanobis_metric(mechanism, q̄, q; γ=γ, ρ=ρ)
     return mahalanobis_evaluation(q, Σγ, μu)
 end
 
-function index_nearest(mechanism::Mechanism1170, vertices, q_subgoal; γ=1e-5, ρ=3e-4)
+function index_nearest(mechanism::Mechanism, vertices, q_subgoal; γ=1e-5, ρ=3e-4)
     i_nearest = 0
     min_distance = +Inf
 
@@ -163,7 +163,7 @@ function index_nearest(mechanism::Mechanism1170, vertices, q_subgoal; γ=1e-5, �
     return i_nearest
 end
 
-function extend(mechanism::Mechanism1170, q_nearest, q_subgoal; γ=1e-5, ρ=3e-4, ϵ=3e-1)
+function extend(mechanism::Mechanism, q_nearest, q_subgoal; γ=1e-5, ρ=3e-4, ϵ=3e-1)
     nq = mechanism.dimensions.state
 
     # compute the smooth dynamics approximation
@@ -196,7 +196,7 @@ function extend(mechanism::Mechanism1170, q_nearest, q_subgoal; γ=1e-5, ρ=3e-4
     return q_new
 end
 
-function sample_subgoal(mechanism::Mechanism1170)
+function sample_subgoal(mechanism::Mechanism)
     nq = mechanism.dimensions.state
 
     qu_min = [0.60, 0.4, -1.0*π]
@@ -219,7 +219,7 @@ end
 
 # TODO this is not perfect we need a different dynamics to perfectly project
 # we need ignore gravity, masses etc
-function feasibility_projection(mechanism::Mechanism1170, q)
+function feasibility_projection(mechanism::Mechanism, q)
     nq = mechanism.dimensions.state
     nu = mechanism.dimensions.state
 
@@ -308,7 +308,7 @@ end
 # mech.bodies
 
 
-function rrt_solve!(mechanism::Mechanism1170, q_init, q_goal, K::Int; γ=1e-5, ρ=3e-4, ϵ=3e-1, goal_distance=1.0)
+function rrt_solve!(mechanism::Mechanism, q_init, q_goal, K::Int; γ=1e-5, ρ=3e-4, ϵ=3e-1, goal_distance=1.0)
     tree = SimpleDiGraph(1)
     vertices = [q_init]
 
