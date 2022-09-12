@@ -1,22 +1,15 @@
-using GeometryBasics
-using Plots
-using RobotVisualizer
-using MeshCat
-using Polyhedra
-using Quaternions
-using Optim
-using StaticArrays
-using ForwardDiff
-using Clustering
-using LinearAlgebra
+include(joinpath(module_dir(), "Pygmalion/Pygmalion.jl"))
 
-include("../src/DojoLight.jl")
-include("../system_identification/adam.jl")
-include("halfspace.jl")
-include("transparency_point_cloud.jl")
-include("visuals.jl")
-include("softmax.jl")
-include("utils.jl")
+
+# include("../src/DojoLight.jl")
+# include("../system_identification/adam.jl")
+# include("halfspace.jl")
+# include("transparency_point_cloud.jl")
+# include("visuals.jl")
+# include("softmax.jl")
+# include("utils.jl")
+
+
 
 vis = Visualizer()
 # render(vis)

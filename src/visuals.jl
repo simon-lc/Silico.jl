@@ -1,58 +1,4 @@
 ######################################################################
-# polytope
-######################################################################
-function build_polytope!(vis::Visualizer, A::Matrix{T}, b::Vector{T};
-        name::Symbol=:polytope,
-        color=RGBA(0.8, 0.8, 0.8, 1.0)) where T
-
-    h = hrep(A, b)
-    p = polyhedron(h)
-    m = Polyhedra.Mesh(p)
-    try
-        setobject!(vis[name], m, MeshPhongMaterial(color=color))
-    catch e
-    end
-    return nothing
-end
-
-function build_2d_polytope!(vis::Visualizer, A::Matrix{T}, b::Vector{T};
-        name::Symbol=:polytope,
-        color=RGBA(0.8, 0.8, 0.8, 1.0)) where T
-
-    n = size(A)[1]
-    Ae = [zeros(n) A]
-    Ae = [Ae;
-         -1 0 0;
-          1 0 0]
-    be = [b; 0.1; 00]
-    build_polytope!(vis, Ae, be, name=name, color=color)
-    return nothing
-end
-
-function set_polytope!(vis::Visualizer, p::Vector{T}, q::Vector{T};
-        name::Symbol=:polytope) where T
-
-    settransform!(vis[name], MeshCat.compose(
-        MeshCat.Translation(p...),
-        MeshCat.LinearMap(z_rotation(q)),
-        )
-    )
-    return nothing
-end
-
-function set_2d_polytope!(vis::Visualizer, p::Vector{T}, q::Vector{T};
-        name::Symbol=:polytope) where T
-    pe = [0; p]
-
-    settransform!(vis[name], MeshCat.compose(
-        MeshCat.Translation(SVector{3}(pe)),
-        MeshCat.LinearMap(rotationmatrix(RotX(q[1]))),
-        )
-    )
-    return nothing
-end
-
-######################################################################
 # shape
 ######################################################################
 function build_shape!(vis::Visualizer, shape::PolytopeShape;
@@ -114,62 +60,6 @@ function set_body!(vis::Visualizer, body::Body, pose; name=body.name)
 end
 
 ######################################################################
-# 2D frame
-######################################################################
-function build_2d_frame!(vis::Visualizer;
-    name::Symbol=:contact,
-    origin_color=RGBA(0.2, 0.2, 0.2, 0.8),
-    normal_axis_color=RGBA(0, 1, 0, 0.8),
-    tangent_axis_color=RGBA(1, 0, 0, 0.8),
-    origin_radius=0.025,
-    ) where T
-
-    # axes
-    build_segment!(vis[:contacts][name];
-        color=tangent_axis_color,
-        segment_radius=origin_radius/2,
-        name=:tangent)
-
-    build_segment!(vis[:contacts][name];
-        color=normal_axis_color,
-        segment_radius=origin_radius/2,
-        name=:normal)
-
-    # origin
-    setobject!(vis[:contacts][name][:origin],
-        HyperSphere(GeometryBasics.Point(0,0,0.), origin_radius),
-        MeshPhongMaterial(color=origin_color));
-    return nothing
-end
-
-function set_2d_frame!(vis::Visualizer, contact, origin, normal, tangent; name=contact.name)
-    settransform!(vis[:contacts][name][:origin],
-        MeshCat.Translation(SVector{3}(0, origin...)))
-    set_segment!(vis[:contacts][name], [0; origin], [0; origin+normal]; name=:normal)
-    set_segment!(vis[:contacts][name], [0; origin], [0; origin+tangent]; name=:tangent)
-    return nothing
-end
-
-######################################################################
-# segment
-######################################################################
-function build_segment!(vis::Visualizer; color=Colors.RGBA(0,0,0,1),
-        segment_radius=0.02, name=:segment)
-
-    segment = MeshCat.Cylinder(MeshCat.Point(0,0,0.0), MeshCat.Point(0,0,1.0), segment_radius)
-    material = MeshPhongMaterial(color=color)
-    setobject!(vis[name][:scaled], segment, material)
-    return vis
-end
-
-function set_segment!(vis::Visualizer, x_start, x_goal; name::Symbol=:segment)
-    transform, scaling = RobotVisualizer.link_transform(x_start, x_goal)
-    settransform!(vis[name][:scaled], scaling)
-    settransform!(vis[name], transform)
-    return nothing
-end
-
-######################################################################
 # mechanism
 ######################################################################
 function build_mechanism!(vis::Visualizer, mechanism::Mechanism;
@@ -201,7 +91,7 @@ function set_mechanism!(vis::Visualizer, mechanism::Mechanism, storage::Storage1
             origin = storage.contact_point[ii][j]
             normal = storage.normal[ii][j]
             tangent = storage.tangent[ii][j]
-            set_2d_frame!(vis[name], contact, origin, normal, tangent)
+            set_2d_frame!(vis[name], origin, normal, tangent, name=contact.name)
         end
     end
     return nothing
@@ -232,7 +122,6 @@ function visualize!(vis::Visualizer, mechanism::Mechanism, storage::Storage116{T
     return vis, animation
 end
 
-
 function visualize!(vis::Visualizer, mechanism::Mechanism, z;
         build::Bool=true,
         name::Symbol=:robot,
@@ -248,3 +137,114 @@ function visualize!(vis::Visualizer, mechanism::Mechanism, z;
     MeshCat.setanimation!(vis, animation)
     return vis, animation
 end
+
+
+# ######################################################################
+# # polytope
+# ######################################################################
+# function build_polytope!(vis::Visualizer, A::Matrix{T}, b::Vector{T};
+#         name::Symbol=:polytope,
+#         color=RGBA(0.8, 0.8, 0.8, 1.0)) where T
+#
+#     h = hrep(A, b)
+#     p = polyhedron(h)
+#     m = Polyhedra.Mesh(p)
+#     try
+#         setobject!(vis[name], m, MeshPhongMaterial(color=color))
+#     catch e
+#     end
+#     return nothing
+# end
+#
+# function build_2d_polytope!(vis::Visualizer, A::Matrix{T}, b::Vector{T};
+#         name::Symbol=:polytope,
+#         color=RGBA(0.8, 0.8, 0.8, 1.0)) where T
+#
+#     n = size(A)[1]
+#     Ae = [zeros(n) A]
+#     Ae = [Ae;
+#          -1 0 0;
+#           1 0 0]
+#     be = [b; 0.1; 00]
+#     build_polytope!(vis, Ae, be, name=name, color=color)
+#     return nothing
+# end
+#
+# function set_polytope!(vis::Visualizer, p::Vector{T}, q::Vector{T};
+#         name::Symbol=:polytope) where T
+#
+#     settransform!(vis[name], MeshCat.compose(
+#         MeshCat.Translation(p...),
+#         MeshCat.LinearMap(z_rotation(q)),
+#         )
+#     )
+#     return nothing
+# end
+#
+# function set_2d_polytope!(vis::Visualizer, p::Vector{T}, q::Vector{T};
+#         name::Symbol=:polytope) where T
+#     pe = [0; p]
+#
+#     settransform!(vis[name], MeshCat.compose(
+#         MeshCat.Translation(SVector{3}(pe)),
+#         MeshCat.LinearMap(rotationmatrix(RotX(q[1]))),
+#         )
+#     )
+#     return nothing
+# end
+
+######################################################################
+# # 2D frame
+# ######################################################################
+# function build_2d_frame!(vis::Visualizer;
+#     name::Symbol=:contact,
+#     origin_color=RGBA(0.2, 0.2, 0.2, 0.8),
+#     normal_axis_color=RGBA(0, 1, 0, 0.8),
+#     tangent_axis_color=RGBA(1, 0, 0, 0.8),
+#     origin_radius=0.025,
+#     ) where T
+#
+#     # axes
+#     build_segment!(vis[:contacts][name];
+#         color=tangent_axis_color,
+#         segment_radius=origin_radius/2,
+#         name=:tangent)
+#
+#     build_segment!(vis[:contacts][name];
+#         color=normal_axis_color,
+#         segment_radius=origin_radius/2,
+#         name=:normal)
+#
+#     # origin
+#     setobject!(vis[:contacts][name][:origin],
+#         HyperSphere(GeometryBasics.Point(0,0,0.), origin_radius),
+#         MeshPhongMaterial(color=origin_color));
+#     return nothing
+# end
+#
+# function set_2d_frame!(vis::Visualizer, contact, origin, normal, tangent; name=contact.name)
+#     settransform!(vis[:contacts][name][:origin],
+#         MeshCat.Translation(SVector{3}(0, origin...)))
+#     set_segment!(vis[:contacts][name], [0; origin], [0; origin+normal]; name=:normal)
+#     set_segment!(vis[:contacts][name], [0; origin], [0; origin+tangent]; name=:tangent)
+#     return nothing
+# end
+
+# ######################################################################
+# # segment
+# ######################################################################
+# function build_segment!(vis::Visualizer; color=Colors.RGBA(0,0,0,1),
+#         segment_radius=0.02, name=:segment)
+#
+#     segment = MeshCat.Cylinder(MeshCat.Point(0,0,0.0), MeshCat.Point(0,0,1.0), segment_radius)
+#     material = MeshPhongMaterial(color=color)
+#     setobject!(vis[name][:scaled], segment, material)
+#     return vis
+# end
+#
+# function set_segment!(vis::Visualizer, x_start, x_goal; name::Symbol=:segment)
+#     transform, scaling = RobotVisualizer.link_transform(x_start, x_goal)
+#     settransform!(vis[name][:scaled], scaling)
+#     settransform!(vis[name], transform)
+#     return nothing
+# end

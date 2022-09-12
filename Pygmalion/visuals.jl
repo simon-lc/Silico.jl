@@ -21,10 +21,10 @@ end
 # visualize point cloud
 ################################################################################
 function build_point_cloud!(vis::Visualizer, num_points::Vector{Int};
-        color=RGBA(0.1,0.1,0.1,1), name::Symbol=:point_cloud)
+        color=RGBA(0.1,0.1,0.1,1), name::Symbol=:point_cloud, names=Symbol.(1:length(num_points)))
 
     for (i,n) in enumerate(num_points)
-        build_point_cloud!(vis[name], n, name=Symbol(i), color=color)
+        build_point_cloud!(vis[name], n, name=names[i], color=color)
     end
     return nothing
 end
@@ -173,7 +173,6 @@ function plot_heatmap(;
     for i = 1:S
         for j = 1:S
             p = [X[i], Y[j]]
-            # V[j,i] = f(sdfV(p, θ, polytope_dimensions, δ))
             V[j,i] = f(p)
         end
     end

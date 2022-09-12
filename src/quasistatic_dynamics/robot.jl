@@ -1,7 +1,7 @@
 ################################################################################
 # body
 ################################################################################
-struct QuasistaticRobot{T,D} <: Body{T}
+struct QuasistaticRobot{T,D} <: AbstractBody{T}
     name::Symbol
     index::NodeIndices
     pose::Vector{T}

@@ -1,27 +1,26 @@
 module DojoLight
 
-using BenchmarkTools
 using CUDA
-using Clustering
-using DirectTrajectoryOptimization
-using FileIO
 using Flux
+using BenchmarkTools
+using Clustering
+using FileIO
 using ForwardDiff
-using GLPK
-using GeometryBasics
 using Ipopt
-using LinearAlgebra
-using MeshCat
-using Meshing
+using Plots
+using DirectTrajectoryOptimization
+using Optim
 using Nonconvex
 using NonconvexIpopt
 using NonconvexPercival
-using Optim
-using Plots
-using Polyhedra
+
+using GeometryBasics
+using LinearAlgebra
+using MeshCat
 using Quaternions
 using RobotVisualizer
 using Mehrotra
+using Printf
 
 include("rotate.jl")
 include("quaternion.jl")
@@ -61,7 +60,3 @@ include("../environment/sphere_collision.jl")
 include("../environment/sphere_drop.jl")
 
 end
-
-
-# using Pkg
-# Pkg.add(path="/home/simon/.julia/dev/Mehrotra.jl")

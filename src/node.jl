@@ -1,12 +1,12 @@
 abstract type Node{T} end
-abstract type Body{T} <: Node{T} end
+abstract type AbstractBody{T} <: Node{T} end
 
 variable_dimension(node::Node) = primal_dimension(node) + 2 * cone_dimension(node)
 optimality_dimension(node::Node) = primal_dimension(node)
 slackness_dimension(node::Node) = cone_dimension(node)
 equality_dimension(node::Node) = optimality_dimension(node) + slackness_dimension(node)
 
-function find_body(bodies::AbstractVector{<:Body}, name::Symbol)
+function find_body(bodies::AbstractVector{<:AbstractBody}, name::Symbol)
     idx = findfirst(x ->x == name, getfield.(bodies, :name))
     return bodies[idx]
 end

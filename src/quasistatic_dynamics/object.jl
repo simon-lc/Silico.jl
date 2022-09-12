@@ -1,7 +1,7 @@
 ################################################################################
 # body
 ################################################################################
-struct QuasistaticObject{T,D} <: Body{T}
+struct QuasistaticObject{T,D} <: AbstractBody{T}
     name::Symbol
     index::NodeIndices
     pose::Vector{T}
