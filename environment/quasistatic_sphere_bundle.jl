@@ -5,7 +5,7 @@ function get_quasistatic_sphere_bundle(;
     inertia=0.2 * ones(1,1),
     friction_coefficient=0.9,
     method_type::Symbol=:finite_difference,
-    options=Options(
+    options=Mehrotra.Options(
         # verbose=false,
         complementarity_tolerance=1e-4,
         compressed_search_direction=false,

@@ -6,7 +6,7 @@ function get_quasistatic_manipulation(;
     friction_coefficient=0.2,
     finger_friction_coefficient=0.9,
     method_type::Symbol=:finite_difference,
-    options=Options(
+    options=Mehrotra.Options(
         # verbose=false,
         complementarity_tolerance=1e-4,
         compressed_search_direction=false,

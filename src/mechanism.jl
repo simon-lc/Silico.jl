@@ -94,7 +94,7 @@ end
 struct Mechanism{T,D,NB,NC,B,C}
     variables::Vector{T}
     parameters::Vector{T}
-    solver::Solver{T}
+    solver::Mehrotra.Solver{T}
     bodies::Vector{B}
     contacts::Vector{C}
     dimensions::MechanismDimensions
@@ -104,7 +104,7 @@ struct Mechanism{T,D,NB,NC,B,C}
 end
 
 function Mechanism(residual, bodies::Vector, contacts::Vector;
-        options::Options{T}=Options(),
+        options::Mehrotra.Options{T}=Mehrotra.Options(),
         D::Int=2,
         method_type::Symbol=:finite_difference) where {T}
 
@@ -122,7 +122,7 @@ function Mechanism(residual, bodies::Vector, contacts::Vector;
     parameters = vcat(get_parameters.(bodies)..., get_parameters.(contacts)...)
 
     # methods = mechanism_methods(bodies, contacts, dim)
-    solver = Solver(
+    solver = Mehrotra.Solver(
             residual,
             num_primals,
             num_cone,

@@ -16,11 +16,12 @@ using NonconvexPercival
 
 using GeometryBasics
 using LinearAlgebra
+using Mehrotra
 using MeshCat
+using Printf
 using Quaternions
 using RobotVisualizer
-using Mehrotra
-using Printf
+using StaticArrays
 
 include("rotate.jl")
 include("quaternion.jl")
@@ -43,9 +44,10 @@ include("storage.jl")
 include("simulate.jl")
 include("dynamics.jl")
 include("continuation.jl")
-
 include("visuals.jl")
+include("utils.jl")
 # include("visuals_opengl.jl")
+
 
 include("../environment/bundle_collision.jl")
 include("../environment/bundle_drop.jl")
@@ -60,3 +62,7 @@ include("../environment/sphere_collision.jl")
 include("../environment/sphere_drop.jl")
 
 end
+
+# using Pkg
+# Pkg.add(path="/home/simon/.julia/dev/DirectTrajectoryOptimization.jl")
+# Pkg.add(path="/home/simon/.julia/dev/Mehrotra.jl")

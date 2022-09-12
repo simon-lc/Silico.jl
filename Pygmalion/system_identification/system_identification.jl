@@ -1,33 +1,8 @@
-using GeometryBasics
-using Plots
-using RobotVisualizer
-using MeshCat
-using Polyhedra
-using Quaternions
-using Optim
-using StaticArrays
-using Clustering
-using ForwardDiff
-using BenchmarkTools
-
 vis = Visualizer()
 render(vis)
 set_floor!(vis)
 set_light!(vis)
 set_background!(vis)
-
-include("../src/DojoLight.jl")
-
-include("../cvxnet/softmax.jl")
-include("../cvxnet/point_cloud.jl")
-include("../cvxnet/halfspace.jl")
-include("../cvxnet/visuals.jl")
-
-include("../system_identification/newton_solver.jl")
-include("../system_identification/structure.jl")
-include("../system_identification/methods.jl")
-include("../system_identification/visuals.jl")
-
 
 ################################################################################
 # TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
@@ -58,7 +33,7 @@ mech = get_polytope_drop(;
     inertia=inertia,
     friction_coefficient=friction_coefficient,
     method_type=:symbolic,
-    options=Options(
+    options=Mehrotra.Options(
         verbose=false,
         complementarity_tolerance=1e-3,
         compressed_search_direction=true,

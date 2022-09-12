@@ -17,7 +17,7 @@ function get_polytope_drop(;
         +1,
         +1,
         ],
-    options=Options(
+    options=Mehrotra.Options(
         # verbose=false,
         complementarity_tolerance=1e-4,
         compressed_search_direction=false,

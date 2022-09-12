@@ -1,23 +1,12 @@
 include(joinpath(module_dir(), "Pygmalion/Pygmalion.jl"))
 
 
-# include("../src/DojoLight.jl")
-# include("../system_identification/adam.jl")
-# include("halfspace.jl")
-# include("transparency_point_cloud.jl")
-# include("visuals.jl")
-# include("softmax.jl")
-# include("utils.jl")
-
-
-
 vis = Visualizer()
 # render(vis)
 open(vis)
 set_background!(vis)
 set_light!(vis, direction="Negative")
 set_floor!(vis, color=RGBA(0.4,0.4,0.4,0.4))
-iterate_color = RGBA(1,1,0,0.6)
 
 Ap0 = [
 	+1.0 +0.0;

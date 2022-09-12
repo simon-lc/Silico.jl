@@ -206,7 +206,7 @@ end
 
 #
 #
-# options=Options(
+# options=Mehrotra.Options(
 #         verbose=false,
 #         complementarity_tolerance=1e-4,
 #         # compressed_search_direction=true,

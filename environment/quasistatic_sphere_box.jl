@@ -6,7 +6,7 @@ function get_quasistatic_sphere_box2(;
     friction_coefficient=0.9,
     method_type::Symbol=:finite_difference,
     control_mode::Symbol=:robot, # :robot or :object
-    options=Options(
+    options=Mehrotra.Options(
         # verbose=false,
         complementarity_tolerance=1e-4,
         compressed_search_direction=false,
