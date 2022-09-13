@@ -24,7 +24,7 @@ function dynamics(z1, mechanism::Mechanism, z, u;
     set_state_control_parameters!(mechanism, z, u; w=w, idx_parameters=idx_parameters)
     solver = mechanism.solver
     solver.options.differentiate = false
-    DojoLight.solve!(solver)
+    Mehrotra.solve!(solver)
 
     # extract result
     get_next_state!(z1, mechanism)
@@ -38,7 +38,7 @@ function dynamics_jacobian_state(dz, mechanism::Mechanism{T,D,NB}, z, u;
     solver = mechanism.solver
     solver.options.differentiate = true
     timestep = mechanism.bodies[1].timestep[1]
-    DojoLight.solve!(solver)
+    Mehrotra.solve!(solver)
 
     # extract result
     # idx_parameters = solver.indices.parameter_keywords[:state]
@@ -60,7 +60,7 @@ function dynamics_jacobian_input(du, mechanism::Mechanism{T,D,NB}, z, u;
     solver = mechanism.solver
     solver.options.differentiate = true
     timestep = mechanism.bodies[1].timestep[1]
-    DojoLight.solve!(solver)
+    Mehrotra.solve!(solver)
 
     # idx_parameters = solver.indices.parameter_keywords[:input]
     idx_parameters = mechanism.indices.input
@@ -80,7 +80,7 @@ function dynamics_jacobian_parameters(dw, mechanism::Mechanism{T,D,NB}, z, u;
     solver = mechanism.solver
     solver.options.differentiate = true
     timestep = mechanism.bodies[1].timestep[1]
-    DojoLight.solve!(solver)
+    Mehrotra.solve!(solver)
 
     idx_parameters_state = mechanism.indices.parameter_state
     idx_solution_state = mechanism.indices.solution_state

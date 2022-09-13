@@ -1,5 +1,5 @@
 include(joinpath(module_dir(), "Pygmalion/Pygmalion.jl"))
-
+include("prediction.jl")
 
 ################################################################################
 # visualize
@@ -43,7 +43,7 @@ timestep = 0.05;
 gravity = -9.81;
 mass = 1.0;
 inertia = 0.2 * ones(1,1);
-μ0 = [0.5]
+μ0 = [0.9]
 complementarity_tolerance = 1e-3
 
 mech = get_polytope_drop(;
@@ -74,7 +74,7 @@ Mehrotra.solve!(mech.solver)
 # test simulation
 ################################################################################
 xp2 = [+0.0,1.00,-0.00]
-vp15 = [3,0.0,-5.0]
+vp15 = [6,0.0,+2.0]
 z0 = [xp2; vp15]
 
 H0 = 20
@@ -93,139 +93,81 @@ vis, anim = visualize!(vis, mech, storage)
 ################################################################################
 # dynamics
 ################################################################################
+idx_parameters = [14]
 num_state = mech.dimensions.body_state
 num_parameters = mech.solver.dimensions.parameters
-num_learnable_parameters = 1
+num_learnable_parameters = length(idx_parameters)
+nz = num_state
+nw = num_learnable_parameters
 
-w1 = nothing
 u1 = [0, 0, 0.0]
 x1 = [0, 2, 0.0]
 v1 = [0, 0, 0.0]
 z1 = [x1; v1]
 
-x2 = [0, 2, 0.0]
-v2 = [0, 0, 0.0]
-z2 = [x2; v2]
+z2 = zeros(num_state)
 dz2 = zeros(num_state, num_state)
+dw2 = zeros(num_state, num_learnable_parameters)
+DojoLight.dynamics(z2, mech, z1, u1, w=μ0, idx_parameters=idx_parameters)
+DojoLight.dynamics_jacobian_state(dz2, mech, z1, u1, w=μ0, idx_parameters=idx_parameters)
+DojoLight.dynamics_jacobian_parameters(dw2, mech, z1, u1, w=μ0, idx_parameters=idx_parameters)
 
-dθsolver = zeros(num_state, num_parameters)
-DojoLight.dynamics(z2, mech, z1, u1, w1)
-DojoLight.dynamics_jacobian_state(dz2, mech, z1, u1, w1)
-DojoLight.dynamics_jacobian_parameters(dθsolver, mech, z1, u1, w1)
-
-function local_dyn(mech, z1, u1, θ1)
-	z2 = zeros(6)
-	set_state_and_learnable_parameters!(mech, z1, θ1)
-	DojoLight.dynamics(z2, mech, z1, u1, nothing)
-	return z2
-end
-dz2
-dz20 = FiniteDiff.finite_difference_jacobian(z1 -> local_dyn(mech, z1, u1, μ0), z1)
-dz2 - dz20
-norm(dz2)
-norm(dz20)
-norm(dz2 - dz20)
-
-
-dθ30 = zeros(6, 1)
-prediction_jacobian_parameters!(dθ30, z1, μ0, mech)
-dθ40 = FiniteDiff.finite_difference_jacobian(μ0 -> local_dyn(mech, z1, u1, μ0), μ0)
-dθ30
-dθ40
-
-plot(dθ30)
-plot!(dθ40)
-plot!(-0.1dθ40)
 
 ################################################################################
 # prediction
 ################################################################################
-
-
-
-set_state_and_learnable_parameters!(mech, z1, μ0)
+# set_state_and_learnable_parameters!(mech, z1, μ0)
 
 z1 = storage.z[end-1]
 z2 = storage.z[end]
-dθ = zeros(num_state, num_learnable_parameters)
+dw2 = zeros(num_state, num_learnable_parameters)
 
-prediction_loss(z2, z2, z1, μ0, mech)
-prediction_jacobian_state!(dz2, z1, μ0, mech)
-prediction_jacobian_parameters!(dθ, z1, μ0, mech)
+prediction_loss(z2, z2, z1, μ0, idx_parameters, mech)
+prediction_jacobian_state!(dz2, z1, μ0, idx_parameters, mech)
+prediction_jacobian_parameters!(dw2, z1, μ0, idx_parameters, mech)
 
 z0 = deepcopy(storage.z[1])
 ẑ = [deepcopy(storage.z[i+1]) for i=1:H0]
 zs = [deepcopy(storage.z[i+1]) for i=1:H0]
-θs = [deepcopy(μ0) for i=1:H0]
+ws = [deepcopy(μ0) for i=1:H0]
 xtruth = vcat([[deepcopy(storage.z[i+1]); deepcopy(μ0)] for i=1:H0]...)
 
-trajectory_loss(ẑ, zs, θs, z0, mech)
-trajectory_gradient(ẑ, zs, θs, z0, mech)
-trajectory_hessian(ẑ, zs, θs, z0, mech)
-
-
-local_loss(xtruth)
-
+trajectory_loss(ẑ, zs, z0, ws, idx_parameters, mech)
+trajectory_gradient(ẑ, zs, z0, ws, idx_parameters, mech)
+trajectory_hessian(ẑ, zs, z0, ws, idx_parameters, mech)
 
 
 # NonconvexPercival
 function local_loss(x)
-	z = [x[(i-1)*(nz+nθ) .+ (1:nz)] for i=1:H0]
-	θ = [x[(i-1)*(nz+nθ) + nz .+ (1:nθ)] for i=1:H0]
-	trajectory_loss(ẑ, z, θ, z0, mech; complementarity_tolerance=1e-3)
+	z = [x[(i-1)*(nz+nw) .+ (1:nz)] for i=1:H0]
+	w = [x[(i-1)*(nz+nw) + nz .+ (1:nw)] for i=1:H0]
+	trajectory_loss(ẑ, z, z0, w, idx_parameters, mech; complementarity_tolerance=1e-3)
 end
 function local_grad(x)
-	z = [x[(i-1)*(nz+nθ) .+ (1:nz)] for i=1:H0]
-	θ = [x[(i-1)*(nz+nθ) + nz .+ (1:nθ)] for i=1:H0]
-	trajectory_gradient(ẑ, z, θ, z0, mech; complementarity_tolerance=1e-3)
+	z = [x[(i-1)*(nz+nw) .+ (1:nz)] for i=1:H0]
+	w = [x[(i-1)*(nz+nw) + nz .+ (1:nw)] for i=1:H0]
+	trajectory_gradient(ẑ, z, z0, w, idx_parameters, mech; complementarity_tolerance=1e-3)
 end
 function local_hess(x)
-	z = [x[(i-1)*(nz+nθ) .+ (1:nz)] for i=1:H0]
-	θ = [x[(i-1)*(nz+nθ) + nz .+ (1:nθ)] for i=1:H0]
-	trajectory_hessian(ẑ, z, θ, z0, mech; complementarity_tolerance=1e-3)
+	z = [x[(i-1)*(nz+nw) .+ (1:nz)] for i=1:H0]
+	w = [x[(i-1)*(nz+nw) + nz .+ (1:nw)] for i=1:H0]
+	trajectory_hessian(ẑ, z, z0, w, idx_parameters, mech; complementarity_tolerance=1e-3)
 end
 obj_fct = CustomHessianFunction(local_loss, local_grad, local_hess)
 
 
-xrand = 0.02*ones(H0*(nz+nθ))
-xrand .+= deepcopy(xtruth)
-g10 = FiniteDiff.finite_difference_gradient(x -> local_loss(x), xrand)
-g20 = local_grad(xrand)
-plot(g10[7:7:end])
-plot!(g20[7:7:end])
-plot!(g10[7:7:end] - g20[7:7:end])
-
-
-# H10 = FiniteDiff.finite_difference_hessian(x -> local_loss(x), xrand)
-# H20 = local_hess(xrand)
-# plot(H10)
-# plot!(H20)
-# plot!(H10 - H20)
-# plot(H10 - H20)
-
-# plot(Gray.(abs.(H10)))
-# plot(Gray.(abs.(Matrix(H20))))
-# plot(Gray.(abs.(Matrix(H20 - H10))))
-# plot(Gray.(abs.(Matrix(H20 + H10))))
-
-
-
 function eq_fct(x)
-	nz = 6
-	nθ = 1
-	eq = zeros((H0-1) * nθ)
-	idx1 = vcat([(i-1)*(nz+nθ) + nz .+ (1:nθ) for i=1:H0-1]...)
-	idx2 = vcat([i*(nz+nθ) + nz .+ (1:nθ) for i=1:H0-1]...)
+	eq = zeros((H0-1) * nw)
+	idx1 = vcat([(i-1)*(nz+nw) + nz .+ (1:nw) for i=1:H0-1]...)
+	idx2 = vcat([i*(nz+nw) + nz .+ (1:nw) for i=1:H0-1]...)
 	eq = x[idx1] .- x[idx2]
 	return 1e-3 .* eq
 end
 
-nz = 6
-nθ = 1
-N = H0 * (nz + nθ)
-
+N = H0 * (nz + nw)
 lb = -1e3
 ub = +1e3
+xinit = zeros(N)
 
 model = Nonconvex.Model()
 addvar!(model, lb*ones(N), ub*ones(N), init=xinit, integer=falses(N))
@@ -244,20 +186,21 @@ options = IpoptOptions(print_level=print_level, max_cpu_time=max_cpu_time)
 
 
 xtruth = vcat([[deepcopy(storage.z[i+1]); deepcopy(μ0)] for i=1:H0]...)
-xinit = 0.1 .* vcat([[deepcopy(storage.z[i+1]); 0.6 .+ deepcopy(μ0)] for i=1:H0]...)
 result = Nonconvex.optimize(model, alg, xinit, options=options)
-
+xmin = result.minimizer
 
 local_loss(xinit)
 local_loss(xtruth)
-local_loss(result.minimizer)
+local_loss(xmin)
 
 plot(xinit)
 plot!(xtruth)
-plot!(result.minimizer)
-plot!(result.minimizer - xtruth)
-plot(result.minimizer - xtruth)
+plot!(xmin)
+plot!(xmin - xtruth)
+plot(xmin - xtruth)
 
 xtruth
-result.minimizer
-result.minimizer[7:7:end]
+xmin
+xmin[7:7:end]
+
+RobotVisualizer.convert_frames_to_video_and_gif("friction_system_id")

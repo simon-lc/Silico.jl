@@ -1,32 +1,31 @@
-function set_state_and_learnable_parameters!(mechanism, z, θ)
-	# state parameters
-	body = mechanism.bodies[1]
-	parameters = get_parameters(body)
-	parameters[1:6] .= z
-	set_parameters!(body, parameters)
+# function set_state_and_learnable_parameters!(mechanism, z, θ)
+# 	# state parameters
+# 	body = mechanism.bodies[1]
+# 	parameters = get_parameters(body)
+# 	parameters[1:6] .= z
+# 	set_parameters!(body, parameters)
+#
+# 	# learnable parameters
+# 	contact = mechanism.contacts[1]
+# 	parameters = get_parameters(contact)
+# 	parameters[1:1] .= θ # friction coefficient
+# 	set_parameters!(contact, parameters)
+#
+# 	parameters = [get_parameters(body); get_parameters(contact)]
+# 	mechanism.solver.parameters .= parameters
+# 	return nothing
+# end
 
-	# learnable parameters
-	contact = mechanism.contacts[1]
-	parameters = get_parameters(contact)
-	parameters[1:1] .= θ # friction coefficient
-	set_parameters!(contact, parameters)
-
-	parameters = [get_parameters(body); get_parameters(contact)]
-	mechanism.solver.parameters .= parameters
-	return nothing
-end
-
-function prediction_loss(ẑ1, z1, z0, θ1, mechanism; complementarity_tolerance=1e-3)
+function prediction_loss(ẑ1, z1, z0, w1, idx_parameters, mechanism; complementarity_tolerance=1e-3)
 
 	mechanism.solver.options.residual_tolerance = complementarity_tolerance / 10
 	mechanism.solver.options.complementarity_tolerance = complementarity_tolerance
-	set_state_and_learnable_parameters!(mechanism, z0, θ1)
+	# set_state_and_learnable_parameters!(mechanism, z0, w1)
 
 	u0 = zeros(mechanism.dimensions.input)
-	w0 = nothing
 	z1_pred = zeros(mechanism.dimensions.state)
 
-	DojoLight.dynamics(z1_pred, mechanism, z0, u0, w0)
+	DojoLight.dynamics(z1_pred, mechanism, z0, u0, w=w1, idx_parameters=idx_parameters)
 
 	Q = I
 	R = I
@@ -36,122 +35,148 @@ function prediction_loss(ẑ1, z1, z0, θ1, mechanism; complementarity_tolerance
 	return l
 end
 
-function prediction_jacobian_state!(dz, z, θ, mechanism; complementarity_tolerance=1e-3)
+function prediction_jacobian_state!(dz, z, w, idx_parameters, mechanism; complementarity_tolerance=1e-3)
 
 	mechanism.solver.options.residual_tolerance = complementarity_tolerance / 10
 	mechanism.solver.options.complementarity_tolerance = complementarity_tolerance
-	set_state_and_learnable_parameters!(mechanism, z, θ)
+	# set_state_and_learnable_parameters!(mechanism, z, θ)
 
 	u = zeros(mechanism.dimensions.input)
-	w = nothing
 	z1_pred = zeros(mechanism.dimensions.state)
 
-	DojoLight.dynamics_jacobian_state(dz, mechanism, z, u, w)
+	DojoLight.dynamics_jacobian_state(dz, mechanism, z, u, w=w, idx_parameters=idx_parameters)
 	get_next_state!(z1_pred, mechanism)
 	return z1_pred
 end
 
-function prediction_jacobian_parameters!(dθ, z, θ, mechanism; complementarity_tolerance=1e-3)
+function prediction_jacobian_parameters!(dw, z, w, idx_parameters, mechanism; complementarity_tolerance=1e-3)
 	solver = mechanism.solver
-	idx_learnable_parameters = 7:7
+	# idx_learnable_parameters = 7:7
 
-	solver.options.residual_tolerance = complementarity_tolerance / 10
-	solver.options.complementarity_tolerance = complementarity_tolerance
-	set_state_and_learnable_parameters!(mechanism, z, θ)
+	mechanism.solver.options.residual_tolerance = complementarity_tolerance / 10
+	mechanism.solver.options.complementarity_tolerance = complementarity_tolerance
+	# set_state_and_learnable_parameters!(mechanism, z, θ)
 
-	dθsolver = zeros(mechanism.dimensions.state, solver.dimensions.parameters)
+	# dθsolver = zeros(mechanism.dimensions.state, solver.dimensions.parameters)
 	u = zeros(mechanism.dimensions.input)
-	w = nothing
 	z1_pred = zeros(mechanism.dimensions.state)
 
-	DojoLight.dynamics_jacobian_parameters(dθsolver, mechanism, z, u, w)
-	dθ .= dθsolver[:, idx_learnable_parameters]
+	DojoLight.dynamics_jacobian_parameters(dw, mechanism, z, u, w=w, idx_parameters=idx_parameters)
+	# dθ .= dθsolver[:, idx_learnable_parameters]
 	################################################################################################################################
-	dθ .*= -10.0
+	# dθ .*= -10.0
 
 	get_next_state!(z1_pred, mechanism)
 	return z1_pred
 end
 
-# traj loss (z1:n, θ1:n)
-function trajectory_loss(ẑ, z, θ, z0, mechanism; complementarity_tolerance=1e-3)
+# traj loss (z1:n, w1:n)
+function trajectory_loss(ẑ, z, z0, w, idx_parameters, mechanism; complementarity_tolerance=1e-3)
 	H = length(z)
 	l = 0.0
 	z_prev = deepcopy(z0)
 	for i = 1:H
-		l += prediction_loss(ẑ[i], z[i], z_prev, θ[i], mechanism; complementarity_tolerance=complementarity_tolerance)
+		l += prediction_loss(ẑ[i], z[i], z_prev, w[i], idx_parameters, mechanism; complementarity_tolerance=complementarity_tolerance)
 		z_prev .= z[i]
 	end
 	return l
 end
 
-# traj gradient wrt z1:n θ1:n
-function trajectory_gradient(ẑ, z, θ, z0, mechanism; complementarity_tolerance=1e-3)
+# traj gradient wrt z1:n w1:n
+function trajectory_gradient(ẑ, z, z0, w, idx_parameters, mechanism; complementarity_tolerance=1e-3)
 	H = length(z)
 	nz = 6
-	nθ = 1
+	nw = length(idx_parameters)
 
 	Q = I
 	R = I
 	dz = zeros(nz, nz)
-	dθ = zeros(nz, nθ)
-	grad = zeros(H * (nz + nθ))
+	dw = zeros(nz, nw)
+	grad = zeros(H * (nz + nw))
 	z_prev = deepcopy(z0)
 
 	for i = 1:H
-		z1_pred = prediction_jacobian_state!(dz, z_prev, θ[i], mechanism; complementarity_tolerance=complementarity_tolerance)
-		z1_pred = prediction_jacobian_parameters!(dθ, z_prev, θ[i], mechanism; complementarity_tolerance=complementarity_tolerance)
-		idx_zi = (i-1)*(nz+nθ) .+ (1:nz)
-		idx_θi = (i-1)*(nz+nθ) + nz .+ (1:nθ)
-		idx_zi_1 = (i-2)*(nz+nθ) .+ (1:nz)
+		z1_pred = prediction_jacobian_state!(dz, z_prev, w[i], idx_parameters,
+			mechanism; complementarity_tolerance=complementarity_tolerance)
+		z1_pred = prediction_jacobian_parameters!(dw, z_prev, w[i], idx_parameters,
+			mechanism; complementarity_tolerance=complementarity_tolerance)
+		idx_zi = (i-1)*(nz+nw) .+ (1:nz)
+		idx_wi = (i-1)*(nz+nw) + nz .+ (1:nw)
+		idx_zi_1 = (i-2)*(nz+nw) .+ (1:nz)
 
 		grad[idx_zi] .+= Q * (z[i] - z1_pred) + R * (z[i] - ẑ[i])
-		grad[idx_θi] .+= -dθ' * Q * (z[i] - z1_pred)
+		grad[idx_wi] .+= -dw' * Q * (z[i] - z1_pred)
 		if i > 1
 			grad[idx_zi_1] .+= -dz' * Q * (z[i] - z1_pred)
 		end
 		z_prev .= z[i]
 	end
-	# @warn "issue with grad sign on some part of the vector"
 	return grad
 end
 
 
-# traj quasi newton hessian wrt z1:n θ1:n
-function trajectory_hessian(ẑ, z, θ, z0, mechanism; complementarity_tolerance=1e-3)
+# traj quasi newton hessian wrt z1:n w1:n
+function trajectory_hessian(ẑ, z, z0, w, idx_parameters, mechanism; complementarity_tolerance=1e-3)
 	H = length(z)
 	nz = 6
-	nθ = 1
+	nw = length(idx_parameters)
 
 	Q = I(nz)
 	R = I(nz)
 	dz = zeros(nz, nz)
-	dθ = zeros(nz, nθ)
-	hess = spzeros(H * (nz + nθ), H * (nz + nθ))
+	dw = zeros(nz, nw)
+	hess = spzeros(H * (nz + nw), H * (nz + nw))
 	z_prev = deepcopy(z0)
 
 	for i = 1:H
-		idx_zi = (i-1)*(nz+nθ) .+ (1:nz)
-		idx_θi = (i-1)*(nz+nθ) + nz .+ (1:nθ)
-		idx_zi_1 = (i-2)*(nz+nθ) .+ (1:nz)
+		idx_zi = (i-1)*(nz+nw) .+ (1:nz)
+		idx_wi = (i-1)*(nz+nw) + nz .+ (1:nw)
+		idx_zi_1 = (i-2)*(nz+nw) .+ (1:nz)
 
-		z1_pred = prediction_jacobian_state!(dz, z_prev, θ[i], mechanism; complementarity_tolerance=complementarity_tolerance)
-		z1_pred = prediction_jacobian_parameters!(dθ, z_prev, θ[i], mechanism; complementarity_tolerance=complementarity_tolerance)
+		z1_pred = prediction_jacobian_state!(dz, z_prev, w[i], idx_parameters,
+			mechanism; complementarity_tolerance=complementarity_tolerance)
+		z1_pred = prediction_jacobian_parameters!(dw, z_prev, w[i], idx_parameters,
+			mechanism; complementarity_tolerance=complementarity_tolerance)
 
 		hess[idx_zi, idx_zi] .+= Q + R
-		hess[idx_zi, idx_θi] .+= - Q * dθ
-		hess[idx_θi, idx_zi] .+= - dθ' * Q
+		hess[idx_zi, idx_wi] .+= - Q * dw
+		hess[idx_wi, idx_zi] .+= - dw' * Q
 
-		hess[idx_θi, idx_θi] .+= dθ' * Q * dθ
+		hess[idx_wi, idx_wi] .+= dw' * Q * dw
 
 		if i > 1
 			hess[idx_zi, idx_zi_1] .+= - Q * dz
 			hess[idx_zi_1, idx_zi] .+= - dz' * Q
-			hess[idx_θi, idx_zi_1] .+= dθ' * Q * dz
-			hess[idx_zi_1, idx_θi] .+= dz' * Q * dθ
+			hess[idx_wi, idx_zi_1] .+= dw' * Q * dz
+			hess[idx_zi_1, idx_wi] .+= dz' * Q * dw
 			hess[idx_zi_1, idx_zi_1] .+= dz' * Q * dz
 		end
 		z_prev .= z[i]
 	end
 	return hess
 end
+
+@warn "TODO add tests"
+#
+# xrand = 0.02*ones(H0*(nz+nw))
+# xrand .+= deepcopy(xtruth)
+# g10 = FiniteDiff.finite_difference_gradient(x -> local_loss(x), xrand)
+# g20 = local_grad(xrand)
+# plot(g10)
+# plot!(g20)
+# plot!((g10 - g20) ./ (1e-3 .+ abs.(g10) + abs.(g20)) * 2)
+# plot(g10[7:7:end])
+# plot!(g20[7:7:end])
+# plot!(g10[7:7:end] - g20[7:7:end])
+#
+#
+# H10 = FiniteDiff.finite_difference_hessian(x -> local_loss(x), xrand)
+# H20 = local_hess(xrand)
+# plot(H10)
+# plot!(H20)
+# plot!(H10 - H20)
+# plot(H10 - H20)
+#
+# plot(Gray.(abs.(H10)))
+# plot(Gray.(abs.(Matrix(H20))))
+# plot(Gray.(abs.(Matrix(H20 - H10))))
