@@ -93,7 +93,7 @@ end
 ################################################################################
 struct Mechanism{T,D,NB,NC,B,C}
     variables::Vector{T}
-    parameters::Vector{T}
+    # parameters::Vector{T}
     solver::Mehrotra.Solver{T}
     bodies::Vector{B}
     contacts::Vector{C}
@@ -141,7 +141,7 @@ function Mechanism(residual, bodies::Vector, contacts::Vector;
     nc = length(contacts)
     mechanism = Mechanism{T,D,nb,nc,eltype(bodies),eltype(contacts)}(
         variables,
-        parameters,
+        # parameters,
         solver,
         bodies,
         contacts,
@@ -178,7 +178,29 @@ end
 function mechanism_residual(primals::Vector, duals::Vector,
         slacks::Vector, mechanism::Mechanism)
     mechanism_residual(primals, duals, slacks,
-        mechanism.parameters,
+        mechanism.solver.parameters,
         mechanism.bodies,
         mechanism.contacts)
+end
+
+function set_parameters!(mechanism::Mechanism, parameters::Vector)
+    Mehrotra.set_parameters!(mechanism.solver, parameters)
+    off = 0
+    for body in mechanism.bodies
+        nθ = parameter_dimension(body)
+        set_parameters!(body, parameters[off .+ (1:nθ)]); off += nθ
+    end
+    for contact in mechanism.contacts
+        nθ = parameter_dimension(contact)
+        set_parameters!(contact, parameters[off .+ (1:nθ)]); off += nθ
+    end
+    return nothing
+end
+
+function get_parameters(mechanism::Mechanism)
+    parameters = vcat(
+        get_parameters.(mechanism.bodies)...,
+        get_parameters.(mechanism.contacts)...,
+        )
+    return parameters
 end

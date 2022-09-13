@@ -159,9 +159,9 @@ function transform(A::Vector{Matrix{T}}, b::Vector{Vector{T}}, o::Vector{Vector{
 end
 
 function normalize_A!(A::Matrix; ϵ=1e-6)
-	nh = size(A,2)
+	nh = size(A,1)
 	for i = 1:nh
-		A[:,i] ./= norm(A[:,i]) + ϵ
+		A[i,:] ./= norm(A[i,:]) + ϵ
 	end
 	return nothing
 end

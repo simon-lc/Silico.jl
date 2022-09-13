@@ -1,18 +1,18 @@
 module DojoLight
 
-using CUDA
-using Flux
-using BenchmarkTools
-using Clustering
-using FileIO
-using ForwardDiff
-using Ipopt
-using Plots
-using DirectTrajectoryOptimization
-using Optim
-using Nonconvex
-using NonconvexIpopt
-using NonconvexPercival
+# using CUDA
+# using Flux
+# using BenchmarkTools
+# using Clustering
+# using FileIO
+# using ForwardDiff
+# using Ipopt
+# using DirectTrajectoryOptimization
+# using Optim
+# using Nonconvex
+# using NonconvexIpopt
+# using NonconvexPercival
+# using Plots
 
 using GeometryBasics
 using LinearAlgebra
@@ -22,6 +22,7 @@ using Printf
 using Quaternions
 using RobotVisualizer
 using StaticArrays
+using Colors
 
 include("rotate.jl")
 include("quaternion.jl")
@@ -62,6 +63,7 @@ include("../environment/sphere_collision.jl")
 include("../environment/sphere_drop.jl")
 
 end
+
 
 # using Pkg
 # Pkg.add(path="/home/simon/.julia/dev/DirectTrajectoryOptimization.jl")

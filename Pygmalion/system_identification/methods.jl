@@ -105,7 +105,7 @@ function process_model(context::CvxContext1320, state::Vector, params::Vector)
 
     function parameters_mapping(context::CvxContext1320, params::Vector)
         set_parameters!(context, params)
-        return context.mechanism.parameters
+        return context.mechanism.solver.parameters
     end
     parameters_jacobian = FiniteDiff.finite_difference_jacobian(params -> parameters_mapping(context, params), params)
 

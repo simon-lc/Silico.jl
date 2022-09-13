@@ -1,3 +1,20 @@
+using CUDA
+using Flux
+using BenchmarkTools
+using Clustering
+using FileIO
+using ForwardDiff
+# using Ipopt
+# using DirectTrajectoryOptimization
+# using Optim
+using Nonconvex
+using NonconvexIpopt
+using NonconvexPercival
+using Plots
+using FiniteDiff
+using SparseArrays
+
+
 # solvers
 include("solvers/adam.jl")
 include("solvers/bfgs.jl")

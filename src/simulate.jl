@@ -11,7 +11,7 @@ function update_parameters!(mechanism::Mechanism)
     end
     # update the consistency logic
     solver.consistency.solved .= false
-    set_bool!(solver.consistency.differentiated, false)
+    Mehrotra.set_bool!(solver.consistency.differentiated, false)
     return nothing
 end
 
@@ -103,7 +103,7 @@ function step!(mechanism::Mechanism, z0; controller::Function=m->nothing)
     set_current_state!(mechanism, z0)
     controller(mechanism) # sets the control inputs u
     update_parameters!(mechanism)
-    solve!(mechanism.solver)
+    Mehrotra.solve!(mechanism.solver)
     z1 = get_next_state(mechanism)
     return z1
 end
