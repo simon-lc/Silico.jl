@@ -62,6 +62,9 @@ include("../environment/sphere_bundle.jl")
 include("../environment/sphere_collision.jl")
 include("../environment/sphere_drop.jl")
 
+export
+    Mechanism
+
 end
 
 

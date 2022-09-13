@@ -17,14 +17,14 @@
     inertia = 0.2 * ones(1,1);
     friction_coefficient = 0.1;
 
-    mech = get_polytope_drop(;
+    mech = DojoLight.get_polytope_drop(;
         timestep=timestep,
         gravity=gravity,
         mass=mass,
         inertia=inertia,
         friction_coefficient=friction_coefficient,
         method_type=:symbolic,
-        options=DojoLight.Options(
+        options=DojoLight.Mehrotra.Options(
             verbose=false,
             complementarity_tolerance=1e-3,
             compressed_search_direction=true,
@@ -41,13 +41,13 @@
     vp15 = [-0,0,-0.0]
     z0 = [xp2; vp15]
     H0 = 100
-    storage = simulate!(mech, z0, H0)
+    storage = DojoLight.simulate!(mech, z0, H0)
 
     # ################################################################################
     # # visualization
     # ################################################################################
-    # build_mechanism!(vis, mech)
-    # visualize!(vis, mech, storage, build=false)
+    # DojoLight.build_mechanism!(vis, mech)
+    # DojoLight.visualize!(vis, mech, storage, build=false)
 
     ################################################################################
     # set_state_control_parameters
@@ -56,11 +56,11 @@
     u0 = [0.1, 0.2, 0.3]
     w0 = [0.5]
     idx_parameters = [14]
-    set_state_control_parameters!(mech, z0, u0; w=w0, idx_parameters=idx_parameters)
+    DojoLight.set_state_control_parameters!(mech, z0, u0; w=w0, idx_parameters=idx_parameters)
 
-    @test norm(get_current_state(mech) - z0, Inf) < 1e-8
-    @test norm(get_input(mech) - u0, Inf) < 1e-8
-    @test norm(get_parameters(mech)[idx_parameters] - w0) < 1e-8
+    @test norm(DojoLight.get_current_state(mech) - z0, Inf) < 1e-8
+    @test norm(DojoLight.get_input(mech) - u0, Inf) < 1e-8
+    @test norm(DojoLight.get_parameters(mech)[idx_parameters] - w0) < 1e-8
 
 
     ################################################################################
@@ -75,25 +75,25 @@
     du = zeros(nz, nu)
     dw = zeros(nz, nw)
 
-    dynamics(z1, mech, z0, u0; w=w0, idx_parameters=idx_parameters)
-    dynamics_jacobian_state(dz, mech, z0, u0; w=w0, idx_parameters=idx_parameters)
-    dynamics_jacobian_input(du, mech, z0, u0; w=w0, idx_parameters=idx_parameters)
-    dynamics_jacobian_parameters(dw, mech, z0, u0; w=w0, idx_parameters=idx_parameters)
+    DojoLight.dynamics(z1, mech, z0, u0; w=w0, idx_parameters=idx_parameters)
+    DojoLight.dynamics_jacobian_state(dz, mech, z0, u0; w=w0, idx_parameters=idx_parameters)
+    DojoLight.dynamics_jacobian_input(du, mech, z0, u0; w=w0, idx_parameters=idx_parameters)
+    DojoLight.dynamics_jacobian_parameters(dw, mech, z0, u0; w=w0, idx_parameters=idx_parameters)
 
     # dynamics
-    z10 = explicit_dynamics(mech, z0, u0; w=w0, idx_parameters=idx_parameters)
+    z10 = DojoLight.explicit_dynamics(mech, z0, u0; w=w0, idx_parameters=idx_parameters)
     norm(z1 - z10, Inf)
     # jacobian state
     dz0 = FiniteDiff.finite_difference_jacobian(z0 ->
-        explicit_dynamics(mech, z0, u0; w=w0, idx_parameters=idx_parameters),
+        DojoLight.explicit_dynamics(mech, z0, u0; w=w0, idx_parameters=idx_parameters),
         z0)
     # jacobian input
     du0 = FiniteDiff.finite_difference_jacobian(u0 ->
-        explicit_dynamics(mech, z0, u0; w=w0, idx_parameters=idx_parameters),
+        DojoLight.explicit_dynamics(mech, z0, u0; w=w0, idx_parameters=idx_parameters),
         u0)
     # jacobian parameters
     dw0 = FiniteDiff.finite_difference_jacobian(w0 ->
-        explicit_dynamics(mech, z0, u0; w=w0, idx_parameters=idx_parameters),
+        DojoLight.explicit_dynamics(mech, z0, u0; w=w0, idx_parameters=idx_parameters),
         w0)
 
     @test norm(dz - dz0, Inf) < 1e-4
