@@ -1,0 +1,16 @@
+shape_loss_parameters = Dict(
+	:thickness => 0.2,
+	:δ_sdf => 15.0,
+	:δ_sigmoid => 0.1,
+	:δ_softabs => 0.5,
+	:altitude_threshold => 0.01,
+	:rendering => 5.0,
+	:sdf_matching => 20.0,
+	:overlap => 2.0,
+	:individual => 1.0,
+	:side_regularization => 0.5,
+	:shape_regularization => 0.5,
+	:inside => 1.0,
+	:outside => 0.1,
+	:floor => 0.1,
+)

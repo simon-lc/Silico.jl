@@ -1,31 +1,12 @@
-using GeometryBasics
-using Plots
-using RobotVisualizer
-using MeshCat
-using Polyhedra
-using Quaternions
-using Optim
-using StaticArrays
-using ForwardDiff
-using Clustering
-using LinearAlgebra
-
-include("../src/DojoLight.jl")
-include("../system_identification/sr1.jl")
-include("../system_identification/adam.jl")
-include("halfspace.jl")
-include("transparency_point_cloud.jl")
-include("visuals.jl")
-include("softmax.jl")
-include("utils.jl")
+include(joinpath(module_dir(), "Pygmalion/Pygmalion.jl"))
 
 vis = Visualizer()
-# render(vis)
-open(vis)
+# open(vis)
+render(vis)
 set_background!(vis)
 set_light!(vis, direction="Negative")
 set_floor!(vis, color=RGBA(0.4,0.4,0.4,0.4))
-iterate_color = RGBA(1,1,0,0.6)
+iterate_color = RGBA(1,1,0,0.6);
 
 Ap0 = [
 	+1.0 +0.3;
@@ -80,7 +61,7 @@ mech = get_polytope_drop(;
         complementarity_correction=0.5,
         )
     );
-solve!(mech.solver)
+Mehrotra.solve!(mech.solver)
 
 ################################################################################
 # test simulation
@@ -114,10 +95,11 @@ end
 ################################################################################
 # camera parameters
 ################################################################################
-nβ = 10
+nβ = 20
 ρ0 = 1e-4
 e0 = fill([0.0, 3.0], H0)
-β0 = [-π + atan(e0[i][2] - x[1][2], e0[i][1] - x[1][1]) .+ Vector(range(+0.20π, -0.20π, length=nβ)) for (i,x) in enumerate(storage.x)]
+β0 = [-π + atan(e0[i][2] - x[1][2], e0[i][1] - x[1][1]) .+
+	Vector(range(+0.12π, -0.12π, length=nβ)) for (i,x) in enumerate(storage.x)]
 d0 = [trans_point_cloud(e0[i], β0[i], ρ0, θP[i], polytope_dimensions_p) for i = 1:H0]
 for i = 1:H0
 	build_point_cloud!(vis[:point_cloud], nβ; color=RGBA(0.9,0.1,0.1,1), name=Symbol(i))
@@ -173,7 +155,7 @@ parameters = Dict(
 	:outside => 0.1,
 	:floor => 0.1,
 )
-max_iterations = 20
+max_iterations = 200
 
 ################################################################################
 # solve
@@ -185,7 +167,7 @@ max_iterations = 20
 # 	:δ_sigmoid => 0.1,
 # 	:δ_softabs => 0.5,
 # 	:altitude_threshold => 0.01,
-# 	:rendering => 1.0 * 5.0,
+# 	:rendering => 0.0 * 5.0,
 # 	:sdf_matching => 1.0 * 20.0,
 # 	:overlap => 1.0 * 2.0,
 # 	:individual => 1.0 * 1.0,
@@ -193,9 +175,10 @@ max_iterations = 20
 # 	:shape_regularization => 1.0 * 0.5,
 # 	:inside => 1.0 * 1.0,
 # 	:outside => 1.0 * 0.1,
-# 	:floor => 1.0 * 0.1,
+# 	:floor => 0.0 * 0.1,
 # )
-function local_loss(θ)
+
+function local_loss(θ, polytope_dimensions=polytope_dimensions)
 	l = 0.0
 	A, b, o = unpack_halfspaces(θ, polytope_dimensions)
 	for i = 1:H0
@@ -204,21 +187,24 @@ function local_loss(θ)
 		θ_t, _ = pack_halfspaces(At, bt, ot)
 		l += shape_loss(θ_t, polytope_dimensions, [e0[i]], [β0[i]], ρ0, [d0[i]]; parameters...)
 	end
-	return l
+	return l / H0
 end
 
 # local_grad(θ) = ForwardDiff.gradient(θ -> local_loss(θ), θ)
-θtruth = pack_halfspaces(Ap0, bp0, op0)
-local_loss(θtruth)
+θtruth, polytope_dimensions_truth = pack_halfspaces(Ap, bp, op)
+unpack_halfspaces(θtruth, polytope_dimensions_truth)
+local_loss(θtruth, polytope_dimensions=polytope_dimensions_p)
 local_loss(θinit)
 local_grad(θinit)
-
 
 adam_opt = Adam(θinit, local_loss, local_grad)
 adam_opt.eps = 1e-8
 adam_opt.a = 3e-3
-θsol0, θiter0 = adam_solve!(adam_opt, projection=local_projection, max_iterations=10max_iterations)
-vis, anim = visualize_iterates!(vis, θiter0[1:5:end], polytope_dimensions, e0, β0, ρ0, max_iterations=1max_iterations+1, color=iterate_color)
+θsol0, θiter0 = adam_solve!(adam_opt,
+	projection=local_projection,
+	max_iterations=max_iterations)
+vis, anim = visualize_iterates!(vis, θiter0[1:5:end], polytope_dimensions, e0, β0, ρ0,
+	max_iterations=max_iterations+1, color=iterate_color)
 
 Asol, bsol, osol = unpack_halfspaces(θsol0, polytope_dimensions)
 for i = 1:H0

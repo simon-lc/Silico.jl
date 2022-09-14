@@ -1,26 +1,6 @@
-# function set_state_and_learnable_parameters!(mechanism, z, θ)
-# 	# state parameters
-# 	body = mechanism.bodies[1]
-# 	parameters = get_parameters(body)
-# 	parameters[1:6] .= z
-# 	set_parameters!(body, parameters)
-#
-# 	# learnable parameters
-# 	contact = mechanism.contacts[1]
-# 	parameters = get_parameters(contact)
-# 	parameters[1:1] .= θ # friction coefficient
-# 	set_parameters!(contact, parameters)
-#
-# 	parameters = [get_parameters(body); get_parameters(contact)]
-# 	mechanism.solver.parameters .= parameters
-# 	return nothing
-# end
-
 function prediction_loss(ẑ1, z1, z0, w1, idx_parameters, mechanism; complementarity_tolerance=1e-3)
-
 	mechanism.solver.options.residual_tolerance = complementarity_tolerance / 10
 	mechanism.solver.options.complementarity_tolerance = complementarity_tolerance
-	# set_state_and_learnable_parameters!(mechanism, z0, w1)
 
 	u0 = zeros(mechanism.dimensions.input)
 	z1_pred = zeros(mechanism.dimensions.state)
@@ -36,10 +16,8 @@ function prediction_loss(ẑ1, z1, z0, w1, idx_parameters, mechanism; complement
 end
 
 function prediction_jacobian_state!(dz, z, w, idx_parameters, mechanism; complementarity_tolerance=1e-3)
-
 	mechanism.solver.options.residual_tolerance = complementarity_tolerance / 10
 	mechanism.solver.options.complementarity_tolerance = complementarity_tolerance
-	# set_state_and_learnable_parameters!(mechanism, z, θ)
 
 	u = zeros(mechanism.dimensions.input)
 	z1_pred = zeros(mechanism.dimensions.state)
@@ -50,22 +28,13 @@ function prediction_jacobian_state!(dz, z, w, idx_parameters, mechanism; complem
 end
 
 function prediction_jacobian_parameters!(dw, z, w, idx_parameters, mechanism; complementarity_tolerance=1e-3)
-	solver = mechanism.solver
-	# idx_learnable_parameters = 7:7
-
 	mechanism.solver.options.residual_tolerance = complementarity_tolerance / 10
 	mechanism.solver.options.complementarity_tolerance = complementarity_tolerance
-	# set_state_and_learnable_parameters!(mechanism, z, θ)
 
-	# dθsolver = zeros(mechanism.dimensions.state, solver.dimensions.parameters)
 	u = zeros(mechanism.dimensions.input)
 	z1_pred = zeros(mechanism.dimensions.state)
 
 	DojoLight.dynamics_jacobian_parameters(dw, mechanism, z, u, w=w, idx_parameters=idx_parameters)
-	# dθ .= dθsolver[:, idx_learnable_parameters]
-	################################################################################################################################
-	# dθ .*= -10.0
-
 	get_next_state!(z1_pred, mechanism)
 	return z1_pred
 end
@@ -85,7 +54,7 @@ end
 # traj gradient wrt z1:n w1:n
 function trajectory_gradient(ẑ, z, z0, w, idx_parameters, mechanism; complementarity_tolerance=1e-3)
 	H = length(z)
-	nz = 6
+	nz = mechanism.dimensions.state
 	nw = length(idx_parameters)
 
 	Q = I
@@ -118,7 +87,7 @@ end
 # traj quasi newton hessian wrt z1:n w1:n
 function trajectory_hessian(ẑ, z, z0, w, idx_parameters, mechanism; complementarity_tolerance=1e-3)
 	H = length(z)
-	nz = 6
+	nz = mechanism.dimensions.state
 	nw = length(idx_parameters)
 
 	Q = I(nz)

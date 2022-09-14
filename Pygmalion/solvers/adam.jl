@@ -19,6 +19,8 @@ end
 
 # Outer constructor
 function Adam(x::AbstractArray{Float64}, loss::Function, grad::Function)
+	g   = zeros(size(x))
+	s   = zeros(size(x))
     m   = zeros(size(x))
     v   = zeros(size(x))
     b1  = 0.9
@@ -26,7 +28,7 @@ function Adam(x::AbstractArray{Float64}, loss::Function, grad::Function)
     a   = 0.001
     eps = 1e-8
     t   = 0
-    Adam(x, loss, grad, m, v, b1, b2, a, eps, t)
+    Adam(x, g, s, loss, grad, m, v, b1, b2, a, eps, t)
 end
 
 # Step function with optional keyword arguments for the data passed to grad()
