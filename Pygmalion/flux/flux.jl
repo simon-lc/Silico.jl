@@ -13,40 +13,46 @@ set_floor!(vis, color=RGBA(0.4,0.4,0.4,0.4))
 
 
 Tf = Float32
-nβ = 10
+nβ = 1000
+# nβ = 1
 e0 = [0.0, 3.0]
-ρ0 = 0.001
+ρ0 = 1e-4
 
 
 Af = [0.0  1.0]
 bf = [0.1]
 of = [0.2, 0.1]
 
-Af1 = [+sqrt(2)/2 +sqrt(2)/2;
-       +sqrt(2)/2 -sqrt(2)/2
+Af1 = [0 1;
+       # +sqrt(2)/2 +sqrt(2)/2;
+       +sqrt(2)/2 -sqrt(2)/2;
+       # -sqrt(2)/2 -sqrt(2)/2;
+       -1.0 0.0;
        ]
-bf1 = [0.3, -0.5]
+bf1 = [0.7, -0.5, 2.0]
 of1 = [0.2, 0.1]
 θinit, polytope_dimensions = pack_halfspaces([Af, Af1], [bf, bf1], [of, of1])
 np = length(polytope_dimensions)
 
 # build_2d_polytope!(vis, Af, bf, name=:f)
-# build_2d_polytope!(vis, Af1, bf1, name=:f1)
+build_2d_polytope!(vis, Af1, bf1 + Af1 * of1, name=:f1)
 # plt = plot_polytope(Af, bf, 1000.0, plot_heatmap=false)
 # plot_polytope(Af1, bf1, 1000.0, plt=plt, plot_heatmap=false, S=100)
 
-Ap = [Ap1, Af]#Ap1, Ap2, Af]
-bp = [bp1, bf]#bp1, bp2, bf]
-op = [op1, of]#op1, op2, of]
+Ap = [Af1, Af]#Ap1, Ap2, Af]
+bp = [bf1, bf]#bp1, bp2, bf]
+op = [of1, of]#op1, op2, of]
 θinit, polytope_dimensions = pack_halfspaces(Ap, bp, op)
-for i = 1:3
-    build_2d_polytope!(vis, Ap[i], bp[i] + Ap[i] * op[i], name=Symbol(i))
-end
-# np =
+# for i = 1:3
+    # build_2d_polytope!(vis, Ap[i], bp[i] + Ap[i] * op[i], name=Symbol(i))
+# end
 
 e0 = [0, 2.0]
 # β0 = -π + atan(e0[2], e0[1]) .+ Vector(range(-0.0π, -0.0π, length=nβ))
 β0 = -π + atan(e0[2], e0[1]) .+ Vector(range(+0.35π, -0.35π, length=nβ))
+# β0 = -π + atan(e0[2], e0[1]) .+ Vector(range(+0.10π, -0.10π, length=nβ))
+# β0 = -π + atan(e0[2], e0[1]) .+ Vector(range(+0.00π, -0.00π, length=nβ))
+# β0 = -π + atan(e0[2], e0[1]) .+ Vector(range(-0.05π, -0.05π, length=nβ))
 d0 = trans_point_cloud(e0, β0, ρ0, θinit, polytope_dimensions)
 plot(d0[1,:], d0[2,:])
 build_point_cloud!(vis[:point_cloud], nβ; color=RGBA(0.9,0.1,0.1,1), name=Symbol(1))
@@ -77,17 +83,27 @@ function rendering_loss(α_prev::AbstractVector, α_ref::AbstractVector, v::Abst
     # v 2
     # A nh x 2
     # b nh
+    @show "wwwwwwwwwwwwww"
 
     nβ = length(α_ref)
     nh = length(b)
 
     αβ = α_prev
     Av = A * v
-    # @show b
-    αhβ = (Av .+ 1e-1*sign.(Av)) .\ b
-    αhβ = Av .\ b
+    # @show size(A)
+    # @show size(v)
+    # @show size(Av)
     # @show Av
+    # @show b
+    # αhβ = (Av .+ 1e-4 * sign.(Av)) .\ b
+    αhβ = max.(0, Av .\ b) # we apply max to avoid intersection with object behind the camera.
+
+    @show size(αhβ)
     @show αhβ
+    # @show size(b)
+    # αhβ = Av .\ b
+    # @show Av
+    # @show αhβ
     # @show b
 
     sdfv = zeros(nh, nβ)
@@ -95,29 +111,32 @@ function rendering_loss(α_prev::AbstractVector, α_ref::AbstractVector, v::Abst
     for i = 1:nh
         for j = 1:nβ
             sdfv[:,j] = αhβ[i,j] .* Av[:,j] .- b
-            @show sdfv[:,j]
         end
         for j = 1:nβ
             sdf[j] = maximum(sdfv[:,j])
         end
         for j = 1:nβ
-            @show sdf[j]
-            cnd = (sdf[j] < 1e-5) && (αhβ[i,j] .< αβ[j])
+            cnd = (sdf[j] < 1e-5) && (αhβ[i,j] < αβ[j])
             if cnd
-                αβ[j] = αhβ[i,j] * cnd
+                αβ[j] = αhβ[i,j]
             end
         end
     end
     return αβ
 end
 
+AAA = [1 2 3; 4 5 6; 7 8 9]
+AAA = [1; 2; 3;;]
+AAA = [1 4; 2 8; 3 12;]
+AAA .\ [2, 4, 6]
+
 function rendering_loss(α_ref::AbstractVector, v::AbstractMatrix{T},
-    A::AbstractVector, b::AbstractVector) where T
+    A::AbstractVector, b::AbstractVector; max_length=100.0) where T
 
     nβ = length(α_ref)
     np = length(b)
 
-    αβ = Inf * ones(T,nβ)
+    αβ = max_length * ones(T,nβ)
     for i = 1:np
         αβ = rendering_loss(αβ, α_ref, v, A[i], b[i])
     end
@@ -137,8 +156,8 @@ end
     )[2]
 
 αβ0
-plot(α0)
-plot!(αβ0, linewidth=6.0)
+scatter(α0)
+scatter!(αβ0, linewidth=6.0)
 
 
 
