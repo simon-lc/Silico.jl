@@ -119,7 +119,7 @@ function build_mechanism!(vis::GLVisualizer.Visualizer, mechanism::Mechanism;
     return nothing
 end
 
-function set_mechanism!(vis::GLVisualizer.Visualizer, mechanism::Mechanism, storage::Storage116, i::Int)
+function set_mechanism!(vis::GLVisualizer.Visualizer, mechanism::Mechanism, storage::TraceStorage, i::Int)
     for (j,body) in enumerate(mechanism.bodies)
         set_body!(vis, body, storage.x[i][j])
     end

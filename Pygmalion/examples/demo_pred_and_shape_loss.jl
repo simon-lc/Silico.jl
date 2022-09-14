@@ -1,13 +1,14 @@
 include(joinpath(module_dir(), "Pygmalion/Pygmalion.jl"))
-include("prediction.jl")
+# include("prediction.jl")
+include("shape_prediction.jl")
 include("shape_loss.jl")
 
 ################################################################################
 # visualize
 ################################################################################
 vis = Visualizer()
-render(vis)
-# open(vis)
+# render(vis)
+open(vis)
 set_background!(vis)
 set_light!(vis, direction="Negative")
 set_floor!(vis, color=RGBA(0.4,0.4,0.4,0.4))
@@ -36,7 +37,8 @@ bf = [0.0]
 of = [0.0]
 build_2d_polytope!(vis[:polytope], A0, b0 + A0 * o0,
 	name=:poly0, color=RGBA(1,1,1,1.0))
-
+θ_p, polytope_dimensions_p = pack_halfspaces([A0, Af], [b0, bf], [o0, of])
+θtruth, polytope_dimensions_truth = pack_halfspaces([A0], [b0], [o0])
 
 ################################################################################
 # inertial parameters
@@ -64,10 +66,7 @@ mech = get_polytope_drop(;
         complementarity_tolerance=ctol,
 		compressed_search_direction=true,
         max_iterations=30,
-        sparse_solver=false,
-        differentiate=false,
-        warm_start=false,
-        complementarity_correction=0.5,
+        sparse_solver=true,
         )
     );
 Mehrotra.solve!(mech.solver)
@@ -75,165 +74,15 @@ Mehrotra.solve!(mech.solver)
 ################################################################################
 # test simulation
 ################################################################################
-xp2 =  [+0.00, +1.50, -0.00]
+xp2 =  [+0.00, +1.50, +0.00]
 vp15 = [-2.00, +0.00, -3.00]
 z0 = [xp2; vp15]
-z0 = [xp2; vp15]
 
-H0 = 35
+H0 = 20
 storage = simulate!(mech, z0, H0+1)
 vis, anim = visualize!(vis, mech, storage)
 
 
-################################################################################
-# dimensions and parameter selection
-################################################################################
-# contact parameters =
-# 	friction_coefficient = 1     13 .+ (1:1)
-# 	Ap = 8     13 .+ (2:9)
-# 	bp = 4     13 .+ (10:13)
-# 	Ac = 2     13 .+ (14:15)
-# 	bc = 1     13 .+ (16:16)
-
-# idx_parameters = 13 .+ [1, 10]
-# idx_parameters = 13 .+ [10]
-idx_parameters = 13 .+ [10, 11, 12, 13]
-num_state = mech.dimensions.body_state
-num_parameters = mech.solver.dimensions.parameters
-num_learnable_parameters = length(idx_parameters)
-nz = num_state
-nw = num_learnable_parameters
-N = H0 * (nz + nw)
-
-################################################################################
-# ground truth
-################################################################################
-z0 = deepcopy(storage.z[1])
-ẑ = [deepcopy(storage.z[i+1]) for i=1:H0]
-zs = [deepcopy(storage.z[i+1]) for i=1:H0]
-ws = [deepcopy(μ0) for i=1:H0]
-# xtruth = vcat([[deepcopy(storage.z[i+1]); deepcopy(μ0)] for i=1:H0]...)
-xtruth = vcat([[deepcopy(storage.z[i+1]); deepcopy(μ0); 0.5] for i=1:H0]...)
-
-trajectory_loss(ẑ, zs, z0, ws, idx_parameters, mech)
-trajectory_gradient(ẑ, zs, z0, ws, idx_parameters, mech)
-trajectory_hessian(ẑ, zs, z0, ws, idx_parameters, mech)
-
-
-################################################################################
-# optimization
-################################################################################
-# NonconvexPercival
-function local_loss(x)
-	z = [x[(i-1)*(nz+nw) .+ (1:nz)] for i=1:H0]
-	w = [x[(i-1)*(nz+nw) + nz .+ (1:nw)] for i=1:H0]
-	trajectory_loss(ẑ, z, z0, w, idx_parameters, mech; complementarity_tolerance=ctol)
-end
-function local_grad(x)
-	z = [x[(i-1)*(nz+nw) .+ (1:nz)] for i=1:H0]
-	w = [x[(i-1)*(nz+nw) + nz .+ (1:nw)] for i=1:H0]
-	trajectory_gradient(ẑ, z, z0, w, idx_parameters, mech; complementarity_tolerance=ctol_grad)
-end
-function local_hess(x)
-	z = [x[(i-1)*(nz+nw) .+ (1:nz)] for i=1:H0]
-	w = [x[(i-1)*(nz+nw) + nz .+ (1:nw)] for i=1:H0]
-	trajectory_hessian(ẑ, z, z0, w, idx_parameters, mech; complementarity_tolerance=ctol_grad)
-end
-
-function eq_fct(x)
-	eq = zeros((H0-1) * nw)
-	idx1 = vcat([(i-1)*(nz+nw) + nz .+ (1:nw) for i=1:H0-1]...)
-	idx2 = vcat([i*(nz+nw) + nz .+ (1:nw) for i=1:H0-1]...)
-	eq = x[idx1] .- x[idx2]
-	return 1e-3*eq
-end
-
-model = Nonconvex.Model()
-xinit = vcat([[0*ones(nz); 1.0*ones(nw)] for i = 1:H0]...)
-lb = vcat([[-10*ones(nz); 0.0*ones(nw)] for i = 1:H0]...)
-ub = vcat([[+10*ones(nz); 1.0*ones(nw)] for i = 1:H0]...)
-addvar!(model, lb, ub, init=xinit, integer=falses(N))
-add_eq_constraint!(model, eq_fct)
-obj_fct = CustomHessianFunction(local_loss, local_grad, local_hess)
-set_objective!(model, obj_fct)
-
-verbose = true
-alg = IpoptAlg()
-max_cpu_time = 90.0
-print_level = verbose ? 5 : 0
-options = IpoptOptions(print_level=print_level, max_cpu_time=max_cpu_time)
-
-# alg = AugLag()
-# options = AugLagOptions(
-# 	# first_order = false,
-# 	rtol = 1e-4
-# 	)
-
-result = Nonconvex.optimize(model, alg, xinit, options=options)
-xmin = result.minimizer
-
-local_loss(xinit)
-local_loss(xtruth)
-local_loss(xmin)
-xmin[7:7:end]
-xmin[7:8:end]
-xmin[8:8:end]
-xmin[7:10:end]
-xmin[8:10:end]
-xmin[9:10:end]
-xmin[10:10:end]
-
-# xtruth = vcat([[deepcopy(storage.z[i+1]); deepcopy(μ0); +0.5] for i=1:H0]...)
-xtruth = vcat([[deepcopy(storage.z[i+1]); +0.5*ones(nw)] for i=1:H0]...)
-# xtruth = vcat([[deepcopy(storage.z[i+1]); +0.5] for i=1:H0]...)
-local_loss(xtruth)
-
-
-
-a = 10
-a = 10
-a = 10
-a = 10
-a = 10
-a = 10
-a = 10
-a = 10
-a = 10
-a = 10
-a = 10
-a = 10
-a = 10
-a = 10
-a = 10
-a = 10
-a = 10
-a = 10
-a = 10
-a = 10
-a = 10
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -243,7 +92,7 @@ a = 10
 
 
 ################################################################################
-# shape
+# visualize true shape
 ################################################################################
 θP = []
 for i = 1:H0
@@ -283,8 +132,9 @@ d_object = filter_point_cloud(d0, poses=[x[1] for x in storage.x], altitude_thre
 θinit, kmres = parameter_initialization(d_object, polytope_dimensions)
 Ainit, binit, oinit = unpack_halfspaces(deepcopy(θinit), polytope_dimensions)
 
+
+
 visualize_kmeans!(vis, θinit, polytope_dimensions, d_object, kmres)
-polytope_dimensions
 setvisible!(vis[:cluster], true)
 setvisible!(vis[:initial], true)
 setvisible!(vis[:cluster], false)
@@ -302,12 +152,12 @@ local_projection(θ) = projection(θ, polytope_dimensions,
 	)
 
 shape_loss_parameters
-max_iterations = 200
+max_iterations = 50
 
 ################################################################################
 # solve
 ################################################################################
-function local_loss(θ, polytope_dimensions=polytope_dimensions)
+function local_shape_loss(θ, polytope_dimensions=polytope_dimensions)
 	np = length(polytope_dimensions)
 	l = 0.0
 	A, b, o = unpack_halfspaces(θ, polytope_dimensions)
@@ -322,42 +172,173 @@ function local_loss(θ, polytope_dimensions=polytope_dimensions)
 	return l / H0
 end
 
-# local_grad(θ) = ForwardDiff.gradient(θ -> local_loss(θ), θ)
-θtruth, polytope_dimensions_truth = pack_halfspaces([A0], [b0], [o0])
-unpack_halfspaces(θtruth, polytope_dimensions_truth)
-local_loss(θtruth, polytope_dimensions_truth)
-local_loss(θtruth, polytope_dimensions_truth)
-
-local_loss(θinit)
-local_grad(θinit)
+# local_shape_grad(θ) = ForwardDiff.gradient(θ -> local_shape_loss(θ), θ)
+local_shape_loss(θtruth, polytope_dimensions_truth)
+local_shape_loss(θinit)
+local_shape_grad(θinit)
 
 
-adam_opt = Adam(θinit, local_loss, local_grad)
-adam_opt.a = 3e-3
+adam_opt = Adam(θinit, local_shape_loss, local_shape_grad)
+adam_opt.a = 5e-3
 
 θsol0, θiter0 = adam_solve!(adam_opt,
 	projection=local_projection,
 	max_iterations=max_iterations)
-vis, anim = visualize_iterates!(vis, θiter0[1:5:end], polytope_dimensions, e0, β0, ρ0,
+vis, anim = visualize_iterates!(vis, θiter0[1:2:end], polytope_dimensions, e0, β0, ρ0,
 	max_iterations=max_iterations+1, color=iterate_color)
 
 Asol, bsol, osol = unpack_halfspaces(θsol0, polytope_dimensions)
-for i = 1:H0
-	for j = 1:np
-		build_2d_polytope!(vis[:sol][Symbol(i)], Asol[j], bsol[j] + Asol[j] * osol[j], name=Symbol(j), color=RGBA(1,1,1,1.0))
-		set_2d_polytope!(vis[:sol][Symbol(i)], storage.x[i][1][1:2], storage.x[i][1][3:3], name=Symbol(j))
+
+
+
+RobotVisualizer.convert_frames_to_video_and_gif("learning_shape_second_phase_50")
+
+################################################################################
+# dynamics_loss
+################################################################################
+learned_mech = get_bundle_drop(;
+    timestep=timestep,
+    gravity=gravity,
+    mass=mass,
+    inertia=inertia,
+    friction_coefficient=μ0[1],
+	method_type=:symbolic,
+	A=Asol,
+	b=bsol .+ Asol .* osol,
+    options=Mehrotra.Options(
+        verbose=false,
+		residual_tolerance=ctol/10,
+        complementarity_tolerance=ctol,
+		compressed_search_direction=true,
+        max_iterations=30,
+        sparse_solver=true,
+        )
+    );
+
+parameter_dimension.(learned_mech.contacts)
+idx_parameters = vcat([13 + (3nh+4)*(i-1) .+ (1+1:1+3nh) for i=1:np]...)
+num_state = mech.dimensions.body_state
+num_learnable_parameters = length(idx_parameters)
+nz = num_state
+nw = num_learnable_parameters
+
+
+################################################################################
+# test simulation
+################################################################################
+function dynamics_loss(learned_mechanism::Mechanism{T}, storage::TraceStorage{T,N}, w, idx_parameters) where {T,N}
+	H = N - 1
+	nz = learned_mechanism.dimensions.state
+	z_pred = zeros(nz)
+	Q = I
+
+	l = 0.0
+	for i = 1:H
+		z = storage.z[i]
+		z1 = storage.z[i+1]
+		u = zeros(learned_mechanism.dimensions.input)
+		dynamics(z_pred, learned_mechanism, z, u, w=w, idx_parameters=idx_parameters)
+
+		l += 0.5 * (z_pred - z1)' * Q * (z_pred - z1)
 	end
+	return l / H
 end
 
-for i = 1:H0
-	atframe(anim, i) do
-		for ii = 1:H0
-			setvisible!(vis[:sol][Symbol(ii)], ii == i)
-			setvisible!(vis[:point_cloud][Symbol(ii)], ii == i)
-		end
+function dynamics_grad(learned_mechanism::Mechanism{T}, storage::TraceStorage{T,N}, w, idx_parameters) where {T,N}
+	H = N - 1
+	nz = learned_mechanism.dimensions.state
+	nw = length(idx_parameters)
+	dw = zeros(nz, nw)
+	grad = zeros(nw)
+	z_pred = zeros(nz)
+	Q = I
+
+	for i = 1:H
+		z = storage.z[i]
+		z1 = storage.z[i]
+		u = zeros(learned_mechanism.dimensions.input)
+		dynamics(z_pred, learned_mechanism, z, u, w=w, idx_parameters=idx_parameters)
+		dynamics_jacobian_parameters(dw, learned_mechanism, z, u, w=w, idx_parameters=idx_parameters)
+		grad .+= dw' * Q * (z_pred - z1)
 	end
+	return grad / H
 end
 
-MeshCat.setanimation!(vis, anim)
+function θ_to_w(θ::Vector{T}, polytope_dimensions) where T
+	np = length(polytope_dimensions)
+	w = zeros(T, sum(3*polytope_dimensions))
 
-# RobotVisualizer.convert_frames_to_video_and_gif("shape_learning_reference")
+	off = 0
+	for i = 1:np
+		nh = polytope_dimensions[i]
+		A, b, o = unpack_halfspaces(θ, polytope_dimensions, i)
+		w[off .+ (1:3nh)] = [A; b + reshape(A, (nh,2)) * o]
+		off += 3nh
+	end
+	return w
+end
+
+function θ_to_w_jacobian(θ, polytope_dimensions)
+	ForwardDiff.jacobian(θ -> θ_to_w(θ, polytope_dimensions), θ)
+end
+
+
+
+
+# storage
+# w = θ_to_w(θtruth, polytope_dimensions_truth)
+# idx_parameters = vcat([13 + (12+4)*(i-1) .+ (1+1:1+12) for i=1:1]...)
+# dynamics_loss(mech, storage, w, idx_parameters)
+
+w = θ_to_w(θsol0, polytope_dimensions)
+idx_parameters = vcat([13 + (3nh+4)*(i-1) .+ (1+1:1+3nh) for i=1:np]...)
+dynamics_loss(learned_mech, storage, w, idx_parameters)
+g10 = dynamics_grad(learned_mech, storage, w, idx_parameters)
+# g20 = FiniteDiff.finite_difference_gradient(w -> dynamics_loss(learned_mech, storage, w, idx_parameters), w)
+scatter(g10)
+scatter!(g20)
+
+function local_dynamics_loss(θ, polytope_dimensions=polytope_dimensions)
+	w = θ_to_w(θ, polytope_dimensions)
+	l = dynamics_loss(learned_mech, storage, w, idx_parameters)
+	return l
+end
+
+function local_dynamics_grad(θ, polytope_dimensions=polytope_dimensions)
+	w = θ_to_w(θ, polytope_dimensions)
+	dwdθ = θ_to_w_jacobian(θ, polytope_dimensions)
+	dldw = dynamics_grad(learned_mech, storage, w, idx_parameters)
+	grad = dwdθ' * dldw
+	return grad
+end
+
+
+
+function local_loss(θ, polytope_dimensions=polytope_dimensions)
+	l = 0.0
+	l += local_shape_loss(θ, polytope_dimensions)
+	l += local_dynamics_loss(θ, polytope_dimensions)
+	return l
+end
+
+function local_grad(θ, polytope_dimensions=polytope_dimensions)
+	nθ = length(θ)
+	grad = zeros(nθ)
+	grad .+= local_shape_grad(θ)
+	grad .+= local_dynamics_grad(θ, polytope_dimensions)
+	return grad
+end
+
+
+local_loss(θsol0)
+local_grad(θsol0)
+
+
+adam_opt = Adam(deepcopy(θsol0), local_loss, local_grad)
+adam_opt.a = 2e-3
+
+θsol1, θiter1 = adam_solve!(adam_opt,
+	projection=local_projection,
+	max_iterations=max_iterations)
+vis, anim = visualize_iterates!(vis, θiter1[1:2:end], polytope_dimensions, e0, β0, ρ0,
+	max_iterations=max_iterations+1, color=iterate_color)

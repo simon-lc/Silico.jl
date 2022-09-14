@@ -58,8 +58,10 @@ function unpack_halfspaces(θ::Vector{T}) where T
     b = zeros(T, n)
     o = zeros(T, 2)
 
-    for i = 1:n
-        A[i,:] .= θ[2*(i-1) .+ (1:2)]
+	# for i = 1:n
+    for i = 1:2
+		# A[i,:] .= θ[2*(i-1) .+ (1:2)]
+		A[:,i] .= θ[n*(i-1) .+ (1:n)]
         # A[i,:] .= [cos(θ[i]), sin(θ[i])]
     end
     b .= θ[2n .+ (1:n)]
@@ -74,8 +76,10 @@ function pack_halfspaces(A::Matrix{T}, b::Vector{T}, o::Vector{T}) where T
     θ = zeros(T,2+3n)
     # θ = zeros(T,2+2n)
 
-    for i = 1:n
-        θ[2*(i-1) .+ (1:2)] = A[i,1:2]
+	# for i = 1:n
+    for i = 1:2
+		# θ[2*(i-1) .+ (1:2)] = A[i,1:2]
+        θ[n*(i-1) .+ (1:n)] .= A[:,i]
         # θ[i] = atan(A[i,2], A[i,1])
     end
     θ[2n .+ (1:n)] .= b

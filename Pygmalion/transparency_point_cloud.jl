@@ -7,7 +7,8 @@ function trans_intersection(e::AbstractVector, v::AbstractVector, ρ,
 
 	c = 0
     for i = 1:nh
-		@views ai = A[(i-1)*d .+ (1:d)]
+		# @views ai = A[(i-1)*d .+ (1:d)]
+		@views ai = A[i:nh:end]
         denum = ai' * v
         (abs(denum) < 1e-5) && continue
         α = (b[i] - ai' * e + ai' * o) / denum
@@ -15,7 +16,8 @@ function trans_intersection(e::AbstractVector, v::AbstractVector, ρ,
 		# s = maximum(A * x .- b)
         s = -Inf
 		for j = 1:nh
-			@views aj = A[(j-1)*d .+ (1:d)]
+			# @views aj = A[(j-1)*d .+ (1:d)]
+			@views aj = A[j:nh:end]
 			prod = aj'*e - aj'*o + α*aj'*v - b[j]
 			s = max(s, prod)
 		end

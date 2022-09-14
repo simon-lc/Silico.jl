@@ -111,7 +111,7 @@ end
 function simulate!(mechanism::Mechanism{T}, z0, H::Int;
         controller::Function=(m,i)->nothing) where T
 
-    storage = Storage(mechanism.dimensions, H, T)
+    storage = TraceStorage(mechanism.dimensions, H, T)
     z = copy(z0)
     for i = 1:H
         z .= step!(mechanism, z, controller=m -> controller(m,i))

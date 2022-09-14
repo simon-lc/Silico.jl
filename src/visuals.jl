@@ -79,7 +79,7 @@ function build_mechanism!(vis::Visualizer, mechanism::Mechanism;
     return nothing
 end
 
-function set_mechanism!(vis::Visualizer, mechanism::Mechanism, storage::Storage116,
+function set_mechanism!(vis::Visualizer, mechanism::Mechanism, storage::TraceStorage,
         i::Int; show_contact::Bool=true, name::Symbol=:robot)
 
     for (j,body) in enumerate(mechanism.bodies)
@@ -106,7 +106,7 @@ function set_mechanism!(vis::Visualizer, mechanism::Mechanism, z; name::Symbol=:
     return nothing
 end
 
-function visualize!(vis::Visualizer, mechanism::Mechanism, storage::Storage116{T,H};
+function visualize!(vis::Visualizer, mechanism::Mechanism, storage::TraceStorage{T,H};
         build::Bool=true,
         show_contact::Bool=true,
         name::Symbol=:robot,

@@ -48,14 +48,16 @@ function sdfV(p::AbstractVector, A::AbstractVector, b::AbstractVector, o::Abstra
 	# findmax
 	vm = -Inf
 	for i = 1:n
-		@views ai = A[(i-1)*d .+ (1:d)]
+		# @views ai = A[(i-1)*d .+ (1:d)]
+		@views ai = A[i:n:end]
 		vi = δ * (ai' * p - ai' * o - b[i])
 		vm = max(vm, vi)
 	end
 	# sum exp
 	e = 0.0
 	for i = 1:n
-		@views ai = A[(i-1)*d .+ (1:d)]
+		# @views ai = A[(i-1)*d .+ (1:d)]
+		@views ai = A[i:n:end]
 		vi = δ * (ai' * p - ai' * o - b[i])
 		e += exp(vi - vm)
 	end

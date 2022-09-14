@@ -11,7 +11,7 @@ function parameter_initialization(d::Matrix, polytope_dimensions)
 	θ = zeros(0)
 	for i = 1:np
 	    angles = range(-π, π, length=nh+1)[1:end-1]
-		θi = [vcat([[cos(a), sin(a)] for a in angles]...); b_mean*ones(nh); kmres.centers[:, i]]
+		θi = [[cos.(angles); sin.(angles)] ; b_mean*ones(nh); kmres.centers[:, i]]
 	    A, b, o = unpack_halfspaces(θi)
 	    push!(θ, pack_halfspaces(A, b, o)...)
 	end

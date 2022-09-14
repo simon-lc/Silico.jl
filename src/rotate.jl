@@ -7,6 +7,7 @@ vector_rotate(v::AbstractVector,q::Quaternion) = Vmat(quaternion_rotate(Quaterni
 
 
 function x_2d_rotation(q)
+    # rotation from body frame to world frame
     c = cos(q[1])
     s = sin(q[1])
     R = [c -s;
