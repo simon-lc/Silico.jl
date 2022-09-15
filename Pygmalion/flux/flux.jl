@@ -19,7 +19,7 @@ e0 = [0.0, 3.0]
 ρ0 = 1e-4
 
 
-Af = [0.0  1.0]
+Af = [0.5  0.9]
 bf = [0.1]
 of = [0.2, 0.1]
 
@@ -34,14 +34,11 @@ of1 = [0.2, 0.1]
 θinit, polytope_dimensions = pack_halfspaces([Af, Af1], [bf, bf1], [of, of1])
 np = length(polytope_dimensions)
 
-# build_2d_polytope!(vis, Af, bf, name=:f)
 build_2d_polytope!(vis, Af1, bf1 + Af1 * of1, name=:f1)
-# plt = plot_polytope(Af, bf, 1000.0, plot_heatmap=false)
-# plot_polytope(Af1, bf1, 1000.0, plt=plt, plot_heatmap=false, S=100)
 
-Ap = [Af1, Af]#Ap1, Ap2, Af]
-bp = [bf1, bf]#bp1, bp2, bf]
-op = [of1, of]#op1, op2, of]
+Ap = [Af1, Af]
+bp = [bf1, bf]
+op = [of1, of]
 θinit, polytope_dimensions = pack_halfspaces(Ap, bp, op)
 # for i = 1:3
     # build_2d_polytope!(vis, Ap[i], bp[i] + Ap[i] * op[i], name=Symbol(i))
@@ -49,7 +46,7 @@ op = [of1, of]#op1, op2, of]
 
 e0 = [0, 2.0]
 # β0 = -π + atan(e0[2], e0[1]) .+ Vector(range(-0.0π, -0.0π, length=nβ))
-β0 = -π + atan(e0[2], e0[1]) .+ Vector(range(+0.35π, -0.35π, length=nβ))
+β0 = -π + atan(e0[2], e0[1]) .+ Vector(range(-0.35π, +0.35π, length=nβ))
 # β0 = -π + atan(e0[2], e0[1]) .+ Vector(range(+0.10π, -0.10π, length=nβ))
 # β0 = -π + atan(e0[2], e0[1]) .+ Vector(range(+0.00π, -0.00π, length=nβ))
 # β0 = -π + atan(e0[2], e0[1]) .+ Vector(range(-0.05π, -0.05π, length=nβ))
@@ -72,7 +69,7 @@ AA = [convert.(Tf, Ai) for Ai in AA]
 bb = [convert.(Tf, bi) for bi in bb]
 
 function rendering_loss(α_prev::AbstractVector, α_ref::AbstractVector, v::AbstractMatrix,
-    A::AbstractMatrix, b::AbstractVector)
+    A::AbstractMatrix, b::AbstractVector; max_length=5.0)
 
     # sdf nβ
     # sdfv nh x nβ
@@ -83,110 +80,51 @@ function rendering_loss(α_prev::AbstractVector, α_ref::AbstractVector, v::Abst
     # v 2
     # A nh x 2
     # b nh
-    @show "wwwwwwwwwwwwww"
 
     nβ = length(α_ref)
     nh = length(b)
 
     αβ = α_prev
     Av = A * v
-    # @show size(A)
-    # @show size(v)
-    # @show size(Av)
-    # @show Av
-    # @show b
-    # αhβ = (Av .+ 1e-4 * sign.(Av)) .\ b
     αhβ = max.(0, Av .\ b) # we apply max to avoid intersection with object behind the camera.
 
-    @show size(αhβ)
-    @show αhβ
-    # @show size(b)
-    # αhβ = Av .\ b
-    # @show Av
-    # @show αhβ
-    # @show b
-
-    sdfv = zeros(nh, nβ)
-    sdf = zeros(nβ)
     for i = 1:nh
-        for j = 1:nβ
-            sdfv[:,j] = αhβ[i,j] .* Av[:,j] .- b
-        end
-        for j = 1:nβ
-            sdf[j] = maximum(sdfv[:,j])
-        end
-        for j = 1:nβ
-            cnd = (sdf[j] < 1e-5) && (αhβ[i,j] < αβ[j])
-            if cnd
-                αβ[j] = αhβ[i,j]
-            end
-        end
+        # for a given half-space i compute the value of the all half-spaces for all rays j
+        sdfv = αhβ[i,:]' .* Av .- b
+        # compute sdf for all rays j hitting the half-space i as the maximum over all half-spaces
+        sdf = vec(findmax(sdfv, dims=1)[1])
+        # compute condition for updating α
+        cnd = (sdf .< 1e-5) .&& (αhβ[i,:] .< αβ)
+        # update value of α if condition is met
+        αβ = cnd .* αhβ[i,:] + (1 .- cnd) .* αβ
     end
+    # we obtain the length of each ray after intersection with polytope A, b
     return αβ
 end
 
-AAA = [1 2 3; 4 5 6; 7 8 9]
-AAA = [1; 2; 3;;]
-AAA = [1 4; 2 8; 3 12;]
-AAA .\ [2, 4, 6]
-
 function rendering_loss(α_ref::AbstractVector, v::AbstractMatrix{T},
-    A::AbstractVector, b::AbstractVector; max_length=100.0) where T
+    A::AbstractVector, b::AbstractVector; max_length=5.0) where T
 
     nβ = length(α_ref)
     np = length(b)
 
     αβ = max_length * ones(T,nβ)
     for i = 1:np
-        αβ = rendering_loss(αβ, α_ref, v, A[i], b[i])
+        αβ = rendering_loss(αβ, α_ref, v, A[i], b[i], max_length=max_length)
     end
-    return sum((α_ref .- αβ).^2) / nβ, αβ
+    return sum((α_ref .- αβ).^2) / nβ
+    # return αβ
 end
 
-# A = [1 2; 3 4]
-# b = [10, 20]
-# A .\ b
-
-
-αβ0 = rendering_loss(
+@elapsed αβ0 = rendering_loss(
     α0,
     v0,
     AA,
     bb,
-    )[2]
+    )
 
-αβ0
-scatter(α0)
+scatter(α0, ylims=(0, 5))
 scatter!(αβ0, linewidth=6.0)
-
-
-
-
-@elapsed rendering_loss(
-    cnd,
-    sdf0,
-    sdfv,
-    Av,
-    αβ,
-    αhβ,
-    α0,
-    v0,
-    AA[1],
-    bb[1],
-    )
-
-@elapsed rendering_loss(
-    cu_cnd,
-    cu_sdf0,
-    cu_sdfv,
-    cu_Av,
-    cu_αβ,
-    cu_αhβ,
-    cu_α0,
-    cu_v0,
-    cu_AA[1],
-    cu_bb[1],
-    )
 
 dAb_loss(α, v, AA, bb) = gradient(rendering_loss,
     α,
@@ -194,7 +132,15 @@ dAb_loss(α, v, AA, bb) = gradient(rendering_loss,
     AA,
     bb)[3:4]
 
-dAb_loss(α0, v0, AA[1], bb[1])
+@elapsed dAb_loss(α0, v0, AA, bb)
+
+aaa = 10
+aaa = 10
+aaa = 10
+aaa = 10
+aaa = 10
+aaa = 10
+
 # @benchmark dAb_loss(α0, v0, AA[1], bb[1])
 
 
@@ -308,3 +254,72 @@ dAb_loss(α0, v0, AA[1], bb[1])
 # Av = zeros(Tf, nh, nβ)
 # αβ = zeros(Tf, nβ)
 # αhβ = zeros(Tf, nh, nβ)
+
+# @elapsed rendering_loss(
+#     cnd,
+#     sdf0,
+#     sdfv,
+#     Av,
+#     αβ,
+#     αhβ,
+#     α0,
+#     v0,
+#     AA[1],
+#     bb[1],
+#     )
+#
+# @elapsed rendering_loss(
+#     cu_cnd,
+#     cu_sdf0,
+#     cu_sdfv,
+#     cu_Av,
+#     cu_αβ,
+#     cu_αhβ,
+#     cu_α0,
+#     cu_v0,
+#     cu_AA[1],
+#     cu_bb[1],
+#     )
+
+
+
+#
+# function rendering_loss(α_prev::AbstractVector, α_ref::AbstractVector, v::AbstractMatrix,
+#     A::AbstractMatrix, b::AbstractVector)
+#
+#     # sdf nβ
+#     # sdfv nh x nβ
+#     # Av nh x nβ
+#     # αβ nβ
+#     # αhβ nh x nβ
+#     # α_ref nβ
+#     # v 2
+#     # A nh x 2
+#     # b nh
+#
+#     nβ = length(α_ref)
+#     nh = length(b)
+#
+#     αβ = α_prev
+#     Av = A * v
+#     αhβ = max.(0, Av .\ b) # we apply max to avoid intersection with object behind the camera.
+#
+#     sdfv = zeros(nh, nβ)
+#     sdf = zeros(nβ)
+#     for i = 1:nh
+#         for j = 1:nβ
+#             sdfv[:,j] = αhβ[i,j] .* Av[:,j] .- b
+#         end
+#         for j = 1:nβ
+#             sdf[j] = maximum(sdfv[:,j])
+#         end
+#         for j = 1:nβ
+#             cnd = (sdf[j] < 1e-5) && (αhβ[i,j] < αβ[j])
+#             if cnd
+#                 αβ[j] = αhβ[i,j]
+#             end
+#         end
+#     end
+#     return αβ
+# end
+#
