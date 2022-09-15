@@ -90,11 +90,10 @@ function pack_halfspaces(A::Matrix{T}, b::Vector{T}, o::Vector{T}) where T
 end
 
 function add_floor(θ, polytope_dimensions)
-    A, b, o = unpack_halfspaces(θ, polytope_dimensions)
-    Af = [0 1.0]
+    Af = [0.0 1.0]
     bf = [0.0]
-    of = [0, 0.0]
-    return pack_halfspaces([A..., Af], [b..., bf], [o..., of])
+    of = [0.0, 0.0]
+    return [θ; vec(Af); bf; of], [polytope_dimensions; 1]
 end
 
 function add_floor(A, b, o)
@@ -160,6 +159,14 @@ function transform(A::Vector{Matrix{T}}, b::Vector{Vector{T}}, o::Vector{Vector{
 		push!(ot, oti)
 	end
 	return At, bt, ot
+end
+
+function preprocess_halfspaces(θ, polytope_dimensions)
+	θ_floor, polytope_dimensions_floor = add_floor(θ, polytope_dimensions)
+	np = length(polytope_dimensions_floor)
+	A, b, o = unpack_halfspaces(θ_floor, polytope_dimensions_floor)
+	bo = [b[i] + (A[i] * o[i]) for i = 1:np]
+	return A, b, bo
 end
 
 function normalize_A!(A::Matrix; ϵ=1e-6)

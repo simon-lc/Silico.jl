@@ -279,8 +279,6 @@ function shape_loss(θ, polytope_dimensions, e, β, ρ, d_ref;
 		for j = 1:nh
 			p = o[i] - A[i][j,:] .* b[i][j] / norm(A[i][j,:])^2
 			ϕ = sdf(p, A[i], b[i], o[i], δ_sdf)
-			# l += shape_regularization * 10 * (1 - sigmoid(-1/δ_sigmoid * ϕ))^2 / (np * nh)
-			# l += shape_regularization * 10 * (1 - sigmoid(-1/δ_sigmoid * ϕ))^2 / (np * nh)
 			l += shape_regularization * 1.0 * (0.5*ϕ^2 + softabs(ϕ, δ_softabs)) / (np * nh)
 		end
 	end
