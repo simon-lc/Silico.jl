@@ -82,16 +82,19 @@ function ray_rendering(v::AbstractMatrix{T}, e::AbstractMatrix,
 	return αβ
 end
 
-function rendering_loss(α_ref::AbstractVector, v::AbstractMatrix{T}, e::AbstractMatrix,
+function rendering_loss(α_ref::AbstractVector, α_floor::AbstractVector, v::AbstractMatrix{T}, e::AbstractMatrix,
     A::AbstractVector, b::AbstractVector; max_length=100.0) where T
 
 	αβ = ray_rendering(v, e, A, b, max_length=max_length)
-	Δα = α_ref .- αβ
+	# since A, b does not contains the floor half-space we clip α to α_floor which is the maximum value of α with the floor half-space
+	# this takes into accoun the fact that the polytope A, b, can be located at a non zero pose.
+	α = min.(αβ, α_floor)
+	Δα = α_ref .- α
 	l = sum(0.5 * Δα.^2 + abs.(Δα)) / nβ
 	return l
 end
 
-function inside_loss(α::AbstractVector, v::AbstractMatrix, e::AbstractMatrix,
+function inside_loss(α::AbstractVector,  v::AbstractMatrix, e::AbstractMatrix,
 	    A::AbstractVector, b::AbstractVector;
 		δ_sdf::T=15.0,
 		δ_sigmoid::T=0.1,
@@ -159,53 +162,11 @@ function sdf_matching_loss(α::AbstractVector, v::AbstractMatrix, e::AbstractMat
 
 	ϕ = vectorized_sdf(α, v, e, A, b, δ_sdf, max_length=100.0)
 	l = 0.1 * sum(0.5 * ϕ.^2 + softabs.(ϕ, δ_softabs))
-	# l = 0.1 * (0.5 * ϕ.^2 + softabs.(ϕ, δ_softabs))
-	# @warn "we need to remove the nβ factor"
 	return l / nβ
 end
 
-function vectorized_ray(eye_positions::AbstractVector, β::AbstractVector, A::AbstractVector,
-	 	b::AbstractVector, o::AbstractVector;
-		altitude_threshold=0.01,
-		max_length=100.0,
-		)
-
-	ne = length(eye_positions)
-	np = length(A)
-
-	bo = [b[j] + A[j] * o[j] for j = 1:np]
-
-	α = []
-	α_hit = []
-	v = []
-	v_hit = []
-	e = []
-	e_hit = []
-	for i = 1:ne
-		nβ = length(β[i])
-		ei = hcat([eye_positions[i] for j = 1:nβ]...)
-		vi = [cos.(β[i])'; sin.(β[i])']
-		αi = ray_rendering(vi, ei, A, bo; max_length=max_length)
-		# altitude (position along the z axis) of the point coming from ray j
-		altitude = αi .* vi[2,:] .+ ei[2,:]
-		cnd = altitude .>= altitude_threshold
-		push!(α, αi)
-		push!(α_hit, αi[cnd])
-		push!(v, vi)
-		push!(v_hit, vi[:,cnd])
-		push!(e, ei)
-		push!(e_hit, ei[:,cnd])
-	end
-	α = vcat(α...)
-	α_hit = vcat(α_hit...)
-	v = hcat(v...)
-	v_hit = hcat(v_hit...)
-	e = hcat(e...)
-	e_hit = hcat(e_hit...)
-	return α, α_hit, v, v_hit, e, e_hit
-end
-
 function keyword_shape_loss(α::AbstractVector, α_hit::AbstractVector,
+		αmax::AbstractVector, αmax_hit::AbstractVector,
 		v::AbstractMatrix, v_hit::AbstractMatrix,
 		e::AbstractMatrix, e_hit::AbstractMatrix,
 		A::AbstractVector, b::AbstractVector, bo::AbstractVector,
@@ -220,6 +181,7 @@ function keyword_shape_loss(α::AbstractVector, α_hit::AbstractVector,
 end
 
 function shape_loss(α::AbstractVector, α_hit::AbstractVector,
+		αmax::AbstractVector, αmax_hit::AbstractVector,
 		v::AbstractMatrix, v_hit::AbstractMatrix,
 		e::AbstractMatrix, e_hit::AbstractMatrix,
 		A::AbstractVector, b::AbstractVector, bo::AbstractVector;
@@ -244,29 +206,13 @@ function shape_loss(α::AbstractVector, α_hit::AbstractVector,
 
 	polytope_dimensions = length.(b)
 	np = length(polytope_dimensions)
-	# without the floor half-space
-	Ar, br, bor = A[1:end-1], b[1:end-1], bo[1:end-1]
+
 	l = 0.0
 	# regularization
-	for i = 1:np-1
-		Δ = norm(br[i] .- mean(br[i]))
+	for i = 1:np
+		Δ = norm(b[i] .- mean(b[i]))
 		l += side_regularization * 10.0 * (0.5*Δ^2 + softabs(Δ, δ_softabs)) / sum(polytope_dimensions)
 	end
-
-	# # inside sampling, overlap penalty
-	# for i = 1:np-1
-	# 	p = zeros(2)
-	# 	ϕ = sum([sigmoid(-10*sdf(p, A[k], bo[k], zeros(2), δ_sdf)) for k in 1:np])
-	# 	l += overlap * 1e-2 * softplus(ϕ - 1, δ_softabs)^2 / np
-	# 	nh = polytope_dimensions[i]
-	# 	for j = 1:nh
-	# 		for α ∈ [1.00, 0.75, 0.5, 0.25]
-	# 			p = - α * A[i][j,:] .* bo[i][j] / norm(A[i][j,:])^2
-	# 			ϕ = sum([sigmoid(-10 * sdf(p, A[k], bo[k], zeros(2), δ_sdf)) for k in 1:np])
-	# 			l += overlap * 1e-2 * softplus(ϕ - 2, δ_softabs)^2 / (np * nh * length(α))
-	# 		end
-	# 	end
-	# end
 
 	# regularization of polytope shape
 	for i = 1:np
@@ -279,33 +225,17 @@ function shape_loss(α::AbstractVector, α_hit::AbstractVector,
 	end
 
 	# rendering
-	l += rendering * rendering_loss(α, v, e, A, bo; max_length=100.0)
-
-	# # # individual
-	# # l += individual * individual_loss(θ_f, polytope_dimensions_f, e[i], β[i], d_ref[i];
-	# # 	δ_sdf=δ_sdf,
-	# # 	δ_softabs=δ_softabs,
-	# # 	altitude_threshold=altitude_threshold) / ne
+	l += rendering * rendering_loss(α, αmax, v, e, A, bo; max_length=100.0)
 
 	# sdf matching
-	l += sdf_matching * sdf_matching_loss(α, v, e, A, b;
+	l += sdf_matching * sdf_matching_loss(α_hit, v_hit, e_hit, A, bo;
 			δ_sdf=10*δ_sdf,
 			δ_softabs=δ_softabs,
 			)
 
 	# floor sampling
 	# only valid when the body frame is aligned with the world frame
-	α_floor = - e_hit[2,:] ./ v_hit[2,:]
-	d_floor = e_hit .+ α_floor' .* v_hit
-	d_floor1 = e_hit .+ (1thickness / 10 .+ α_floor)' .* v_hit
-	d_floor2 = e_hit .+ (2thickness / 10 .+ α_floor)' .* v_hit
-	d_floor10 = e_hit .+ (10thickness / 10 .+ α_floor)' .* v_hit
-	# plt = scatter(d_floor[1,:], d_floor[2,:], color=:black, ylims=(-0.2, 1.0))
-	# scatter!(plt, d_floor1[1,:], d_floor1[2,:], color=:blue)
-	# scatter!(plt, d_floor2[1,:], d_floor2[2,:], color=:red)
-	# scatter!(plt, d_floor10[1,:], d_floor10[2,:], color=:red)
-	# display(plt)
-	l += floor * floor_loss(α_floor, v_hit, e_hit, Ar, bor;
+	l += floor * floor_loss(αmax_hit, v_hit, e_hit, A, bo;
 			δ_sdf=δ_sdf,
 			δ_sigmoid=δ_sigmoid,
 			thickness=thickness,
@@ -328,4 +258,72 @@ function shape_loss(α::AbstractVector, α_hit::AbstractVector,
 			inside_sample=inside_sample,
 			)
 	return l
+end
+
+function vectorized_ray(eye_positions::AbstractVector, angles::AbstractVector,
+		A::AbstractVector, b::AbstractVector, o::AbstractVector,
+		poses::AbstractVector=fill(zeros(3), length(eye_positions));
+		altitude_threshold=0.01,
+		max_length=100.0,
+		)
+
+	ne = length(eye_positions)
+	np = length(A)
+
+	# body to world frame transform
+	x = [p[1:2] for p in poses] # position
+	θ = [p[3] for p in poses] # orientation
+	bRw = [[cos(θi) sin(θi); -sin(θi) cos(θi)] for θi in θ]
+	# transform the eye_positions from world frame to body frame
+	eye_positions_b = bRw .* (eye_positions .- x)
+	# transform the angles from world frame to body frame
+	angles_b = [angles[i] .- θ[i] for i=1:ne]
+	# floor halfspace in the body frame
+	Afw = [0.0 1.0;]
+	bfw = [0.0]
+	ofw = [0.0, 0.0]
+	Afb = [Afw * bRw[i]' for i = 1:ne]
+	bfb = [bfw for i = 1:ne]
+	ofb = [bRw[i] * (ofw - x[i]) for i = 1:ne]
+
+	bo = [b[j] + A[j] * o[j] for j = 1:np]
+
+	α = []
+	α_hit = []
+	αmax = []
+	αmax_hit = []
+	v = []
+	v_hit = []
+	e = []
+	e_hit = []
+	for i = 1:ne
+		nβ = length(angles_b[i])
+		ei = hcat([eye_positions_b[i] for j = 1:nβ]...)
+		vi = [cos.(angles_b[i])'; sin.(angles_b[i])']
+		Afi = [A..., Afb[i]]
+		bofi = [bo..., bfb[i] + Afb[i] * ofb[i]]
+		αi = ray_rendering(vi, ei, Afi, bofi; max_length=max_length)
+		# we assume that the floor is located in 0,0 and with normal [0,1].
+		αmaxi = min.(max_length, -eye_positions[i][2] ./ sin.(angles[i]))
+		# altitude (position along the z axis in the world frame) of the point coming from ray j
+		altitude = vec(Afb[i] * (αi' .* vi + ei .- ofb[i]) .- bfb[i])
+		cnd = altitude .>= altitude_threshold
+		push!(α, αi)
+		push!(α_hit, αi[cnd])
+		push!(αmax, αmaxi)
+		push!(αmax_hit, αmaxi[cnd])
+		push!(v, vi)
+		push!(v_hit, vi[:,cnd])
+		push!(e, ei)
+		push!(e_hit, ei[:,cnd])
+	end
+	α = vcat(α...)
+	α_hit = vcat(α_hit...)
+	αmax = vcat(αmax...)
+	αmax_hit = vcat(αmax_hit...)
+	v = hcat(v...)
+	v_hit = hcat(v_hit...)
+	e = hcat(e...)
+	e_hit = hcat(e_hit...)
+	return α, α_hit, αmax, αmax_hit, v, v_hit, e, e_hit
 end

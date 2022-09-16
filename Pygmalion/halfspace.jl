@@ -161,11 +161,11 @@ function transform(A::Vector{Matrix{T}}, b::Vector{Vector{T}}, o::Vector{Vector{
 	return At, bt, ot
 end
 
-function preprocess_halfspaces(θ, polytope_dimensions)
-	θ_floor, polytope_dimensions_floor = add_floor(θ, polytope_dimensions)
-	np = length(polytope_dimensions_floor)
-	A, b, o = unpack_halfspaces(θ_floor, polytope_dimensions_floor)
+function preprocess_halfspaces(θ, polytope_dimensions; vectorize::Bool=false)
+	np = length(polytope_dimensions)
+	A, b, o = unpack_halfspaces(θ, polytope_dimensions)
 	bo = [b[i] + (A[i] * o[i]) for i = 1:np]
+	vectorize && return [vcat(vec.(A)...); vcat(b...); vcat(bo...)]
 	return A, b, bo
 end
 

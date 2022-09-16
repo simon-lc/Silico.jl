@@ -75,9 +75,7 @@ build_2d_polytope!(vis[:polytope], Ap2, bp2 + Ap2 * op2, name=:poly2, color=RGBA
 ne = 10
 nβ = 30
 eye_positions = [[ex, 2.0] for ex in range(-1.70, 1.70, length=ne)]
-# eye_positions = [[ex, 2.0] for ex in range(-0.0170, 0.0170, length=ne)]
 β0 = [-π + atan(e[2], e[1]) .+ Vector(range(+0.15π, -0.15π, length=nβ)) for e in eye_positions]
-
 
 for i = 1:ne
 	c = i > 5 ? RGBA(0.1,0.1,0.1,1) : RGBA(0.9,0.1,0.1,1)
@@ -94,7 +92,6 @@ end
 		)
 
 d0s = [e[:,(i-1)*nβ .+ (1:nβ)] + α[(i-1)*nβ .+ (1:nβ)]' .* v[:,(i-1)*nβ .+ (1:nβ)] for i = 1:ne]
-d0 = hcat(d0s...)
 d0_hit = e_hit .+ α_hit' .* v_hit
 set_2d_point_cloud!(vis, eye_positions, d0s; name=:point_cloud)
 
@@ -124,21 +121,6 @@ local_projection(θ) = projection(θ, polytope_dimensions,
 	olims=[-3.00, +3.00],
 	)
 
-# step_projection
-local_step_projection(Δθ) = step_projection(Δθ, polytope_dimensions;######################################
-	Alims=[-0.40, +0.40],
-	blims=[-0.05, +0.05],
-	olims=[-0.05, +0.05],
-	)
-# regularization
-θdiag = zeros(0)
-for i = 1:np
-	θi = [1e-2 * ones(2nh); 1e0 * ones(nh); 1e0 * ones(2)]
-    A, b, o = unpack_halfspaces(θi)
-    push!(θdiag, pack_halfspaces(A, b, o)...)
-end
-θdiag
-
 parameters = Dict(
 	:thickness => 0.2,
 	:δ_sdf => 0.025,
@@ -147,8 +129,6 @@ parameters = Dict(
 	:altitude_threshold => 0.01,
 	:rendering => 1.0 * 5.0,
 	:sdf_matching => 1.0 * 10.0,
-	# :overlap => 0.0 * 2.0,
-	# :individual => 0.0 * 1.0,
 	:side_regularization => 1.0 * 0.5,
 	:shape_regularization => 0.0 * 0.5,
 	:inside => 1.0 * 0.4,
@@ -181,22 +161,11 @@ function local_grad(θ)
 		A, b, bo, parameters,
 		)
 	dldAb = [vcat(vec.(grads[1])...); vcat(grads[2]...); vcat(grads[3]...)]
-	dAbdθ = ForwardDiff.jacobian(θ -> vec_preprocess_halfspaces(θ, polytope_dimensions), θ)
+	dAbdθ = ForwardDiff.jacobian(θ -> preprocess_halfspaces(θ, polytope_dimensions, vectorize=true), θ)
 	return  dAbdθ' * dldAb
 end
 
-function vec_preprocess_halfspaces(θ::Vector{T}, polytope_dimensions) where T
-	θ_floor, polytope_dimensions_floor = add_floor(θ, polytope_dimensions)
-	np = length(polytope_dimensions_floor)
-	A, b, o = unpack_halfspaces(θ_floor, polytope_dimensions_floor)
-	bo = [b[i] + (A[i] * o[i]) for i = 1:np]
-	# return A, b
-	return [vcat(vec.(A)...); vcat(b...); vcat(bo...)]
-end
 
-
-vec_preprocess_halfspaces(θinit, polytope_dimensions)
-preprocess_halfspaces(θinit, polytope_dimensions)
 local_loss(θinit)
 local_loss(θsol0)
 local_grad(θinit)
@@ -214,11 +183,8 @@ visualize_iterates!(vis, θiter0[1:10:end], polytope_dimensions, eye_positions[1
  	β0, 1e-4, max_iterations=max_iterations+1, color=iterate_color)
 Asol, bsol, osol = unpack_halfspaces(local_projection(θsol0), polytope_dimensions)
 
-# for i = 1:np
-# 	plt = plot_polytope(Asol[i], bsol[i], 100.0, xlims=(-3,3), ylims=(-3,3))
-# 	display(plt)
-# 	sleep(0.5)
-# end
+
+
 
 
 
@@ -238,7 +204,7 @@ function local_grad(θ)
 		A, b, bo, parameters,
 		)
 	dldAb = [vcat(vec.(grads[1])...); vcat(grads[2]...); vcat(grads[3]...)]
-	dAbdθ = ForwardDiff.jacobian(θ -> vec_preprocess_halfspaces(θ, polytope_dimensions), θ)
+	dAbdθ = ForwardDiff.jacobian(θ -> preprocess_halfspaces(θ, polytope_dimensions, vectorize=true), θ)
 	return  dAbdθ' * dldAb
 end
 
@@ -251,3 +217,19 @@ max_iterations = 20
 visualize_iterates!(vis, θiter1[1:10:end], polytope_dimensions, eye_positions[1],
  	β0, 1e-4, max_iterations=max_iterations+1, color=iterate_color)
 Asol, bsol, osol = unpack_halfspaces(local_projection(θsol0), polytope_dimensions)
+
+
+
+
+
+#
+# α, α_hit, v, v_hit, e, e_hit = vectorized_ray(eye_positions, β0, Ap, bp, op;
+# 		altitude_threshold=0.01,
+# 		max_length=100.0,
+# 		)
+
+# aa = [0.0 1.0]
+# α = 10*[1,2,3,4,5,6,7,8,9,10]
+# v = 10ones(2, 10)
+# o = [1,2]
+# aa * (α' .* v .- o) .- [1]
