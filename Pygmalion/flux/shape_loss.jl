@@ -1,5 +1,5 @@
 function vectorized_sdf(α::AbstractVector, v::AbstractMatrix, e::AbstractMatrix, A::AbstractVector,
-		b::AbstractVector{Vector{T}}, δ; max_length=100.0) where T
+		b::AbstractVector{Vector{T}}, δ; max_length=50.00) where T
 
 	nβ = length(α) # number of rays
 	np = length(A) # number of polytopes
@@ -13,7 +13,7 @@ function vectorized_sdf(α::AbstractVector, v::AbstractMatrix, e::AbstractMatrix
 end
 
 function vectorized_sdf(α::AbstractVector, v::AbstractMatrix, e::AbstractMatrix, A::AbstractMatrix{T},
-		b::AbstractVector, δ; max_length=100.0) where T
+		b::AbstractVector, δ; max_length=50.00) where T
 	# α [nβ] vector of ray length
 	# v [2 nβ] matrix holding the vector directions
 	# A matrix half-spaces
@@ -69,7 +69,7 @@ function ray_rendering(α_prev::AbstractVector, v::AbstractMatrix, e::AbstractMa
 end
 
 function ray_rendering(v::AbstractMatrix{T}, e::AbstractMatrix,
-    A::AbstractVector, b::AbstractVector; max_length=100.0) where T
+    A::AbstractVector, b::AbstractVector; max_length=50.00) where T
 
     nβ = size(v, 2)
     np = length(b)
@@ -83,7 +83,7 @@ function ray_rendering(v::AbstractMatrix{T}, e::AbstractMatrix,
 end
 
 function rendering_loss(α_ref::AbstractVector, α_floor::AbstractVector, v::AbstractMatrix{T}, e::AbstractMatrix,
-    A::AbstractVector, b::AbstractVector; max_length=100.0) where T
+    A::AbstractVector, b::AbstractVector; max_length=50.00) where T
 
 	αβ = ray_rendering(v, e, A, b, max_length=max_length)
 	# since A, b does not contains the floor half-space we clip α to α_floor which is the maximum value of α with the floor half-space
@@ -110,7 +110,7 @@ function inside_loss(α::AbstractVector,  v::AbstractMatrix, e::AbstractMatrix,
 
 	l = 0.0
 	for sample in samples
-		ϕ = vectorized_sdf(α .+ sample, v, e, A, b, δ_sdf, max_length=100.0)
+		ϕ = vectorized_sdf(α .+ sample, v, e, A, b, δ_sdf, max_length=50.00)
 		l += 10 * sum((1 .- sigmoid.(-1/δ_sigmoid .* ϕ)).^2)
 	end
 	return l / (nβ * inside_sample)
@@ -129,7 +129,7 @@ function outside_loss(α::AbstractVector, v::AbstractMatrix, e::AbstractMatrix,
 
 	l = 0.0
 	for sample in samples
-		ϕ = vectorized_sdf(α .- sample, v, e, A, b, δ_sdf, max_length=100.0)
+		ϕ = vectorized_sdf(α .- sample, v, e, A, b, δ_sdf, max_length=50.00)
 		l += 5 * sum((0 .- sigmoid.(-1/δ_sigmoid .* ϕ)).^2)
 	end
 	return l / (nβ * outside_sample)
@@ -148,7 +148,7 @@ function floor_loss(α::AbstractVector, v::AbstractMatrix, e::AbstractMatrix,
 
 	l = 0.0
 	for sample in samples
-		ϕ = vectorized_sdf(α .+ sample, v, e, A, b, δ_sdf, max_length=100.0)
+		ϕ = vectorized_sdf(α .+ sample, v, e, A, b, δ_sdf, max_length=50.00)
 		l += 5 * sum((0 .- sigmoid.(-1/δ_sigmoid .* ϕ)).^2)
 	end
 	return l / (nβ * floor_sample)
@@ -160,7 +160,7 @@ function sdf_matching_loss(α::AbstractVector, v::AbstractMatrix, e::AbstractMat
 		δ_softabs::T=0.5,
 		) where T
 
-	ϕ = vectorized_sdf(α, v, e, A, b, δ_sdf, max_length=100.0)
+	ϕ = vectorized_sdf(α, v, e, A, b, δ_sdf, max_length=50.00)
 	l = 0.1 * sum(0.5 * ϕ.^2 + softabs.(ϕ, δ_softabs))
 	return l / nβ
 end
@@ -172,7 +172,8 @@ function keyword_shape_loss(α::AbstractVector, α_hit::AbstractVector,
 		A::AbstractVector, b::AbstractVector, bo::AbstractVector,
 		kwargs
 		) where T
-	return shape_loss(α, α_hit,
+		return shape_loss(α, α_hit,
+			αmax, αmax_hit,
 			v, v_hit,
 			e, e_hit,
 			A, b, bo;
@@ -225,7 +226,7 @@ function shape_loss(α::AbstractVector, α_hit::AbstractVector,
 	end
 
 	# rendering
-	l += rendering * rendering_loss(α, αmax, v, e, A, bo; max_length=100.0)
+	l += rendering * rendering_loss(α, αmax, v, e, A, bo; max_length=50.00)
 
 	# sdf matching
 	l += sdf_matching * sdf_matching_loss(α_hit, v_hit, e_hit, A, bo;
@@ -264,7 +265,7 @@ function vectorized_ray(eye_positions::AbstractVector, angles::AbstractVector,
 		A::AbstractVector, b::AbstractVector, o::AbstractVector,
 		poses::AbstractVector=fill(zeros(3), length(eye_positions));
 		altitude_threshold=0.01,
-		max_length=100.0,
+		max_length=50.00,
 		)
 
 	ne = length(eye_positions)
