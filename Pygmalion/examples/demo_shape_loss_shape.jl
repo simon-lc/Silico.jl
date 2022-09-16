@@ -1,4 +1,6 @@
 include(joinpath(module_dir(), "Pygmalion/Pygmalion.jl"))
+include("../flux/shape_loss.jl")
+
 
 vis = Visualizer()
 # open(vis)
@@ -66,7 +68,7 @@ Mehrotra.solve!(mech.solver)
 ################################################################################
 # test simulation
 ################################################################################
-vp15 = [-0,0,-0.1*9.0]
+vp15 = [-0,0,-0.3*9.0]
 xp2 = [+0.0,2.00,+0.00]
 z0 = [xp2; vp15]
 
@@ -104,7 +106,7 @@ angles = [-π/2 .+ Vector(range(+0.2π, -0.2π, length=nβ)) for (i,x) in enumer
 
 α, α_hit, αmax, αmax_hit, v, v_hit, e, e_hit = vectorized_ray(eye_positions, angles, [Ap0], [bp0], [op0], poses;
 	altitude_threshold=0.01,
-	max_length=5.50,
+	max_length=50.00,
 	)
 
 for i = 1:H0
@@ -205,78 +207,10 @@ local_grad(θinit)
 ################################################################################
 adam_opt = Adam(θinit, local_loss, local_grad)
 adam_opt.eps = 1e-8
-adam_opt.a = 16e-3
-max_iterations = 20
-@elapsed θsol0, θiter1 = adam_solve!(adam_opt, projection=local_projection, max_iterations=10max_iterations)
+adam_opt.a = 1e-2
+max_iterations = 40
+@elapsed θsol0, θiter0 = adam_solve!(adam_opt, projection=local_projection, max_iterations=10max_iterations)
 
-visualize_iterates!(vis, θiter1[1:5:end], polytope_dimensions, eye_positions[1],
- 	β0, 1e-4, max_iterations=max_iterations+1, color=iterate_color)
+visualize_iterates!(vis, θiter0[1:10:end], polytope_dimensions, eye_positions[1],
+ 	angles, 1e-4, max_iterations=max_iterations+1, color=iterate_color)
 Asol, bsol, osol = unpack_halfspaces(local_projection(θsol0), polytope_dimensions)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#
-#
-#
-#
-# function local_loss(θ, polytope_dimensions=polytope_dimensions)
-# 	l = 0.0
-# 	A, b, o = unpack_halfspaces(θ, polytope_dimensions)
-# 	for i = 1:H0
-# 		At, bt, ot = transform(A, b, o, storage.x[i][1])
-# 		build_2d_polytope!(vis[:polytope], At[1], bt[1] + At[1] * ot[1], name=Symbol("poly$i"), color=RGBA(0,1,1,0.2))
-# 		θ_t, _ = pack_halfspaces(At, bt, ot)
-# 		l += shape_loss(θ_t, polytope_dimensions, [eye_positions[i]], [angles[i]], ρ0, [d0[i]]; parameters...)
-# 	end
-# 	return l / H0
-# end
-#
-# # local_grad(θ) = ForwardDiff.gradient(θ -> local_loss(θ), θ)
-# θtruth, polytope_dimensions_truth = pack_halfspaces(Ap, bp, op)
-# unpack_halfspaces(θtruth, polytope_dimensions_truth)
-# local_loss(θtruth, polytope_dimensions=polytope_dimensions_p)
-# local_loss(θinit)
-# local_grad(θinit)
-#
-# adam_opt = Adam(θinit, local_loss, local_grad)
-# adam_opt.eps = 1e-8
-# adam_opt.a = 3e-3
-# θsol0, θiter0 = adam_solve!(adam_opt,
-# 	projection=local_projection,
-# 	max_iterations=max_iterations)
-# vis, anim = visualize_iterates!(vis, θiter0[1:5:end], polytope_dimensions, eye_positions, angles, ρ0,
-# 	max_iterations=max_iterations+1, color=iterate_color)
-#
-# Asol, bsol, osol = unpack_halfspaces(θsol0, polytope_dimensions)
-# for i = 1:H0
-# 	for j = 1:np
-# 		build_2d_polytope!(vis[:sol][Symbol(i)], Asol[j], bsol[j] + Asol[j] * osol[j], name=Symbol(j), color=RGBA(1,1,1,1.0))
-# 		set_2d_polytope!(vis[:sol][Symbol(i)], storage.x[i][1][1:2], storage.x[i][1][3:3], name=Symbol(j))
-# 	end
-# end
-#
-# for i = 1:H0
-# 	atframe(anim, i) do
-# 		for ii = 1:H0
-# 			setvisible!(vis[:sol][Symbol(ii)], ii == i)
-# 			setvisible!(vis[:point_cloud][Symbol(ii)], ii == i)
-# 		end
-# 	end
-# end
-#
-# MeshCat.setanimation!(vis, anim)
-#
-# # RobotVisualizer.convert_frames_to_video_and_gif("shape_learning_reference")
