@@ -66,7 +66,7 @@ Mehrotra.solve!(mech.solver)
 ################################################################################
 # test simulation
 ################################################################################
-vp15 = [-0,0,-1.1*9.0]
+vp15 = [-0,0,-0.1*9.0]
 xp2 = [+0.0,2.00,+0.00]
 z0 = [xp2; vp15]
 
@@ -153,12 +153,12 @@ parameters = Dict(
 	:δ_softabs => 0.5,
 	:altitude_threshold => 0.01,
 	:rendering => 1.0 * 5.0,
-	:sdf_matching => 0.0 * 10.0,
-	:side_regularization => 0.0 * 0.5,
+	:sdf_matching => 1.0 * 10.0,
+	:side_regularization => 1.0 * 0.5,
 	:shape_regularization => 0000.0 * 0.5,
-	:inside => 0.0 * 0.4,
-	:outside => 0.0 * 0.1,
-	:floor => 0.0 * 0.1,
+	:inside => 1.0 * 0.4,
+	:outside => 1.0 * 0.1,
+	:floor => 1.0 * 0.1,
 	)
 max_iterations = 20
 
