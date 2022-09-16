@@ -54,10 +54,18 @@ function projection(θ, polytope_dimensions;
 	θmax = []
     A, b, o = unpack_halfspaces(θ, polytope_dimensions)
 
+	off = 0
     for (i,nh) in enumerate(polytope_dimensions)
+		nθi = 3nh + 2
+		# for j = 1:nh
+		# 	A[i][j,:] = A[i][j,:] / (1e-6 + norm(A[i][j,:]))
+		# end
+
+		@views Ai = θ[off .+ (1:2nh)]
 		for j = 1:nh
-			A[i][j,:] = A[i][j,:] / (1e-6 + norm(A[i][j,:]))
+			Ai[j:nh:end] .= Ai[j:nh:end] / (1e-6 + norm(Ai[j:nh:end]))
 		end
+		off += nθi
 		push!(θmin, [Alims[1] * ones(2nh); blims[1] * ones(nh); olims[1] * ones(2)]...)
 		push!(θmax, [Alims[2] * ones(2nh); blims[2] * ones(nh); olims[2] * ones(2)]...)
     end

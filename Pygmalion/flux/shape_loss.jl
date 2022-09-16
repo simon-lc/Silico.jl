@@ -1,19 +1,19 @@
 function vectorized_sdf(α::AbstractVector, v::AbstractMatrix, e::AbstractMatrix, A::AbstractVector,
-		b::AbstractVector{Vector{T}}, δ) where T
+		b::AbstractVector{Vector{T}}, δ; max_length=100.0) where T
 
 	nβ = length(α) # number of rays
 	np = length(A) # number of polytopes
 
-	ϕ = zeros(T, nβ)
+	ϕ = max_length * ones(T, nβ)
 	for i in 1:np
-		ϕi = vectorized_sdf(α, v, e, A[i], b[i], δ)
+		ϕi = vectorized_sdf(α, v, e, A[i], b[i], δ, max_length=max_length)
 		ϕ = min.(ϕ, ϕi)
 	end
 	return ϕ
 end
 
 function vectorized_sdf(α::AbstractVector, v::AbstractMatrix, e::AbstractMatrix, A::AbstractMatrix{T},
-		b::AbstractVector, δ) where T
+		b::AbstractVector, δ; max_length=100.0) where T
 	# α [nβ] vector of ray length
 	# v [2 nβ] matrix holding the vector directions
 	# A matrix half-spaces
@@ -107,7 +107,7 @@ function inside_loss(α::AbstractVector, v::AbstractMatrix, e::AbstractMatrix,
 
 	l = 0.0
 	for sample in samples
-		ϕ = vectorized_sdf(α .+ sample, v, e, A, b, δ_sdf)
+		ϕ = vectorized_sdf(α .+ sample, v, e, A, b, δ_sdf, max_length=100.0)
 		l += 10 * sum((1 .- sigmoid.(-1/δ_sigmoid .* ϕ)).^2)
 	end
 	return l / (nβ * inside_sample)
@@ -126,7 +126,7 @@ function outside_loss(α::AbstractVector, v::AbstractMatrix, e::AbstractMatrix,
 
 	l = 0.0
 	for sample in samples
-		ϕ = vectorized_sdf(α .- sample, v, e, A, b, δ_sdf)
+		ϕ = vectorized_sdf(α .- sample, v, e, A, b, δ_sdf, max_length=100.0)
 		l += 5 * sum((0 .- sigmoid.(-1/δ_sigmoid .* ϕ)).^2)
 	end
 	return l / (nβ * outside_sample)
@@ -145,7 +145,7 @@ function floor_loss(α::AbstractVector, v::AbstractMatrix, e::AbstractMatrix,
 
 	l = 0.0
 	for sample in samples
-		ϕ = vectorized_sdf(α .+ sample, v, e, A, b, δ_sdf)
+		ϕ = vectorized_sdf(α .+ sample, v, e, A, b, δ_sdf, max_length=100.0)
 		l += 5 * sum((0 .- sigmoid.(-1/δ_sigmoid .* ϕ)).^2)
 	end
 	return l / (nβ * floor_sample)
@@ -157,8 +157,8 @@ function sdf_matching_loss(α::AbstractVector, v::AbstractMatrix, e::AbstractMat
 		δ_softabs::T=0.5,
 		) where T
 
-	ϕ = vectorized_sdf(α, v, e, A, b, δ_sdf)
-	l = 0.1 * sum(0.5 * ϕ.^2 + softabs.(ϕ, δ_softabs)) / nβ
+	ϕ = vectorized_sdf(α, v, e, A, b, δ_sdf, max_length=100.0)
+	l = 0.1 * sum(0.5 * ϕ.^2 + softabs.(ϕ, δ_softabs))
 	# l = 0.1 * (0.5 * ϕ.^2 + softabs.(ϕ, δ_softabs))
 	# @warn "we need to remove the nβ factor"
 	return l / nβ
@@ -253,20 +253,20 @@ function shape_loss(α::AbstractVector, α_hit::AbstractVector,
 		l += side_regularization * 10.0 * (0.5*Δ^2 + softabs(Δ, δ_softabs)) / sum(polytope_dimensions)
 	end
 
-	# inside sampling, overlap penalty
-	for i = 1:np
-		p = o[i]
-		ϕ = sum([sigmoid(-10*sdf(p, A[k], bo[k], zeros(2), δ_sdf)) for k in 1:np+1])
-		l += overlap * 1e-2 * softplus(ϕ - 1, δ_softabs)^2 / np
-		nh = polytope_dimensions[i]
-		for j = 1:nh
-			for α ∈ [1.00, 0.75, 0.5, 0.25]
-				p = - α * A[i][j,:] .* bo[i][j] / norm(A[i][j,:])^2
-				ϕ = sum([sigmoid(-10 * sdf(p, A[k], bo[k], zeros(2), δ_sdf)) for k in 1:np+1])
-				l += overlap * 1e-2 * softplus(ϕ - 2, δ_softabs)^2 / (np * nh * length(α))
-			end
-		end
-	end
+	# # inside sampling, overlap penalty
+	# for i = 1:np-1
+	# 	p = zeros(2)
+	# 	ϕ = sum([sigmoid(-10*sdf(p, A[k], bo[k], zeros(2), δ_sdf)) for k in 1:np])
+	# 	l += overlap * 1e-2 * softplus(ϕ - 1, δ_softabs)^2 / np
+	# 	nh = polytope_dimensions[i]
+	# 	for j = 1:nh
+	# 		for α ∈ [1.00, 0.75, 0.5, 0.25]
+	# 			p = - α * A[i][j,:] .* bo[i][j] / norm(A[i][j,:])^2
+	# 			ϕ = sum([sigmoid(-10 * sdf(p, A[k], bo[k], zeros(2), δ_sdf)) for k in 1:np])
+	# 			l += overlap * 1e-2 * softplus(ϕ - 2, δ_softabs)^2 / (np * nh * length(α))
+	# 		end
+	# 	end
+	# end
 
 	# regularization of polytope shape
 	for i = 1:np
@@ -289,14 +289,23 @@ function shape_loss(α::AbstractVector, α_hit::AbstractVector,
 
 	# sdf matching
 	l += sdf_matching * sdf_matching_loss(α, v, e, A, b;
-			δ_sdf=δ_sdf,
+			δ_sdf=10*δ_sdf,
 			δ_softabs=δ_softabs,
 			)
 
 	# floor sampling
 	# only valid when the body frame is aligned with the world frame
 	α_floor = - e_hit[2,:] ./ v_hit[2,:]
-	l += floor * floor_loss(α_floor, v_hit, e_hit, A, bo;
+	d_floor = e_hit .+ α_floor' .* v_hit
+	d_floor1 = e_hit .+ (1thickness / 10 .+ α_floor)' .* v_hit
+	d_floor2 = e_hit .+ (2thickness / 10 .+ α_floor)' .* v_hit
+	d_floor10 = e_hit .+ (10thickness / 10 .+ α_floor)' .* v_hit
+	# plt = scatter(d_floor[1,:], d_floor[2,:], color=:black, ylims=(-0.2, 1.0))
+	# scatter!(plt, d_floor1[1,:], d_floor1[2,:], color=:blue)
+	# scatter!(plt, d_floor2[1,:], d_floor2[2,:], color=:red)
+	# scatter!(plt, d_floor10[1,:], d_floor10[2,:], color=:red)
+	# display(plt)
+	l += floor * floor_loss(α_floor, v_hit, e_hit, Ar, bor;
 			δ_sdf=δ_sdf,
 			δ_sigmoid=δ_sigmoid,
 			thickness=thickness,

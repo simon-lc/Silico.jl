@@ -46,7 +46,7 @@ end
 
 function adam_solve!(opt::Adam;
         max_iterations::Int=100,
-        l_tolerance=0.3,
+        l_tolerance=0.1,
 		projection=x->x,
         data...)
     iterates = [deepcopy(opt.x)]
