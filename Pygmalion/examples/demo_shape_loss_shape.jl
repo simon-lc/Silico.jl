@@ -3,7 +3,7 @@ include("../flux/shape_loss.jl")
 
 
 vis = Visualizer()
-# open(vis)
+open(vis)
 render(vis)
 set_background!(vis)
 set_light!(vis, direction="Negative")
@@ -68,14 +68,13 @@ Mehrotra.solve!(mech.solver)
 ################################################################################
 # test simulation
 ################################################################################
-vp15 = [-0,0,-0.3*9.0]
+vp15 = [-0,0,-0.6*9.0]
 xp2 = [+0.0,2.00,+0.00]
 z0 = [xp2; vp15]
 
 H0 = 25
 storage = simulate!(mech, z0, H0)
 vis, anim = visualize!(vis, mech, storage)
-storage.x
 
 θP = []
 for i = 1:H0
@@ -211,6 +210,8 @@ adam_opt.a = 1e-2
 max_iterations = 40
 @elapsed θsol0, θiter0 = adam_solve!(adam_opt, projection=local_projection, max_iterations=10max_iterations)
 
-visualize_iterates!(vis, θiter0[1:10:end], polytope_dimensions, eye_positions[1],
+visualize_iterates!(vis, θiter0[1:Int(floor(max_iterations/2)):end], polytope_dimensions, eye_positions[1],
  	angles, 1e-4, max_iterations=max_iterations+1, color=iterate_color)
 Asol, bsol, osol = unpack_halfspaces(local_projection(θsol0), polytope_dimensions)
+
+# RobotVisualizer.convert_frames_to_video_and_gif("drop_and_rotate")
