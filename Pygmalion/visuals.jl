@@ -219,6 +219,29 @@ function visualize_kmeans!(vis::Visualizer, θ, polytope_dimensions, d_object, k
 	return nothing
 end
 
+function visualize_polytope_iterates!(vis::Visualizer, θ, polytope_dimensions;
+		max_iterations::Int=length(θ),
+		color=RGBA(1,1,0,0.4),
+		animation=MeshCat.Animation(10))
+	T = length(θ)
+
+	for i = 1:max_iterations
+		im = min(i, length(θ))
+		build_2d_convex_bundle!(vis[:iterates], θ[im], polytope_dimensions, name=Symbol(i), color=color)
+	end
+
+	for i = 1:max_iterations
+		atframe(animation, i) do
+	        for ii = 1:max_iterations
+	            setvisible!(vis[:iterates][Symbol(ii)], ii == i)
+	        end
+	    end
+	end
+	settransform!(vis[:iterates], MeshCat.Translation(0.05,0,0.0))
+	setanimation!(vis, animation)
+	return vis, animation
+end
+
 function visualize_iterates!(vis::Visualizer, θ, polytope_dimensions, e, β, ρ;
 		point_cloud::Bool=false,
 		max_iterations::Int=length(θ),
@@ -234,13 +257,13 @@ function visualize_iterates!(vis::Visualizer, θ, polytope_dimensions, e, β, ρ
 	point_cloud && build_point_cloud!(vis[:iterates][:point_cloud], nβ;
 		color=RGBA(0.8,0.1,0.1,1), name=Symbol(1))
 
-	for i = 1:max_iterations
-		atframe(animation, i) do
-			for ii = 1:max_iterations
-				setvisible!(vis[:iterates][Symbol(ii)], false)
-			end
-		end
-	end
+	# for i = 1:max_iterations
+	# 	atframe(animation, i) do
+	# 		for ii = 1:max_iterations
+	# 			setvisible!(vis[:iterates][Symbol(ii)], false)
+	# 		end
+	# 	end
+	# end
 
 	for i = 1:max_iterations
 		atframe(animation, i) do

@@ -34,7 +34,7 @@ function bfgs_solver!(xinit, loss, grad, projection, step_projection;
         y = g - g_previous
 
         # Δx = - (inv(H) + reg * I) \ g
-        @show isposdef(B)
+        # @show isposdef(B)
         # Δx = - (B + reg * I) \ g
         Δx = - (B + reg * Binit) \ g
         # Δx = - B \ g
