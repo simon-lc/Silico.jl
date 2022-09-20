@@ -206,14 +206,14 @@ function visualize_kmeans!(vis::Visualizer, θ, polytope_dimensions, d_object, k
 	        vis[:cluster][Symbol(ik)][Symbol(i)],
 	        HyperSphere(MeshCat.Point(0,0,0.0), 0.035),
 	        MeshPhongMaterial(color=colors[ik%7+1]))
-	    settransform!(vis[:cluster][Symbol(ik)][Symbol(i)], MeshCat.Translation(0.2, d_object[:,i]...))
+	    settransform!(vis[:cluster][Symbol(ik)][Symbol(i)], MeshCat.Translation(0.3, d_object[:,i]...))
 	end
 	for i = 1:np
 	    setobject!(
 	        vis[:cluster][Symbol(i)][:center],
 	        HyperRectangle(MeshCat.Vec(-0.05,-0.05,-0.05), MeshCat.Vec(0.1,0.1,0.1)),
 	        MeshPhongMaterial(color=colors[i%7+1]))
-	    settransform!(vis[:cluster][Symbol(i)][:center], MeshCat.Translation(0.2, kmres.centers[:,i]...))
+	    settransform!(vis[:cluster][Symbol(i)][:center], MeshCat.Translation(0.3, kmres.centers[:,i]...))
 	end
 	build_2d_convex_bundle!(vis, θ, polytope_dimensions, name=:initial, color=RGBA(1,1,1,0.4))
 	return nothing

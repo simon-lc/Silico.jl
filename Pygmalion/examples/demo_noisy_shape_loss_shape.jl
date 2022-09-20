@@ -232,4 +232,4 @@ visualize_iterates!(vis, θiter0[1:Int(floor(max_iterations/2)):end], polytope_d
  	angles, 1e-4, max_iterations=max_iterations+1, color=iterate_color)
 Asol, bsol, osol = unpack_halfspaces(local_projection(θsol0), polytope_dimensions)
 
-# RobotVisualizer.convert_frames_to_video_and_gif("drop_and_rotate")
+# RobotVisualizer.convert_frames_to_video_and_gif("noisy_shape_learning")
