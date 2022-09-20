@@ -33,7 +33,7 @@ function newton_solver!(xinit, loss, grad, hess, projection, clamping;
                 break
             end
             α /= 2
-            if j == 10
+            if j == line_search_iterations
                 stall += 1
                 α = 0.0
                 reg = clamp(reg*exp(3.0*log(reg_step)), reg_min, reg_max)

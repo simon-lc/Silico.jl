@@ -65,9 +65,6 @@ function complete_residual(all_vars, mechanism::Mechanism)
 	@views residual_equality = residual[idx_equality]
 	@views residual_cone_product = residual[idx_cone_product]
 	equality_constraint(residual_equality, variables, parameters)
-	# @show parameters[15:26]
-	# @show residual_equality
-	# @show size(residual_equality)
 	cone_constraint(residual_cone_product, duals, slacks)
 	# compute positivity constraints
 	residual[num_equality + num_cone + 1:end] .= [min.(0, duals); min.(0, slacks)]
@@ -323,7 +320,90 @@ function traj_objective_hessian(v0, v, θ, mechanism::Mechanism;
 				v3)
 		end
 	end
-
-
 	return hess
+end
+
+
+
+
+
+function integrator_constraint(v2, v3, timestep)
+	p2 = v2[1:3]
+	p3 = v3[1:3]
+	v25 = v3[4:6]
+	return p2 + timestep .* v25 - p3
+end
+
+function step_constraint(v2, v3, θ, mechanism::Mechanism;
+		ρ=1e-3)
+
+	all_vars = get_all_vars(v2, v3, θ, mechanism)
+	residual = complete_residual(all_vars, mechanism)
+
+	timestep = mechanism.bodies[1].timestep
+	integrator = integrator_constraint(v2, v3, timestep)
+	return [integrator; residual]
+end
+
+function step_constraint_jacobian(v2, v3, θ, mechanism::Mechanism;
+		ρ=1e-3)
+
+	dvars_dv2 = get_all_vars_jacobian(v2, v3, θ, mechanism, jacobian=:v2)
+	dvars_dv3 = get_all_vars_jacobian(v2, v3, θ, mechanism, jacobian=:v3)
+	dvars_dθ = get_all_vars_jacobian(v2, v3, θ, mechanism, jacobian=:θ)
+
+	all_vars = get_all_vars(v2, v3, θ, mechanism)
+	residual = complete_residual(all_vars, mechanism)
+	dr_dvars = complete_residual_jacobian(all_vars, mechanism)
+
+	dr_dv2 = dr_dvars * dvars_dv2
+	dr_dv3 = dr_dvars * dvars_dv3
+	dr_dθ = dr_dvars * dvars_dθ
+
+
+	timestep = mechanism.bodies[1].timestep
+	di_dv2 = ForwardDiff.jacobian(v2 ->
+		integrator_constraint(v2, v3, timestep), v2)
+	di_dv3 = ForwardDiff.jacobian(v3 ->
+		integrator_constraint(v2, v3, timestep), v3)
+	di_dθ = ForwardDiff.jacobian(θ ->
+		integrator_constraint(v2, v3, timestep), θ)
+
+	dv2 = [di_dv2; dr_dv2]
+	dv3 = [di_dv3; dr_dv3]
+	dθ = [di_dθ; dr_dθ]
+	return dv2, dv3, dθ
+end
+
+
+
+function traj_constraints(v0, v, θ, mechanism::Mechanism; kwargs...)
+	H = length(v)
+	objective = step_objective(v0, v[1], θ, mechanism; kwargs...)
+	for i = 2:H
+		objective += step_objective(v[i-1], v[i], θ, mechanism; kwargs...)
+	end
+	return objective
+end
+
+function traj_objective_jacobian(v0, v, θ, mechanism::Mechanism; kwargs...)
+	H = length(v)
+	nv = length(v0)
+	nθ = length(θ)
+
+	dv = [zeros(nv) for i = 1:H]
+	dθ = zeros(nθ)
+
+	dv2i, dv3i, dθi = step_objective_jacobian(v0, v[1], θ, mechanism; kwargs...)
+	dv[1] .+= dv3i
+	dθ .+= dθi
+
+	for i = 2:H
+		dv2i, dv3i, dθi = step_objective_jacobian(v[i-1], v[i], θ, mechanism; kwargs...)
+		dv[i-1] .+= dv2i
+		dv[i] .+= dv3i
+		dθ .+= dθi
+	end
+
+	return dv, dθ
 end

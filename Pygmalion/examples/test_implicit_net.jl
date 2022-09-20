@@ -46,7 +46,7 @@ mech = get_polytope_drop(;
 xp2 = [+0.0,1.50,-0.00]
 vp15 = [-0,0,-9.0]
 z0 = [xp2; vp15]
-
+θ = rand(12)
 
 
 
@@ -140,6 +140,26 @@ dv0 = [FiniteDiff.finite_difference_gradient(
 
 sum(norm.(dv .- dv0))
 norm(dθ - dθ0)
+
+
+
+
+dv2, dv3, dθ = step_constraint_jacobian(v20, v30, θ0, mech)
+dv20 = FiniteDiff.finite_difference_jacobian(
+	v20 -> step_constraint(v20, v30, θ0, mech), v20)
+dv30 = FiniteDiff.finite_difference_jacobian(
+	v30 -> step_constraint(v20, v30, θ0, mech), v30)
+dθ0 = FiniteDiff.finite_difference_jacobian(
+	θ0 -> step_constraint(v20, v30, θ0, mech), θ0)
+
+norm(dv2)
+norm(dv3)
+norm(dθ)
+norm(dv2 - dv20)
+norm(dv3 - dv30)
+norm(dθ - dθ0)
+
+
 
 
 

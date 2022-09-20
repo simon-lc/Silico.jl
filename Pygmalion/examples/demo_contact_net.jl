@@ -2,8 +2,8 @@ include(joinpath(module_dir(), "Pygmalion/Pygmalion.jl"))
 include("implicit_net.jl")
 
 vis = Visualizer()
-render(vis)
-# open(vis)
+# render(vis)
+open(vis)
 set_background!(vis)
 set_light!(vis, direction="Negative")
 set_floor!(vis, color=RGBA(0.4,0.4,0.4,0.4))
@@ -49,8 +49,8 @@ mech = get_polytope_drop(;
     mass=mass,
     inertia=inertia,
     friction_coefficient=0.1,
-	# method_type=:finite_difference,
-    method_type=:symbolic,
+	method_type=:finite_difference,
+    # method_type=:symbolic,
 	A=Ap0,
 	b=bp0,
     options=Mehrotra.Options(
@@ -80,7 +80,7 @@ xp2 = [+0.0,0.5,-0.00]
 vp15 = [-0,0,-0.0]
 z0 = [xp2; vp15]
 
-H0 = 10
+H0 = 1
 
 storage = simulate!(mech, z0, H0+1)
 vis, anim = visualize!(vis, mech, storage)
@@ -99,17 +99,6 @@ x_truth = deepcopy([storage.x[i+1][1] for i = 1:H0])
 vars_truth = pack_variables(v_truth, θ_truth)
 nv = length(v0_truth)
 nθ = length(θ_truth)
-
-# # true data
-# θ_plaus = deepcopy([vec(Ap0); bp0 .+ 0.1])
-# mech.solver.parameters[15:26] .= θ_plaus
-# update_nodes!(mech)
-# storage_plaus = simulate!(mech, z0, H0+1)
-# v0_plaus = deepcopy([xp2; vp15; zeros(num_variables - 3)])
-# v_plaus = deepcopy([[storage_plaus.x[i+1][1]; storage_plaus.variables[i]] for i = 1:H0])
-# vars_plaus = pack_variables(v_plaus, θ_plaus)
-# # vars_plaus = pack_variables(v_truth, θ_plaus)
-# # vis, anim = visualize!(vis, mech, storage_plaus)
 
 
 # fake data
@@ -151,7 +140,9 @@ function tracking_jacobian(vars, x; Q_tracking=I)
 end
 
 function tracking_hessian(vars, x; Q_tracking=I)
-	d = vcat([[Q_tracking(3); zeros(nv-3)] for i = 1:H]...)
+	v, θ = unpack_variables(vars, nv, nθ)
+	H = length(v)
+	d = vcat([[diag(Q_tracking(3)); zeros(nv-3)] for i = 1:H]...)
 	return Diagonal([d; ones(nθ)])
 end
 
@@ -184,6 +175,8 @@ local_hess(vars) = traj_objective_hessian(v0_truth, v_truth, θ_truth, mech,
 local_loss(vars_plaus)
 local_loss(vars_truth)
 local_loss(vars_fake)
+tracking_hessian(vars_fake)
+local_loss(0.01vars_fake + (1-0.01)*vars_truth)
 
 # projection
 function local_projection(vars)
@@ -196,6 +189,57 @@ function local_projection(vars)
 	vars[end-nθ+1:end] .= θp[1:end-2]
 	return vars
 end
+
+
+local_constraint(x) = zeros(0)
+local_constraint_jacobian(x) = zeros(0,length(x))
+
+################################################################################
+# augmented lagrangian solver
+################################################################################
+vars_sol0, vars_iter0 = augmented_lagrangian_solver!(vars_fake,
+		local_loss,
+		local_grad,
+		local_hess,
+		local_constraint,
+		local_constraint_jacobian;
+		projection=local_projection,
+		outer_iterations=20,
+        inner_iterations=200,
+		line_search_iterations=15,
+        reg_min=1e-2,
+        reg_max=1e-0,
+        reg_step=1.1,
+		ρ_min=1e-6,
+		ρ_max=1e+0,
+		ρ_step=0.3,
+		objective_tolerance=1e-4,
+		constraint_tolerance=1e-4,
+		D=Diagonal(ones(length(vars_fake))),
+		)
+
+v_sol0, θ_sol0 = unpack_variables(vars_sol0, nv, nθ)
+θ_iter0 = [[unpack_variables(v, nv, nθ)[2]; zeros(2)] for v in vars_iter0]
+
+build_2d_polytope!(vis[:polytope], Ap0, bp0 + Ap0 * op0,
+	name=:poly0, color=RGBA(1,1,1,1))
+visualize_polytope_iterates!(vis, θ_iter0, [4], color=RGBA(0,1,1,0.5))
+set_floor!(vis, origin=[0,0,-0.5], x=0.02, y=10)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ################################################################################
 # adam solve
@@ -212,13 +256,10 @@ v_sol0, θ_sol0 = unpack_variables(vars_sol0, nv, nθ)
 
 build_2d_polytope!(vis[:polytope], Ap0, bp0 + Ap0 * op0,
 	name=:poly0, color=RGBA(1,1,1,1))
-visualize_polytope_iterates!(vis, θ_iter0[1:Int(floor(max_iterations/100)):end], [4], color=RGBA(0,1,1,0.5))
+visualize_polytope_iterates!(vis, θ_iter0[1:Int(floor(max_iterations/50)):end], [4], color=RGBA(0,1,1,0.5))
 set_floor!(vis, origin=[0,0,-0.5], x=0.02, y=10)
 
 # plot(hcat([v[1:3] for v in v_sol0]...)')
-
-
-
 
 
 ################################################################################
