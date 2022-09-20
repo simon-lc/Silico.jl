@@ -6,13 +6,21 @@ using MeshCat
 using Statistics
 using StaticArrays
 using RobotVisualizer
+using JLD2
+using Plots
+
 # ## visualizer
-# vis = Visualizer()
+vis = Visualizer()
 # render(vis)
+open(vis)
+RobotVisualizer.set_background!(vis)
+RobotVisualizer.set_light!(vis)
+RobotVisualizer.set_floor!(vis, x=0.1)
+RobotVisualizer.set_camera!(vis, zoom=3.0)
 
 
 # ## horizon
-horizon = 11
+horizon = 15
 timestep = 0.05
 
 # ## dimensions
@@ -175,6 +183,23 @@ function contact_constraints_inequality_t(x, u;
     ]
 end
 
+function x_2d_rotation(q)
+    # rotation from body frame to world frame
+    c = cos(q[1])
+    s = sin(q[1])
+    R = [c -s;
+         s  c]
+    return R
+end
+
+function skew(p)
+    SA[
+    	 0    -p[3]  p[2];
+    	 p[3]  0    -p[1];
+    	-p[2]  p[1]  0;
+    ]
+end
+
 ################################################################################
 # problem data
 ################################################################################
@@ -192,34 +217,53 @@ bp0 = 0.5*[
 	+1,
 	]
 friction_coefficient0 = 0.1
+
+Ap1 = [
+	+1.0 +0.0;
+	+0.0 +1.0;
+	-1.0 +0.0;
+	+0.0 -1.0;
+	]
+bp1 = 0.75*[
+	+1,
+	+1,
+	+1,
+	+1,
+	]
+friction_coefficient1 = 0.5
+
 # ## dynamics
 dynamics = [(y, x, u) -> polytope_dynamics(y, x, u; timestep=timestep) for t = 1:horizon-1]
 
 # ## states
-configuration_ref = [[0.0; 0.75; 0.0; 0.0; 0.0; 0.0] for i = 1:horizon]
-ϵ_init = 0.1
-x1 = [
-    0.0; 1.0; 0.0;
-    0.0; 0.0; 0.0;
-    0.0; 0.0;
-    ϵ_init ;
-    ϵ_init ;
-    ϵ_init ;
-    ϵ_init ; ϵ_init ;
-    ϵ * ones(nh);
-    ϵ_init ;
-    vec(Ap0);
-    bp0;
-	0.1;
-    ]
-xT = deepcopy(x1)
+file_ref = JLD2.load(joinpath(@__DIR__, "..", "examples/deps", "configuration_ref_$horizon.jld2"))
+file_init = JLD2.load(joinpath(@__DIR__, "..", "examples/deps", "configuration_init_$horizon.jld2"))
+configuration_ref = file_ref["configuration_ref"]
+configuration_init = file_init["configuration_init"]
+
+# ϵ_init = 0.1
+# x1 = [
+#     0.0; 1.0; 0.0;
+#     0.0; 0.0; 0.0;
+#     0.0; 0.0;
+#     ϵ_init ;
+#     ϵ_init ;
+#     ϵ_init ;
+#     ϵ_init ; ϵ_init ;
+#     ϵ * ones(nh);
+#     ϵ_init ;
+#     vec(Ap0);
+#     bp0;
+# 	0.1;
+#     ]
+# xT = deepcopy(x1)
 
 # ## objective
 function obj_t(x, u, t)
     J = 0.0
     Δp = 1.00 .* (x[1:3] - configuration_ref[t][1:3])
     Δv = 1.00 .* (x[4:6] - configuration_ref[t][4:6])
-    Δθ = 0.05 .* (x[end-3nh-1+1:end] - [vec(Ap0); bp0; friction_coefficient0])
+    Δθ = 0.50 .* (x[end-3nh-1+1:end] - [vec(Ap1); bp1; friction_coefficient1])
     J += 0.5 * dot(Δp, Δp)
     J += 0.5 * dot(Δv, Δv)
     J += 0.5 * dot(Δθ, Δθ)
@@ -245,8 +289,7 @@ solver = Solver(objective, dynamics, num_states, num_actions,
     );
 
 # ## initialize
-x_interpolation = linear_interpolation(x1, xT, horizon)
-state_guess = x_interpolation
+state_guess = deepcopy(configuration_init)
 action_guess = [zeros(0) for t = 1:horizon-1] # may need to run more than once to get good trajectory
 initialize_states!(solver, state_guess)
 initialize_actions!(solver, action_guess)
@@ -256,18 +299,28 @@ solve!(solver)
 
 # ## solution
 x_sol, u_sol = get_trajectory(solver)
+p_sol = [x[1:3] for x in x_sol]
+p_truth = [x[1:3] for x in configuration_ref]
 
 # ## visualize
 Ap = mean([x[end-3nh-1+1:end-nh-1] for x in x_sol])
 Ap = reshape(Ap, (nh,2))
 bp = mean([x[end-nh-1+1:end-1] for x in x_sol])
-friction_coefficient = mean([x[end] for x in x_sol])
-p_sol = [x[1:3] for x in x_sol]
-build_2d_polytope!(vis, Ap, bp, name=:polytope)
+friction_coefficientp = mean([x[end] for x in x_sol])
+
+build_2d_polytope!(vis[:polytope_init], Ap1, bp1, name=:polytope, color=MeshCat.RGBA(1,1,1,0.4))
+build_2d_polytope!(vis[:polytope_sol], Ap, bp, name=:polytope, color=MeshCat.RGBA(1,0,0,0.4))
+build_2d_polytope!(vis[:polytope_truth], Ap0, bp0, name=:polytope, color=MeshCat.RGBA(0,0,0,1.0))
+settransform!(vis[:polytope_init][:polytope], MeshCat.Translation(0.00,0,0))
+settransform!(vis[:polytope_sol][:polytope], MeshCat.Translation(0.05,0,0))
+settransform!(vis[:polytope_truth][:polytope], MeshCat.Translation(0.10,0,0))
 anim = MeshCat.Animation()
-for i = 1:horizon
-    atframe(anim, i) do
-        set_2d_polytope!(vis, x_sol[i][1:2], x_sol[i][3:3], name=:polytope)
+for ii = 1:horizon+20
+    atframe(anim, ii) do
+		i = clamp(ii, 1, horizon)
+		set_2d_polytope!(vis, p_truth[i][1:2], p_truth[i][3:3], name=:polytope_init)
+		set_2d_polytope!(vis, p_sol[i][1:2], p_sol[i][3:3], name=:polytope_sol)
+        set_2d_polytope!(vis, p_truth[i][1:2], p_truth[i][3:3], name=:polytope_truth)
     end
 end
 setanimation!(vis, anim)
@@ -275,20 +328,12 @@ u_sol
 x_sol
 
 
+# convert_frames_to_video_and_gif("sysid_drop_and_slide_sol")
+plot(hcat(x_sol...)'[:,1:3])
+plot(hcat(configuration_init...)'[:,1:3])
 
-function x_2d_rotation(q)
-    # rotation from body frame to world frame
-    c = cos(q[1])
-    s = sin(q[1])
-    R = [c -s;
-         s  c]
-    return R
-end
+plot(hcat(x_sol...)'[:,4:6])
+plot(hcat(configuration_init...)'[:,4:6])
 
-function skew(p)
-    SA[
-    	 0    -p[3]  p[2];
-    	 p[3]  0    -p[1];
-    	-p[2]  p[1]  0;
-    ]
-end
+plot(hcat(x_sol...)'[:,7:end])
+plot(hcat(configuration_init...)'[:,7:end])

@@ -13,6 +13,8 @@ using NonconvexPercival
 using Plots
 using FiniteDiff
 using SparseArrays
+using JLD2
+
 
 
 # solvers
@@ -34,3 +36,5 @@ include("transparency_point_cloud.jl")
 include("utils.jl")
 include("visuals.jl")
 # include("vertices.jl")
+
+include("flux/shape_loss.jl")

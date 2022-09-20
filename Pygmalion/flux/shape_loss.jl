@@ -165,26 +165,18 @@ function sdf_matching_loss(α::AbstractVector, v::AbstractMatrix, e::AbstractMat
 	return l / nβ
 end
 
-function keyword_shape_loss(α::AbstractVector, α_hit::AbstractVector,
-		αmax::AbstractVector, αmax_hit::AbstractVector,
-		v::AbstractMatrix, v_hit::AbstractMatrix,
-		e::AbstractMatrix, e_hit::AbstractMatrix,
+function keyword_shape_loss(α::AbstractVector, αmax::AbstractVector,
+		v::AbstractMatrix, e::AbstractMatrix, hit_indices::AbstractVector,
 		A::AbstractVector, b::AbstractVector, bo::AbstractVector,
 		kwargs
 		) where T
-		return shape_loss(α, α_hit,
-			αmax, αmax_hit,
-			v, v_hit,
-			e, e_hit,
-			A, b, bo;
+		return shape_loss(α, αmax, v, e, hit_indices, A, b, bo;
 			kwargs...
 			)
 end
 
-function shape_loss(α::AbstractVector, α_hit::AbstractVector,
-		αmax::AbstractVector, αmax_hit::AbstractVector,
-		v::AbstractMatrix, v_hit::AbstractMatrix,
-		e::AbstractMatrix, e_hit::AbstractMatrix,
+function shape_loss(α::AbstractVector, αmax::AbstractVector,
+		v::AbstractMatrix, e::AbstractMatrix, hit_indices::AbstractVector,
 		A::AbstractVector, b::AbstractVector, bo::AbstractVector;
 		δ_sdf=15.0,
 		δ_softabs=0.5,
@@ -207,22 +199,17 @@ function shape_loss(α::AbstractVector, α_hit::AbstractVector,
 
 	polytope_dimensions = length.(b)
 	np = length(polytope_dimensions)
+	α_hit = α[hit_indices]
+	αmax_hit = αmax[hit_indices]
+	v_hit = v[:,hit_indices]
+	e_hit = e[:,hit_indices]
+
 
 	l = 0.0
 	# regularization
 	for i = 1:np
 		Δ = norm(b[i] .- mean(b[i]))
 		l += side_regularization * 10.0 * (0.5*Δ^2 + softabs(Δ, δ_softabs)) / sum(polytope_dimensions)
-	end
-
-	# regularization of polytope shape
-	for i = 1:np
-		nh = polytope_dimensions[i]
-		for j = 1:nh
-			p = - A[i][j,:] .* bo[i][j] / norm(A[i][j,:])^2
-			ϕ = sdf(p, A[i], bo[i], zeros(2), δ_sdf)
-			l += shape_regularization * 1.0 * (0.5*ϕ^2 + softabs(ϕ, δ_softabs)) / (np * nh)
-		end
 	end
 
 	# rendering
@@ -290,13 +277,10 @@ function vectorized_ray(eye_positions::AbstractVector, angles::AbstractVector,
 	bo = [b[j] + A[j] * o[j] for j = 1:np]
 
 	α = []
-	α_hit = []
 	αmax = []
-	αmax_hit = []
 	v = []
-	v_hit = []
 	e = []
-	e_hit = []
+	hit_indices = []
 	for i = 1:ne
 		nβ = length(angles_b[i])
 		ei = hcat([eye_positions_b[i] for j = 1:nβ]...)
@@ -310,21 +294,38 @@ function vectorized_ray(eye_positions::AbstractVector, angles::AbstractVector,
 		altitude = vec(Afb[i] * (αi' .* vi + ei .- ofb[i]) .- bfb[i])
 		cnd = altitude .>= altitude_threshold
 		push!(α, αi)
-		push!(α_hit, αi[cnd])
 		push!(αmax, αmaxi)
-		push!(αmax_hit, αmaxi[cnd])
 		push!(v, vi)
-		push!(v_hit, vi[:,cnd])
 		push!(e, ei)
-		push!(e_hit, ei[:,cnd])
+		push!(hit_indices, cnd)
 	end
 	α = vcat(α...)
-	α_hit = vcat(α_hit...)
 	αmax = vcat(αmax...)
-	αmax_hit = vcat(αmax_hit...)
 	v = hcat(v...)
-	v_hit = hcat(v_hit...)
 	e = hcat(e...)
-	e_hit = hcat(e_hit...)
-	return α, α_hit, αmax, αmax_hit, v, v_hit, e, e_hit
+	hit_indices = vcat(hit_indices...)
+	return α, αmax, v, e, hit_indices
+end
+
+function noise_transform(v::AbstractMatrix, e::AbstractMatrix, nβ::Int, poses::AbstractVector, poses_noisy::AbstractVector)
+	# e and v are in the body frame
+	# body ---- x θ ----> world <---- x_noisy, θ_noisy ---- body_noisy
+	# We need to transform them to the noisy body frame.
+	H = length(poses)
+
+	Δx1 = vec([poses[i][1] - poses_noisy[i][1] for i = 1:H]' .* ones(nβ)) # nβ*H
+	Δx2 = vec([poses[i][2] - poses_noisy[i][2] for i = 1:H]' .* ones(nβ)) # nβ*H
+	Δx = [Δx1'; Δx2'] # 2 x nβ*H
+	Δθ = vec([poses[i][3] - poses_noisy[i][3] for i = 1:H]' .* ones(nβ)) # nβ*H
+	c = cos.(Δθ)
+	s = sin.(Δθ)
+
+	e_temp = e + Δx
+	e1 = e_temp[1,:]
+	e2 = e_temp[2,:]
+	v1 = v[1,:]
+	v2 = v[2,:]
+	e_noisy = [(c .* e1)' .- (s .* e2)'; (s .* e1)' .+ (c .* e2)']
+	v_noisy = [(c .* v1)' .- (s .* v2)'; (s .* v1)' .+ (c .* v2)']
+	return v_noisy, e_noisy
 end
