@@ -6,14 +6,14 @@ function vectorized_sdf(α::AbstractVector, v::AbstractMatrix, e::AbstractMatrix
 
 	ϕ = max_length * ones(T, nβ)
 	for i in 1:np
-		ϕi = vectorized_sdf(α, v, e, A[i], b[i], δ, max_length=max_length)
+		ϕi = vectorized_sdf(α, v, e, A[i], b[i], δ)
 		ϕ = min.(ϕ, ϕi)
 	end
 	return ϕ
 end
 
 function vectorized_sdf(α::AbstractVector, v::AbstractMatrix, e::AbstractMatrix, A::AbstractMatrix{T},
-		b::AbstractVector, δ; max_length=50.00) where T
+		b::AbstractVector, δ) where T
 	# α [nβ] vector of ray length
 	# v [2 nβ] matrix holding the vector directions
 	# A matrix half-spaces
@@ -33,7 +33,7 @@ function vectorized_sdf(α::AbstractVector, v::AbstractMatrix, e::AbstractMatrix
 	return ϕ
 end
 
-function ray_rendering(α_prev::AbstractVector, v::AbstractMatrix, e::AbstractMatrix,
+function ray_tracing(α_prev::AbstractVector, v::AbstractMatrix, e::AbstractMatrix,
     A::AbstractMatrix, b::AbstractVector)
 
     # sdf nβ
@@ -68,7 +68,7 @@ function ray_rendering(α_prev::AbstractVector, v::AbstractMatrix, e::AbstractMa
     return αβ
 end
 
-function ray_rendering(v::AbstractMatrix{T}, e::AbstractMatrix,
+function ray_tracing(v::AbstractMatrix{T}, e::AbstractMatrix,
     A::AbstractVector, b::AbstractVector; max_length=50.00) where T
 
     nβ = size(v, 2)
@@ -76,7 +76,7 @@ function ray_rendering(v::AbstractMatrix{T}, e::AbstractMatrix,
 
     αβ = max_length * ones(T,nβ)
     for i = 1:np
-        αβ = ray_rendering(αβ, v, e, A[i], b[i])
+        αβ = ray_tracing(αβ, v, e, A[i], b[i])
     end
 
 	return αβ
@@ -85,7 +85,7 @@ end
 function rendering_loss(α_ref::AbstractVector, α_floor::AbstractVector, v::AbstractMatrix{T}, e::AbstractMatrix,
     A::AbstractVector, b::AbstractVector; max_length=50.00) where T
 
-	αβ = ray_rendering(v, e, A, b, max_length=max_length)
+	αβ = ray_tracing(v, e, A, b, max_length=max_length)
 	# since A, b does not contains the floor half-space we clip α to α_floor which is the maximum value of α with the floor half-space
 	# this takes into accoun the fact that the polytope A, b, can be located at a non zero pose.
 	α = min.(αβ, α_floor)
@@ -100,6 +100,7 @@ function inside_loss(α::AbstractVector,  v::AbstractMatrix, e::AbstractMatrix,
 		δ_sigmoid::T=0.1,
 		thickness::T=0.2,
 		inside_sample::Int=10,
+		max_length::T=50.00,
 		) where T
 
 	nβ = length(α)
@@ -110,7 +111,7 @@ function inside_loss(α::AbstractVector,  v::AbstractMatrix, e::AbstractMatrix,
 
 	l = 0.0
 	for sample in samples
-		ϕ = vectorized_sdf(α .+ sample, v, e, A, b, δ_sdf, max_length=50.00)
+		ϕ = vectorized_sdf(α .+ sample, v, e, A, b, δ_sdf, max_length=max_length)
 		l += 10 * sum((1 .- sigmoid.(-1/δ_sigmoid .* ϕ)).^2)
 	end
 	return l / (nβ * inside_sample)
@@ -121,6 +122,7 @@ function outside_loss(α::AbstractVector, v::AbstractMatrix, e::AbstractMatrix,
 		δ_sdf::T=15.0,
 		δ_sigmoid::T=0.1,
 		thickness::T=0.2,
+		max_length::T=50.00,
 		outside_sample::Int=10,
 		) where T
 
@@ -129,7 +131,7 @@ function outside_loss(α::AbstractVector, v::AbstractMatrix, e::AbstractMatrix,
 
 	l = 0.0
 	for sample in samples
-		ϕ = vectorized_sdf(α .- sample, v, e, A, b, δ_sdf, max_length=50.00)
+		ϕ = vectorized_sdf(α .- sample, v, e, A, b, δ_sdf, max_length=max_length)
 		l += 5 * sum((0 .- sigmoid.(-1/δ_sigmoid .* ϕ)).^2)
 	end
 	return l / (nβ * outside_sample)
@@ -140,6 +142,7 @@ function floor_loss(α::AbstractVector, v::AbstractMatrix, e::AbstractMatrix,
 		δ_sdf::T=15.0,
 		δ_sigmoid::T=0.1,
 		thickness::T=0.2,
+		max_length::T=50.00,
 		floor_sample::Int=10,
 		) where T
 
@@ -148,7 +151,7 @@ function floor_loss(α::AbstractVector, v::AbstractMatrix, e::AbstractMatrix,
 
 	l = 0.0
 	for sample in samples
-		ϕ = vectorized_sdf(α .+ sample, v, e, A, b, δ_sdf, max_length=50.00)
+		ϕ = vectorized_sdf(α .+ sample, v, e, A, b, δ_sdf, max_length=max_length)
 		l += 5 * sum((0 .- sigmoid.(-1/δ_sigmoid .* ϕ)).^2)
 	end
 	return l / (nβ * floor_sample)
@@ -158,44 +161,36 @@ function sdf_matching_loss(α::AbstractVector, v::AbstractMatrix, e::AbstractMat
 	    A::AbstractVector, b::AbstractVector;
 		δ_sdf::T=15.0,
 		δ_softabs::T=0.5,
+		max_length::T=50.00,
 		) where T
 
-	ϕ = vectorized_sdf(α, v, e, A, b, δ_sdf, max_length=50.00)
+	ϕ = vectorized_sdf(α, v, e, A, b, δ_sdf, max_length=max_length)
 	l = 0.1 * sum(0.5 * ϕ.^2 + softabs.(ϕ, δ_softabs))
 	return l / nβ
 end
 
-function keyword_shape_loss(α::AbstractVector, αmax::AbstractVector,
-		v::AbstractMatrix, e::AbstractMatrix, hit_indices::AbstractVector,
-		A::AbstractVector, b::AbstractVector, bo::AbstractVector,
-		kwargs
-		) where T
-		return shape_loss(α, αmax, v, e, hit_indices, A, b, bo;
-			kwargs...
-			)
+Base.@kwdef mutable struct ShapeLossOptions1200{T}
+	δ_sdf::T=0.025
+	δ_sdf_matching::T=0.25
+	δ_softabs::T=0.5
+	δ_sigmoid::T=0.01
+	altitude_threshold::T=0.01
+	thickness::T=0.2
+	max_length::T=50.00
+	rendering::T=5.0
+	sdf_matching::T=10.0
+	side_regularization::T=0.5
+	inside::T=0.4
+	outside::T=0.1
+	floor::T=0.1
+	inside_sample::Int=10
+	outside_sample::Int=10
+	floor_sample::Int=10
 end
 
 function shape_loss(α::AbstractVector, αmax::AbstractVector,
 		v::AbstractMatrix, e::AbstractMatrix, hit_indices::AbstractVector,
-		A::AbstractVector, b::AbstractVector, bo::AbstractVector;
-		δ_sdf=15.0,
-		δ_softabs=0.5,
-		δ_sigmoid=0.1,
-		altitude_threshold=0.01,
-		thickness=0.2,
-		rendering=5.0,
-		sdf_matching=20.0,
-		overlap=2.0,
-		individual=1.0,
-		side_regularization=0.5,
-		shape_regularization=0.5,
-		inside=1.0,
-		outside=0.1,
-		floor=0.1,
-		inside_sample::Int=10,
-		outside_sample::Int=10,
-		floor_sample::Int=10,
-		) where T
+		A::AbstractVector, b::AbstractVector, bo::AbstractVector; opts=ShapeLossOptions1200())
 
 	polytope_dimensions = length.(b)
 	np = length(polytope_dimensions)
@@ -209,43 +204,79 @@ function shape_loss(α::AbstractVector, αmax::AbstractVector,
 	# regularization
 	for i = 1:np
 		Δ = norm(b[i] .- mean(b[i]))
-		l += side_regularization * 10.0 * (0.5*Δ^2 + softabs(Δ, δ_softabs)) / sum(polytope_dimensions)
+		l += opts.side_regularization * 10.0 * (0.5*Δ^2 + softabs(Δ, opts.δ_softabs)) / sum(polytope_dimensions)
 	end
 
 	# rendering
-	l += rendering * rendering_loss(α, αmax, v, e, A, bo; max_length=50.00)
+	l += opts.rendering * rendering_loss(α, αmax, v, e, A, bo; max_length=opts.max_length)
 
 	# sdf matching
-	l += sdf_matching * sdf_matching_loss(α_hit, v_hit, e_hit, A, bo;
-			δ_sdf=10*δ_sdf,
-			δ_softabs=δ_softabs,
+	l += opts.sdf_matching * sdf_matching_loss(α_hit, v_hit, e_hit, A, bo;
+			δ_sdf=opts.δ_sdf_matching,
+			δ_softabs=opts.δ_softabs,
+			max_length=opts.max_length,
 			)
 
 	# floor sampling
-	# only valid when the body frame is aligned with the world frame
-	l += floor * floor_loss(αmax_hit, v_hit, e_hit, A, bo;
-			δ_sdf=δ_sdf,
-			δ_sigmoid=δ_sigmoid,
-			thickness=thickness,
-			floor_sample=floor_sample,
+	l += opts.floor * floor_loss(αmax_hit, v_hit, e_hit, A, bo;
+			δ_sdf=opts.δ_sdf,
+			δ_sigmoid=opts.δ_sigmoid,
+			thickness=opts.thickness,
+			max_length=opts.max_length,
+			floor_sample=opts.floor_sample,
 			)
 
 	# outside sampling
-	l += outside * outside_loss(α_hit, v_hit, e_hit, A, bo;
-			δ_sdf=δ_sdf,
-			δ_sigmoid=δ_sigmoid,
-			thickness=thickness,
-			outside_sample=outside_sample,
+	l += opts.outside * outside_loss(α_hit, v_hit, e_hit, A, bo;
+			δ_sdf=opts.δ_sdf,
+			δ_sigmoid=opts.δ_sigmoid,
+			thickness=opts.thickness,
+			max_length=opts.max_length,
+			outside_sample=opts.outside_sample,
 			)
 
 	# inside sampling
-	l += inside * inside_loss(α_hit, v_hit, e_hit, A, bo;
-			δ_sdf=δ_sdf,
-			δ_sigmoid=δ_sigmoid,
-			thickness=thickness,
-			inside_sample=inside_sample,
+	l += opts.inside * inside_loss(α_hit, v_hit, e_hit, A, bo;
+			δ_sdf=opts.δ_sdf,
+			δ_sigmoid=opts.δ_sigmoid,
+			thickness=opts.thickness,
+			max_length=opts.max_length,
+			inside_sample=opts.inside_sample,
 			)
 	return l
+end
+
+function noisy_shape_loss(
+	α, αmax, v, e, hit_indices,
+	A, b, bo,
+	noise, denoise,
+	opts=ShapeLossOptions1200())
+
+	poses_noise = noise .- denoise
+	v_noisy, e_noisy = noise_transform(v, e, poses_noise)
+	l = shape_loss(
+		α, αmax, v_noisy, e_noisy, hit_indices,
+		A, b, bo,
+		opts=opts,
+		)
+	H = length(denoise)
+	l += 3e1 * sum(norm.(denoise).^2) / H
+	return l
+end
+
+function noisy_shape_gradient(
+	α, αmax, v, e, hit_indices,
+	A, b, bo,
+	noise, denoise,
+	opts=ShapeLossOptions1200(),
+	)
+
+	gradient(noisy_shape_loss,
+		α, αmax, v, e, hit_indices,
+		A, b, bo,
+		noise, denoise,
+		opts,
+		)[[6,7,8,10]]
 end
 
 function vectorized_ray(eye_positions::AbstractVector, angles::AbstractVector,
@@ -287,7 +318,7 @@ function vectorized_ray(eye_positions::AbstractVector, angles::AbstractVector,
 		vi = [cos.(angles_b[i])'; sin.(angles_b[i])']
 		Afi = [A..., Afb[i]]
 		bofi = [bo..., bfb[i] + Afb[i] * ofb[i]]
-		αi = ray_rendering(vi, ei, Afi, bofi; max_length=max_length)
+		αi = ray_tracing(vi, ei, Afi, bofi; max_length=max_length)
 		# we assume that the floor is located in 0,0 and with normal [0,1].
 		αmaxi = min.(max_length, -eye_positions[i][2] ./ sin.(angles[i]))
 		# altitude (position along the z axis in the world frame) of the point coming from ray j
@@ -307,16 +338,18 @@ function vectorized_ray(eye_positions::AbstractVector, angles::AbstractVector,
 	return α, αmax, v, e, hit_indices
 end
 
-function noise_transform(v::AbstractMatrix, e::AbstractMatrix, nβ::Int, poses::AbstractVector, poses_noisy::AbstractVector)
+function noise_transform(v::AbstractMatrix, e::AbstractMatrix, poses_noise::AbstractVector)
+	# poses_noise = poses_noisy .- poses
 	# e and v are in the body frame
 	# body ---- x θ ----> world <---- x_noisy, θ_noisy ---- body_noisy
 	# We need to transform them to the noisy body frame.
 	H = length(poses)
+	nβ = Int(size(e, 2) / H)
 
-	Δx1 = vec([poses[i][1] - poses_noisy[i][1] for i = 1:H]' .* ones(nβ)) # nβ*H
-	Δx2 = vec([poses[i][2] - poses_noisy[i][2] for i = 1:H]' .* ones(nβ)) # nβ*H
+	Δx1 = vec([poses_noise[i][1] for i = 1:H]' .* ones(nβ)) # nβ*H
+	Δx2 = vec([poses_noise[i][2] for i = 1:H]' .* ones(nβ)) # nβ*H
 	Δx = [Δx1'; Δx2'] # 2 x nβ*H
-	Δθ = vec([poses[i][3] - poses_noisy[i][3] for i = 1:H]' .* ones(nβ)) # nβ*H
+	Δθ = vec([poses_noise[i][3] for i = 1:H]' .* ones(nβ)) # nβ*H
 	c = cos.(Δθ)
 	s = sin.(Δθ)
 
