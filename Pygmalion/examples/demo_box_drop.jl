@@ -1,5 +1,4 @@
 include(joinpath(module_dir(), "Pygmalion/Pygmalion.jl"))
-include("../flux/shape_loss.jl")
 
 
 vis = Visualizer()

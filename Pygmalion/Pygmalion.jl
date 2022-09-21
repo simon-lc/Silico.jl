@@ -35,6 +35,7 @@ include("softmax.jl")
 include("transparency_point_cloud.jl")
 include("utils.jl")
 include("visuals.jl")
+include("zoo.jl")
 # include("vertices.jl")
 
 include("flux/shape_loss.jl")
