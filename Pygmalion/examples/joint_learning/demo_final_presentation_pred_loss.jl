@@ -1,4 +1,6 @@
 include(joinpath(module_dir(), "Pygmalion/Pygmalion.jl"))
+include(joinpath(@__DIR__, "..", "implicit_dynamics", "prediction.jl"))
+
 
 vis = Visualizer()
 open(vis)
@@ -27,14 +29,9 @@ mech = get_bundle_drop(;
 	A=A_recipient,
 	b=bo_recipient,
     options=Mehrotra.Options(
-        verbose=false,
         complementarity_tolerance=1e-3,
         compressed_search_direction=true,
-        max_iterations=30,
         sparse_solver=false,
-        differentiate=false,
-        warm_start=false,
-        complementarity_correction=0.5,
         )
     );
 Mehrotra.solve!(mech.solver)
@@ -90,7 +87,7 @@ set_2d_point_cloud!(vis, eye_positions, d0w_split; name=:point_cloud)
 # Initialization
 ################################################################################
 nh = 5
-polytope_dimensions = [nh,nh,nh]
+polytope_dimensions = [nh,nh,nh,nh]
 np = length(polytope_dimensions)
 
 θinit, kmres = parameter_initialization(d0b_noisy[:,hit_indices], polytope_dimensions)
@@ -167,7 +164,6 @@ function local_grad(vars)
 	return [dAbdθ' * dldAb; dlddenoise]
 end
 
-
 local_loss(vars_init)
 local_loss(vars_sol0)
 local_grad(vars_init)
@@ -178,14 +174,17 @@ local_grad(vars_init)
 # solve
 ################################################################################
 adam_opt = Adam(vars_init, local_loss, local_grad)
-# adam_opt.a = 5e-3
-adam_opt.a = 12e-3
+adam_opt.a = 5e-3
 max_iterations = 400
 visual_iterations = 25
 
 subset = 1:Int(ceil(max_iterations/visual_iterations)):max_iterations
 @elapsed vars_sol0, vars_iter0 = adam_solve!(adam_opt, projection=local_projection, max_iterations=max_iterations)
 θsol0, denoise_sol0 = unpack_poses_halfspace_variables(vars_sol0, polytope_dimensions)
+A_sol0, b_sol0, bo_sol0 = preprocess_halfspaces(θsol0, polytope_dimensions)
+denoised_poses_sol0 = noisy_poses .- denoise_sol0
+
+
 
 vis, anim = visualize_iterates!(vis, vars_iter0[subset], polytope_dimensions, eye_positions[1],
  	angles, 1e-4, max_iterations=visual_iterations, color=iterate_color)
@@ -216,256 +215,196 @@ for (j,i) in enumerate(subset)
 	end
 end
 MeshCat.setanimation!(vis, anim)
-# convert_frames_to_video_and_gif("u_shape_denoising")
-
-Asol, bsol, osol = unpack_halfspaces(θsol0, polytope_dimensions)
 
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# ## visualizer
-vis = Visualizer()
-# render(vis)
-open(vis)
-RobotVisualizer.set_background!(vis)
-RobotVisualizer.set_light!(vis)
-RobotVisualizer.set_floor!(vis, x=0.1)
-RobotVisualizer.set_camera!(vis, zoom=3.0)
 
 ################################################################################
-# inertial parameters
+# Prediction loss
 ################################################################################
-mech = get_polytope_drop(;
+learned_mech = get_bundle_drop(;
     timestep=timestep,
     gravity=gravity,
     mass=mass,
     inertia=inertia,
     friction_coefficient=0.1,
-	method_type=:symbolic,
-	A=deepcopy(A_box[1]),
-	b=deepcopy(bo_box[1]),
+    method_type=:symbolic,
+	A=deepcopy(A_sol0),
+	b=deepcopy(bo_sol0),
     options=Mehrotra.Options(
-        verbose=false,
+		verbose=false,
         complementarity_tolerance=1e-3,
         compressed_search_direction=true,
-        max_iterations=30,
         sparse_solver=false,
-        differentiate=false,
-        warm_start=false,
-        complementarity_correction=0.5,
         )
     );
-Mehrotra.solve!(mech.solver)
+
+Mehrotra.solve!(learned_mech.solver)
 
 ################################################################################
 # test simulation
 ################################################################################
-vp15 = [+3.0, +0.0, +2.0]
-xp2  = [+0.0, +0.75, +0.0]
+vp15 = [-0,0,-0.6*9.0]
+xp2 = [+0.0,2.00,+0.00]
 z0 = [xp2; vp15]
 
-storage = simulate!(mech, z0, horizon)
-vis, anim = visualize!(vis, mech, storage)
+# horizon = 25
+# learned_storage = simulate!(learned_mech, z0, horizon)
+# vis, anim = visualize!(vis, learned_mech, storage, show_contact=false)
 
-configuration_ref = [[storage.x[i][1]; storage.v[i][1]] for i = 1:horizon]
+
+
 
 ################################################################################
-# initial guess
+# test traj loss
 ################################################################################
-Ap1 = [
-	+1.0 +0.0;
-	+0.0 +1.0;
-	-1.0 +0.0;
-	+0.0 -1.0;
-	]
-bp1 = 0.75*[
-	+1,
-	+1,
-	+1,
-	+1,
-	]
-friction_coefficient1 = 0.5
+idx_parameters = vcat([c.index.parameters[2:16] for c in learned_mech.contacts]...) # Ap, bp
+wi = vcat([[vec(A_sol[i]); b_sol[i] + A_sol[i] * o_sol[i]] for i = 1:np]...)
+w_init = [wi for i=2:horizon]
 
-ϵ_init = 1.0
-x1 = [
-    0.0; 1.0; 0.0;
-    0.0; 0.0; 0.0;
-	0.0; 0.0;
-	ϵ_init ;
-	ϵ_init ;
-	ϵ_init ;
-	ϵ_init ; ϵ_init ;
-	ϵ_init * ones(nh);
-	ϵ_init ;
+prediction_loss(z0, z0, z0, w_init[1], idx_parameters, learned_mech; complementarity_tolerance=1e-3, Q=I, R=I)
+prediction_loss(storage.z[2], storage.z[2], z0, w_init[1], idx_parameters, learned_mech; complementarity_tolerance=1e-3, Q=I, R=0.01I)
 
-	0.0; 0.0;
-	ϵ_init ;
-	ϵ_init ;
-	ϵ_init ;
-	ϵ_init ; ϵ_init ;
-	ϵ_init * ones(nh);
-	ϵ_init ;
+ẑ_ref = [deepcopy(storage.z[i]) for i = 2:horizon]
+ẑ_traj = [[noisy_poses[i]; (noisy_poses[i] - noisy_poses[i-1]) / timestep] for i=2:horizon]
+z_traj = [[denoised_poses_sol[i]; (denoised_poses_sol[i] - denoised_poses_sol[i-1]) / timestep] for i=2:horizon]
 
-	0.0; 0.0;
-    ϵ_init ;
-    ϵ_init ;
-    ϵ_init ;
-    ϵ_init ; ϵ_init ;
-    ϵ_init * ones(nh);
-    ϵ_init ;
+plot(hcat(ẑ_ref...)')
+plot(hcat(z_traj...)')
+plot(hcat(ẑ_traj...)')
 
-	friction_coefficient1;
-	vec(Asol[1]);
-	bsol[1] + Asol[1] * osol[1];
-	vec(Asol[2]);
-	bsol[2] + Asol[2] * osol[2];
-    vec(Asol[3]);
-    bsol[3] + Asol[3] * osol[3];
-    ]
-configuration_init = [[deepcopy(configuration_ref[i][1:6]); x1[7:end]] for i = 1:horizon]
+# prediction_loss(ẑ_traj[1], z_traj[1], z0, w_init[1], idx_parameters, learned_mech;
+prediction_loss(ẑ_ref[1], ẑ_ref[1], z0, w_init[1], idx_parameters, learned_mech;
+	complementarity_tolerance=1e-3, Q=I, R=I)
+
+trajectory_loss(ẑ_traj, z_traj, z0, w_init, idx_parameters, learned_mech;
+	complementarity_tolerance=1e-3, Q=I, R=I)
+
+trajectory_gradient(ẑ_traj, z_traj, z0, w_init, idx_parameters, learned_mech;
+	complementarity_tolerance=1e-3, Q=I, R=0.01*I)
 
 
+################################################################################
+# optimization
+################################################################################
+function local_loss(vars)
+	θ, denoise = unpack_poses_halfspace_variables(vars, polytope_dimensions)
+	A, b, bo = preprocess_halfspaces(θ, polytope_dimensions)
+	wi = vcat([[vec(A[i]); bo[i]] for i = 1:np]...)
+	w_init = [wi for i=2:horizon]
+
+	denoised_poses = deepcopy(poses) .- denoise
+	z_traj = [[denoised_poses[i]; (denoised_poses[i] - denoised_poses[i-1]) / timestep] for i=2:horizon]
+
+	l = trajectory_loss(ẑ_traj, z_traj, z0, w_init, idx_parameters, learned_mech;
+		complementarity_tolerance=1e-3, Q=Diagonal([1ones(3); 0.0001ones(3)]), R=1e-5I)
+	return l
+end
+
+function local_grad(vars)
+	θ, denoise = unpack_poses_halfspace_variables(vars, polytope_dimensions)
+	A, b, bo = preprocess_halfspaces(θ, polytope_dimensions)
+	wi = vcat([[vec(A[i]); bo[i]] for i = 1:np]...)
+	w_init = [wi for i=2:horizon]
+
+	denoised_poses = deepcopy(poses) .- denoise
+	z_traj = [[denoised_poses[i]; (denoised_poses[i] - denoised_poses[i-1]) / timestep] for i=2:horizon]
+
+	dldxw = trajectory_gradient(ẑ_traj, z_traj, z0, w_init, idx_parameters, learned_mech;
+		complementarity_tolerance=1e-3, Q=Diagonal([1ones(3); 0.0001ones(3)]), R=1e-5I)
+
+	dxwdvars = ForwardDiff.jacobian(vars -> preprocess_vars(vars), vars)
+	return dxwdvars' * dldxw
+end
+
+function preprocess_vars(vars)
+	θ, denoise = unpack_poses_halfspace_variables(vars, polytope_dimensions)
+	A, b, bo = preprocess_halfspaces(θ, polytope_dimensions)
+	wi = vcat([[vec(A[i]); bo[i]] for i = 1:np]...)
+	w_init = [wi for i=2:horizon]
+
+	denoised_poses = deepcopy(poses) .- denoise
+	z_traj = [[denoised_poses[i]; (denoised_poses[i] - denoised_poses[i-1]) / timestep] for i=2:horizon]
+
+	traj = vcat([[z_traj[i]; w_init[i]] for i=1:horizon-1]...)
+	return traj
+end
+
+
+preprocess_vars(vars_init)
+local_loss(vars_sol0)
+g0 = local_grad(vars_sol0)
+# g1 = FiniteDiff.finite_difference_gradient(vars -> local_loss(vars), vars_sol0)
+
+
+################################################################################
+# solve
+################################################################################
+adam_opt = Adam(vars_sol0, local_loss, local_grad)
+adam_opt.a = 5e-3
+max_iterations = 100
+visual_iterations = 25
+
+subset = 1:Int(ceil(max_iterations/visual_iterations)):max_iterations
+@elapsed vars_sol1, vars_iter1 = adam_solve!(adam_opt, projection=local_projection,
+	max_iterations=max_iterations, l_tolerance=1e-5)
+θsol1, denoise_sol1 = unpack_poses_halfspace_variables(vars_sol1, polytope_dimensions)
+A_sol1, b_sol1, bo_sol1 = preprocess_halfspaces(θsol1, polytope_dimensions)
+denoised_poses_sol1 = noisy_poses .- denoise_sol1
+
+
+vis, anim = visualize_iterates!(vis, vars_iter1[subset], polytope_dimensions, eye_positions[1],
+ 	angles, 1e-4, max_iterations=visual_iterations, color=iterate_color)
+
+plot(hcat(noise...)'[:,1], color=:red)
+plot!(hcat(denoise_sol0...)'[:,1], color=:blue)
+plot!(hcat(denoise_sol1...)'[:,1], color=:blue)
+
+plot(hcat(noise...)'[:,2], color=:red)
+plot!(hcat(denoise_sol0...)'[:,2], color=:blue)
+plot!(hcat(denoise_sol1...)'[:,2], color=:blue)
+
+plot(hcat(noise...)'[:,3], color=:red)
+plot!(hcat(denoise_sol0...)'[:,3], color=:blue)
+plot!(hcat(denoise_sol1...)'[:,3], color=:blue)
 
 
 
-# ## dimensions
-nh
-# (2 + 1 + 1 + 1 + 2 + nh + 1)
-nx = 6 + np * (2 + 1 + 1 + 1 + 2 + nh + 1) + 1 + np*nh*3
-nu = 0
 
-num_states = [nx for t = 1:horizon]
-num_actions = [nu for t = 1:horizon-1]
-
-mech.bodies[1].index
-mech.contacts[1].index
-mech.contacts[1]
-
-function contact_constraints_equality_t(x, u, mechanism;
-        Ac=[0 1.0],
-        bc=[0.0],
+################################################################################
+# Prediction loss
+################################################################################
+learned_mech = get_bundle_drop(;
+    timestep=timestep,
+    gravity=gravity,
+    mass=mass,
+    inertia=inertia,
+    friction_coefficient=0.1,
+    method_type=:symbolic,
+	A=deepcopy(A_sol1),
+	b=deepcopy(bo_sol1),
+    options=Mehrotra.Options(
+		verbose=false,
+        complementarity_tolerance=1e-3,
+        compressed_search_direction=true,
+        sparse_solver=false,
         )
-
-	# unpack
-	body_variables_3, contact_variables_3, contact_parameters_3 = unpack_contact_implicit_variables(x, mechanism)
-	c, ϕ, γ, ψ, β, λp, λc = contact_variables_3[1]
-    return [γ; ψ; β; λp; λc] .* poly_halfspace_slackness(x, mechanism, Ac=Ac, bc=bc)
-end
-
-function contact_constraints_inequality_t(x, u, mechanism;
-        Ac=[0 1.0],
-        bc=[0.0],
-        )
-
-	# unpack
-	body_variables_3, contact_variables_3, contact_parameters_3 = unpack_contact_implicit_variables(x, mechanism)
-	c, ϕ, γ, ψ, β, λp, λc = contact_variables_3[1]
-	friction_coefficient_3, A3, b3 = contact_parameters_3[1]
-
-	p3, v25, c, ϕ, γ, ψ, β, λp, λc, A3, b3, friction_coefficient3 = unpack_state(x)
-    return [
-        poly_halfspace_slackness(x, mechanism, Ac=Ac, bc=bc);
-        γ;
-        ψ;
-        β;
-        λp;
-        λc;
-    ]
-end
-
-
-unpack_contact_implicit_variables(rand(nx), mech)
-polytope_dynamics(rand(nx), rand(nx), rand(nu), mech)
-poly_halfspace_slackness(rand(nx), mech)
-contact_constraints_equality_t(rand(nx), rand(nu), mech)
-contact_constraints_inequality_t(rand(nx), rand(nu), mech)
-################################################################################
-# problem data
-################################################################################
-# ## dynamics_model
-dynamics_model = [(y, x, u) -> polytope_dynamics(y, x, u, mech; timestep=timestep) for t = 1:horizon-1]
-
-# ## objective
-function obj_t(x, u, t, mechanism)
-    J = 0.0
-    Δp = 1.00 .* (x[1:3] - configuration_ref[t][1:3])
-    Δv = 1.00 .* (x[4:6] - configuration_ref[t][4:6])
-    # Δθ = 0.50 .* (x[6 + ] - [vec(Ap1); bp1; friction_coefficient1])
-    J += 0.5 * dot(Δp, Δp)
-    J += 0.5 * dot(Δv, Δv)
-    # J += 0.5 * dot(Δθ, Δθ)
-    return J
-end
-
-objective = [
-    (x,u) -> obj_t(x, u, t, mech) for t = 1:horizon
-    ]
-
-# ## constraints
-equality_t(x, u) = contact_constraints_equality_t(x, u, mech)
-equality = [equality_t for t = 1:horizon]
-
-inequality_t(x, u) = contact_constraints_inequality_t(x, u, mech)
-nonnegative = [inequality_t for t = 1:horizon]
-
-# ## solver
-solver = Solver(objective, dynamics_model, num_states, num_actions,
-    equality=equality,
-    nonnegative=nonnegative,
-    options=Options()
     );
 
-# ## initialize
-state_guess = deepcopy(configuration_init)
-action_guess = [zeros(0) for t = 1:horizon-1] # may need to run more than once to get good trajectory
-initialize_states!(solver, state_guess)
-initialize_actions!(solver, action_guess)
+Mehrotra.solve!(learned_mech.solver)
 
-# ## solve
-solve!(solver)
+################################################################################
+# test simulation
+################################################################################
+vp15 = [-0,0,-0.6*9.0]
+xp2 = [+0.0,2.00,+0.00]
+z0 = [xp2; vp15]
 
-# ## solution
-x_sol, u_sol = get_trajectory(solver)
-p_sol = [x[1:3] for x in x_sol]
-p_truth = [x[1:3] for x in configuration_ref]
+horizon = 25
+learned_storage1 = simulate!(learned_mech, z0, horizon)
+vis, anim = visualize!(vis, learned_mech, learned_storage1, show_contact=false, name=:learned)
+vis, anim = visualize!(vis, mech, storage, show_contact=false, name=:truth, animation=anim)
 
-# ## visualize
-friction_coefficientp = mean([x[end-45+1] for x in x_sol])
-Ap = mean([x[end-3nh-1+1:end-nh-1] for x in x_sol])
-Ap = reshape(Ap, (nh,2))
-bp = mean([x[end-nh-1+1:end-1] for x in x_sol])
-
-build_2d_polytope!(vis[:polytope_init], Ap1, bp1, name=:polytope, color=MeshCat.RGBA(1,1,1,0.4))
-build_2d_polytope!(vis[:polytope_sol], Ap, bp, name=:polytope, color=MeshCat.RGBA(1,0,0,0.4))
-build_2d_polytope!(vis[:polytope_truth], Ap0, bp0, name=:polytope, color=MeshCat.RGBA(0,0,0,1.0))
-settransform!(vis[:polytope_init][:polytope], MeshCat.Translation(0.00,0,0))
-settransform!(vis[:polytope_sol][:polytope], MeshCat.Translation(0.05,0,0))
-settransform!(vis[:polytope_truth][:polytope], MeshCat.Translation(0.10,0,0))
-anim = MeshCat.Animation()
-for ii = 1:horizon+20
-    atframe(anim, ii) do
-		i = clamp(ii, 1, horizon)
-		set_2d_polytope!(vis, p_truth[i][1:2], p_truth[i][3:3], name=:polytope_init)
-		set_2d_polytope!(vis, p_sol[i][1:2], p_sol[i][3:3], name=:polytope_sol)
-        set_2d_polytope!(vis, p_truth[i][1:2], p_truth[i][3:3], name=:polytope_truth)
-    end
-end
-setanimation!(vis, anim)
-u_sol
-x_sol
+convert_frames_to_video_and_gif("shape_learning_from_dynamics")

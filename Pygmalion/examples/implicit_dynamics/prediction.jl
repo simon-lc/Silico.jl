@@ -1,4 +1,4 @@
-function prediction_loss(ẑ1, z1, z0, w1, idx_parameters, mechanism; complementarity_tolerance=1e-3)
+function prediction_loss(ẑ1, z1, z0, w1::AbstractVector, idx_parameters, mechanism; complementarity_tolerance=1e-3, Q=I, R=I)
 	mechanism.solver.options.residual_tolerance = complementarity_tolerance / 10
 	mechanism.solver.options.complementarity_tolerance = complementarity_tolerance
 
@@ -7,15 +7,13 @@ function prediction_loss(ẑ1, z1, z0, w1, idx_parameters, mechanism; complement
 
 	DojoLight.dynamics(z1_pred, mechanism, z0, u0, w=w1, idx_parameters=idx_parameters)
 
-	Q = I
-	R = I
 	l = 0.0
 	l += 0.5 * (z1_pred - z1)' * Q * (z1_pred - z1)
 	l += 0.5 * (z1 - ẑ1)' * R * (z1 - ẑ1)
 	return l
 end
 
-function prediction_jacobian_state!(dz, z, w, idx_parameters, mechanism; complementarity_tolerance=1e-3)
+function prediction_jacobian_state!(dz, z, w::AbstractVector, idx_parameters, mechanism; complementarity_tolerance=1e-3)
 	mechanism.solver.options.residual_tolerance = complementarity_tolerance / 10
 	mechanism.solver.options.complementarity_tolerance = complementarity_tolerance
 
@@ -27,7 +25,7 @@ function prediction_jacobian_state!(dz, z, w, idx_parameters, mechanism; complem
 	return z1_pred
 end
 
-function prediction_jacobian_parameters!(dw, z, w, idx_parameters, mechanism; complementarity_tolerance=1e-3)
+function prediction_jacobian_parameters!(dw, z, w::AbstractVector, idx_parameters, mechanism; complementarity_tolerance=1e-3)
 	mechanism.solver.options.residual_tolerance = complementarity_tolerance / 10
 	mechanism.solver.options.complementarity_tolerance = complementarity_tolerance
 
@@ -40,25 +38,30 @@ function prediction_jacobian_parameters!(dw, z, w, idx_parameters, mechanism; co
 end
 
 # traj loss (z1:n, w1:n)
-function trajectory_loss(ẑ, z, z0, w, idx_parameters, mechanism; complementarity_tolerance=1e-3)
+function trajectory_loss(ẑ, z, z0, w, idx_parameters, mechanism;
+		complementarity_tolerance=1e-3, Q=I, R=I)
+
 	H = length(z)
 	l = 0.0
 	z_prev = deepcopy(z0)
 	for i = 1:H
-		l += prediction_loss(ẑ[i], z[i], z_prev, w[i], idx_parameters, mechanism; complementarity_tolerance=complementarity_tolerance)
+		l += prediction_loss(ẑ[i], z[i], z_prev, w[i], idx_parameters, mechanism;
+			complementarity_tolerance=complementarity_tolerance,
+			Q=Q,
+			R=R)
 		z_prev .= z[i]
 	end
 	return l
 end
 
 # traj gradient wrt z1:n w1:n
-function trajectory_gradient(ẑ, z, z0, w, idx_parameters, mechanism; complementarity_tolerance=1e-3)
+function trajectory_gradient(ẑ, z, z0, w, idx_parameters, mechanism;
+		complementarity_tolerance=1e-3, Q=I, R=I)
+
 	H = length(z)
 	nz = mechanism.dimensions.state
 	nw = length(idx_parameters)
 
-	Q = I
-	R = I
 	dz = zeros(nz, nz)
 	dw = zeros(nz, nw)
 	grad = zeros(H * (nz + nw))
@@ -85,7 +88,7 @@ end
 
 
 # traj quasi newton hessian wrt z1:n w1:n
-function trajectory_hessian(ẑ, z, z0, w, idx_parameters, mechanism; complementarity_tolerance=1e-3)
+function trajectory_hessian(ẑ, z, z0, w, idx_parameters, mechanism; complementarity_tolerance=1e-3, Q=I, R=I)
 	H = length(z)
 	nz = mechanism.dimensions.state
 	nw = length(idx_parameters)

@@ -109,10 +109,11 @@ end
 function visualize!(vis::Visualizer, mechanism::Mechanism, storage::TraceStorage{T,H};
         build::Bool=true,
         show_contact::Bool=true,
+        color=RGBA(0.2, 0.2, 0.2, 0.8),
         name::Symbol=:robot,
         animation=MeshCat.Animation(Int(floor(1/mechanism.bodies[1].timestep[1])))) where {T,H}
 
-    build && build_mechanism!(vis, mechanism, show_contact=show_contact, name=name)
+    build && build_mechanism!(vis, mechanism, show_contact=show_contact, color=color, name=name)
     for i = 1:H
         atframe(animation, i) do
             set_mechanism!(vis, mechanism, storage, i, show_contact=show_contact, name=name)

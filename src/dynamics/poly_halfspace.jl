@@ -62,7 +62,6 @@ function parameter_dimension(contact::PolyHalfSpace{T,D}) where {T,D}
 end
 
 function unpack_variables(x::Vector, contact::PolyHalfSpace{T,D,NP}) where {T,D,NP}
-    num_cone = cone_dimension(contact)
     NC = 1
     off = 0
     c = x[off .+ (1:2)]; off += 2
