@@ -177,10 +177,12 @@ Base.@kwdef mutable struct ShapeLossOptions1200{T}
 	altitude_threshold::T=0.01
 	thickness::T=0.2
 	max_length::T=50.00
-	rendering::T=5.0
+	# rendering::T=5.0
+	rendering::T=0.0
 	sdf_matching::T=10.0
 	side_regularization::T=0.5
-	inside::T=0.4
+	# inside::T=0.4
+	inside::T=0.0
 	outside::T=0.1
 	floor::T=0.1
 	inside_sample::Int=10

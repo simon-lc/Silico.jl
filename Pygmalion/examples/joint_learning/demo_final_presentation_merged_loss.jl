@@ -204,10 +204,10 @@ function local_loss(vars)
 		ShapeLossOptions1200(),
 		)
 
-	lt = trajectory_loss(ẑ_traj, z_traj, z0, w_init, idx_parameters, learned_mech;
-		complementarity_tolerance=1e-3, Q=Diagonal([300ones(3); 1e-1ones(3)]), R=1e-15I)
-	l += lt
-	@show lt
+	# lt = trajectory_loss(ẑ_traj, z_traj, z0, w_init, idx_parameters, learned_mech;
+	# 	complementarity_tolerance=1e-3, Q=Diagonal([300ones(3); 1e-1ones(3)]), R=1e-15I)
+	# l += lt
+	# @show lt
 
 	return l
 end
@@ -230,11 +230,11 @@ function local_grad(vars)
 	dl = [dAbdθ' * dldAb; dlddenoise]
 
 
-	dldxw = trajectory_gradient(ẑ_traj, z_traj, z0, w_init, idx_parameters, learned_mech;
-		complementarity_tolerance=1e-3, Q=Diagonal([300ones(3); 1e-1ones(3)]), R=1e-15I)
-	dxwdvars = ForwardDiff.jacobian(vars -> preprocess_vars(vars, polytope_dimensions, vectorize=true), vars)
-	dlt = dxwdvars' * dldxw
-	dl += dlt
+	# dldxw = trajectory_gradient(ẑ_traj, z_traj, z0, w_init, idx_parameters, learned_mech;
+	# 	complementarity_tolerance=1e-3, Q=Diagonal([300ones(3); 1e-1ones(3)]), R=1e-15I)
+	# dxwdvars = ForwardDiff.jacobian(vars -> preprocess_vars(vars, polytope_dimensions, vectorize=true), vars)
+	# dlt = dxwdvars' * dldxw
+	# dl += dlt
 	return dl
 end
 
@@ -324,4 +324,4 @@ learned_storage = simulate!(learned_mech, z0, horizon)
 vis, anim = visualize!(vis, learned_mech, learned_storage, show_contact=false, color=RGBA(0,0.4,0.9,0.4), name=:learned)
 vis, anim = visualize!(vis, mech, storage, show_contact=false, color=RGBA(1,1,1,1), name=:robot, animation=anim)
 
-convert_frames_to_video_and_gif("forward_sim_normal")
+convert_frames_to_video_and_gif("ground_truth_top_only")
