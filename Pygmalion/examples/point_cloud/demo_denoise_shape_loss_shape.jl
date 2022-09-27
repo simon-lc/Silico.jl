@@ -208,7 +208,7 @@ local_grad(vars_init)
 ################################################################################
 adam_opt = Adam(vars_init, local_loss, local_grad)
 adam_opt.eps = 1e-8
-adam_opt.a = 5e-3
+adam_opt.a = 8e-3
 max_iterations = 400
 visual_iterations = 50
 
