@@ -91,7 +91,7 @@ poses = [x[1] for x in storage.x]
 x = [p[1:2] for p in poses] # position
 θ = [p[3] for p in poses] # orientation
 bRw = [[cos(θ[i]) sin(θ[i]); -sin(θ[i]) cos(θ[i])] for i=1:H0]
-noise = [[0.2, 0.2, 0.5] .* (rand(3) .- 0.5) for x in storage.x]
+noise = [[0.2, 0.2, 0.5] .* (i/(2H0) - 0.25) for i=1:H0]
 noisy_poses = [storage.x[i][1] + noise[i]  for i = 1:H0]
 
 
@@ -208,7 +208,7 @@ local_grad(vars_init)
 ################################################################################
 adam_opt = Adam(vars_init, local_loss, local_grad)
 adam_opt.eps = 1e-8
-adam_opt.a = 8e-3
+adam_opt.a = 5e-3
 max_iterations = 400
 visual_iterations = 50
 
