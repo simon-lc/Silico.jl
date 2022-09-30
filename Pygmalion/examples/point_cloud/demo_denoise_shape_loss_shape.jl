@@ -91,7 +91,7 @@ poses = [x[1] for x in storage.x]
 x = [p[1:2] for p in poses] # position
 θ = [p[3] for p in poses] # orientation
 bRw = [[cos(θ[i]) sin(θ[i]); -sin(θ[i]) cos(θ[i])] for i=1:H0]
-noise = [[0.2, 0.2, 0.5] .* (i/(2H0) - 0.25) for i=1:H0]
+noise = [[0.2, 0.2, 0.5] .* (i/(2H0) - 0.15) for i=1:H0]
 noisy_poses = [storage.x[i][1] + noise[i]  for i = 1:H0]
 
 
