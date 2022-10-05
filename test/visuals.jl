@@ -11,7 +11,11 @@
     ################################################################################
     # example
     ################################################################################
-    mech = DojoLight.get_sphere_drop(verbose=false)
+    mech = DojoLight.get_sphere_drop(
+        options=DojoLight.Mehrotra.Options(
+            verbose=false,
+            ),
+        )
 
     ################################################################################
     # test simulation
