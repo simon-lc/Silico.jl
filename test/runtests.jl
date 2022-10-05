@@ -8,5 +8,6 @@ using SparseArrays
 
 using DojoLight
 
+@testset "environment"          verbose=true begin include("environment.jl") end
 @testset "dynamics"             verbose=true begin include("dynamics.jl") end
 @testset "visuals"              verbose=true begin include("visuals.jl") end

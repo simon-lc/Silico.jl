@@ -13,7 +13,7 @@ struct PolyPoly{T,D,NP,NC} <: Node{T}
     b_child_collider::Vector{T} #polytope
 end
 
-function PolyPoly(parent_body::Body{T}, child_body::Body{T};
+function PolyPoly(parent_body::AbstractBody{T}, child_body::AbstractBody{T};
         parent_collider_id::Int=1,
         child_collider_id::Int=1,
         name::Symbol=:contact,
@@ -121,7 +121,7 @@ function unpack_parameters(θ::Vector, contact::PolyPoly{T,D,NP,NC}) where {T,D,
 end
 
 function residual!(e, x, θ, contact::PolyPoly{T,D,NP,NC},
-        pbody::Body, cbody::Body) where {T,D,NP,NC}
+        pbody::AbstractBody, cbody::AbstractBody) where {T,D,NP,NC}
 
     # unpack parameters
     friction_coefficient, Ap, bp, Ac, bc = unpack_parameters(θ[contact.index.parameters], contact)

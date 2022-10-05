@@ -13,7 +13,7 @@ struct SphereSphere{T,D} <: Node{T}
     child_position_offset::Vector{T}
 end
 
-function SphereSphere(parent_body::Body{T}, child_body::Body{T};
+function SphereSphere(parent_body::AbstractBody{T}, child_body::AbstractBody{T};
         parent_collider_id::Int=1,
         child_collider_id::Int=1,
         name::Symbol=:contact,
@@ -109,7 +109,7 @@ function unpack_parameters(θ::Vector, contact::SphereSphere{T,D}) where {T,D}
 end
 
 function residual!(e, x, θ, contact::SphereSphere{T,D},
-        pbody::Body, cbody::Body) where {T,D}
+        pbody::AbstractBody, cbody::AbstractBody) where {T,D}
 
     # unpack parameters
     friction_coefficient, radp, offp, radc, offc = unpack_parameters(θ[contact.index.parameters], contact)

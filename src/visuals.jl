@@ -28,7 +28,7 @@ end
 ######################################################################
 # body
 ######################################################################
-function build_body!(vis::Visualizer, body::Body;
+function build_body!(vis::Visualizer, body::AbstractBody;
         name::Symbol=body.name,
         collider_color=RGBA(0.2, 0.2, 0.2, 0.8),
         center_of_mass_color=RGBA(1, 1, 1, 1.0),
@@ -47,7 +47,7 @@ function build_body!(vis::Visualizer, body::Body;
     return nothing
 end
 
-function set_body!(vis::Visualizer, body::Body, pose; name=body.name)
+function set_body!(vis::Visualizer, body::AbstractBody, pose; name=body.name)
     p = pose[1:2]
     q = pose[3:3]
     pe = [0; p]

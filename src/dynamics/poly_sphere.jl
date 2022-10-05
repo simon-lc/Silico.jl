@@ -13,7 +13,7 @@ struct PolySphere{T,D,NP} <: Node{T}
     child_position_offset::Vector{T}
 end
 
-function PolySphere(parent_body::Body{T}, child_body::Body{T};
+function PolySphere(parent_body::AbstractBody{T}, child_body::AbstractBody{T};
         parent_collider_id::Int=1,
         child_collider_id::Int=1,
         name::Symbol=:contact,
@@ -115,7 +115,7 @@ function unpack_parameters(θ::Vector, contact::PolySphere{T,D,NP}) where {T,D,N
 end
 
 function residual!(e, x, θ, contact::PolySphere{T,D,NP},
-        pbody::Body, cbody::Body) where {T,D,NP}
+        pbody::AbstractBody, cbody::AbstractBody) where {T,D,NP}
 
     # unpack parameters
     friction_coefficient, Ap, bp, radc, offc = unpack_parameters(θ[contact.index.parameters], contact)

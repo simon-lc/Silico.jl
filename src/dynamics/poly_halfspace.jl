@@ -12,7 +12,7 @@ struct PolyHalfSpace{T,D,NP} <: Node{T}
     b_child_collider::Vector{T} #polytope
 end
 
-function PolyHalfSpace(parent_body::Body{T}, Ac::AbstractMatrix, bc::AbstractVector;
+function PolyHalfSpace(parent_body::AbstractBody{T}, Ac::AbstractMatrix, bc::AbstractVector;
         parent_collider_id::Int=1,
         name::Symbol=:halfspace,
         friction_coefficient=0.2) where {T}
@@ -114,7 +114,7 @@ function unpack_parameters(θ::Vector, contact::PolyHalfSpace{T,D,NP}) where {T,
 end
 
 function residual!(e, x, θ, contact::PolyHalfSpace{T,D,NP},
-        pbody::Body) where {T,D,NP}
+        pbody::AbstractBody) where {T,D,NP}
     NC = 1
     # unpack parameters
     friction_coefficient, Ap, bp, Ac, bc = unpack_parameters(θ[contact.index.parameters], contact)

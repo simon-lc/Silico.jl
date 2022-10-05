@@ -11,7 +11,7 @@ struct SphereHalfSpace{T,D} <: Node{T}
     b_child_collider::Vector{T} #polytope
 end
 
-function SphereHalfSpace(parent_body::Body{T}, Ac::AbstractMatrix, bc::AbstractVector;
+function SphereHalfSpace(parent_body::AbstractBody{T}, Ac::AbstractMatrix, bc::AbstractVector;
         parent_collider_id::Int=1,
         name::Symbol=:halfspace,
         friction_coefficient=0.2) where {T}
@@ -101,7 +101,7 @@ function unpack_parameters(θ::Vector, contact::SphereHalfSpace{T,D}) where {T,D
 end
 
 function residual!(e, x, θ, contact::SphereHalfSpace{T,D},
-        pbody::Body) where {T,D}
+        pbody::AbstractBody) where {T,D}
     NC = 1
     # unpack parameters
     friction_coefficient, parent_radius, Ac, bc = unpack_parameters(θ[contact.index.parameters], contact)
