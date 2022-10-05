@@ -27,10 +27,9 @@ function get_polytope_drop(;
         )
     )
 
-    np = length(A)
     Af = [0.0  +1.0]
     bf = [0.0]
-    normalize_A!.(A)
+    normalize_A!(A)
 
     # nodes
     shapes = [PolytopeShape(A, b)]
