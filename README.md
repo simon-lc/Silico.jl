@@ -1,4 +1,5 @@
 [![CI](https://github.com/simon-lc/DojoLight.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/simon-lc/DojoLight.jl/actions/workflows/CI.yml)
+[![codecov](https://codecov.io/gh/simon-lc/DojoLight.jl/branch/main/graph/badge.svg?token=VMLS7NNFAI)](https://codecov.io/gh/simon-lc/DojoLight.jl)
 
 # DojoLight.jl
 Lightweight and hackable version of the Dojo physics engine.
