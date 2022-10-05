@@ -21,13 +21,31 @@ jobs:
         arch:
           - x64
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@latest
         with:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
-      # - uses: julia-actions/julia-buildpkg@latest
+      - uses: webfactory/ssh-agent@v0.5.4
+        with:
+            ssh-private-key: ${{ secrets.SSH_SECRET }}
+      - name: Clone Mehrotra.jl
+        run: git clone https://github.com/simon-lc/Mehrotra.jl
+      - name: Install private repo
+        run: julia --project -e 'using Pkg; Pkg.add(; url="Mehrotra.jl")'
+      - uses: actions/cache@v1
+        env:
+          cache-name: cache-artifacts
+        with:
+          path: ~/.julia/artifacts
+          key: ${{ runner.os }}-test-${{ env.cache-name }}-${{ hashFiles('**/Project.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-test-${{ env.cache-name }}-
+            ${{ runner.os }}-test-
+            ${{ runner.os }}-
+      - uses: julia-actions/julia-buildpkg@latest
       - uses: julia-actions/julia-runtest@latest
       - uses: julia-actions/julia-uploadcodecov@latest
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
