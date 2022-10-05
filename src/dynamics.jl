@@ -97,6 +97,37 @@ function dynamics_jacobian_parameters(dw, mechanism::Mechanism{T,D,NB}, z, u;
     return nothing
 end
 
+
+function dynamics_jacobian_state_parameters(dz, dw, mechanism::Mechanism{T,D,NB}, z, u;
+        w=Vector(), idx_parameters=0:-1) where {T,D,NB}
+
+    set_state_control_parameters!(mechanism, z, u; w=w, idx_parameters=idx_parameters)
+    solver = mechanism.solver
+    solver.options.differentiate = true
+    timestep = mechanism.bodies[1].timestep[1]
+    Mehrotra.solve!(solver)
+
+    # extract result
+    # idx_parameters = solver.indices.parameter_keywords[:state]
+    idx_parameters_state = mechanism.indices.parameter_state
+    idx_solution_state = mechanism.indices.solution_state
+    idx_velocity = vcat([6(i-1) .+ (4:6) for i=1:NB]...)
+    idx_pose = vcat([6(i-1) .+ (1:3) for i=1:NB]...)
+
+    dz[idx_pose,:] .= timestep * solver.data.solution_sensitivity[idx_solution_state, idx_parameters_state]
+    dz[idx_pose,idx_pose] .+= I(length(idx_pose))
+    dz[idx_velocity,:] .= solver.data.solution_sensitivity[idx_solution_state, idx_parameters_state]
+
+    dw[idx_pose,:] .= timestep * solver.data.solution_sensitivity[idx_solution_state, idx_parameters]
+    for i in idx_pose
+        if idx_parameters_state[i] ∈ idx_parameters
+            dw[i, idx_parameters_state[i]] .+= 1.0
+        end
+    end
+    dw[idx_velocity,:] .= solver.data.solution_sensitivity[idx_solution_state, idx_parameters]
+    return nothing
+end
+
 function quasistatic_dynamics_jacobian_state(dz, mechanism::Mechanism{T,D,NB}, z, u;
         w=Vector(), idx_parameters=0:-1) where {T,D,NB}
 

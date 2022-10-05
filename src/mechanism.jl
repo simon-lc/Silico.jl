@@ -204,3 +204,5 @@ function get_parameters(mechanism::Mechanism)
         )
     return parameters
 end
+
+get_timestep(mechanism::Mechanism) = mechanism.bodies[1].timestep[1]
