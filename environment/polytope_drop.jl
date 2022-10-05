@@ -192,7 +192,7 @@ end
 #         options=options
 #         );
 
-# initialize_solver!(solver)
+# Mehrotra.initialize_solver!(solver)
 # solver.parameters .= rand(solver.dimensions.parameters)
 # solve!(solver)
 # solver.methods.equality_constraint

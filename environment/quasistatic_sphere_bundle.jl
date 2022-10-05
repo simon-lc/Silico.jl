@@ -82,6 +82,6 @@ function get_quasistatic_sphere_bundle(;
         options=options,
         method_type=method_type)
 
-    initialize_solver!(mechanism.solver)
+    Mehrotra.initialize_solver!(mechanism.solver)
     return mechanism
 end

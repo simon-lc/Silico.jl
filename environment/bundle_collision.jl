@@ -92,6 +92,6 @@ function get_bundle_collsion(;
         options=options,
         method_type=method_type)
 
-    initialize_solver!(mechanism.solver)
+    Mehrotra.initialize_solver!(mechanism.solver)
     return mechanism
 end
