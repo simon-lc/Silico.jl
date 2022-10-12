@@ -25,20 +25,7 @@ include("dynamics/sphere_sphere.jl")
 include("quasistatic_dynamics/robot.jl")
 include("quasistatic_dynamics/object.jl")
 
-include("contact_2D/ellipsoid.jl")
-include("contact_2D/halfspace.jl")
-include("contact_2D/padded_polytope.jl")
-include("contact_2D/polytope.jl")
-include("contact_2D/sphere.jl")
 include("contact_2D/contact.jl")
-
-
-include("contact_3D/cone.jl")
-include("contact_3D/ellipsoid.jl")
-include("contact_3D/halfspace.jl")
-include("contact_3D/padded_polytope.jl")
-include("contact_3D/polytope.jl")
-include("contact_3D/sphere.jl")
 include("contact_3D/contact.jl")
 
 include("mechanism.jl")

@@ -132,3 +132,65 @@ function contact_frame(contact::PolySphere, mechanism::Mechanism)
 
     return contact_point, normal, tangent
 end
+
+# for visualization
+function contact_frame(contact::Contact2D, mechanism::Mechanism)
+    pbody = find_body(mechanism.bodies, contact.parent_name)
+    cbody = find_body(mechanism.bodies, contact.child_name)
+
+    variables = mechanism.solver.solution.all
+    parameters = mechanism.solver.parameters
+
+    c, α, βp, βc, γ, ψ, β, λα, λp, λc, sγ, sψ, sβ, sα, sp, sc =
+        unpack_variables(variables[contact.index.variables], contact)
+    vp25 = unpack_variables(variables[pbody.index.variables], pbody)
+    vc25 = unpack_variables(variables[cbody.index.variables], cbody)
+
+    pp2, timestep_p = unpack_pose_timestep(parameters[pbody.index.parameters], pbody)
+    pc2, timestep_c = unpack_pose_timestep(parameters[cbody.index.parameters], cbody)
+
+    pp3 = pp2 + timestep_p[1] * vp25
+    pc3 = pc2 + timestep_c[1] * vc25
+    # contact position in the world frame
+    contact_w = c + (pp3 + pc3)[1:2] / 2
+    # contact_p is expressed in pbody's frame
+    contact_p = x_2d_rotation(pp3[3:3])' * (contact_w - pp3[1:2])
+
+    # constraints
+    shape_p = contact.parent_shape
+    ∇p_gp = constraint_jacobian_p(shape_p, contact_p, α, βp)
+    normal = x_2d_rotation(pp3[3:3]) * ∇p_gp' * λp
+    R = [0 1; -1 0]
+    tangent = R * normal
+
+    return contact_w, normal, tangent
+end
+
+# for visualization
+function contact_frame(contact::EnvContact2D, mechanism::Mechanism)
+    pbody = find_body(mechanism.bodies, contact.parent_name)
+
+    variables = mechanism.solver.solution.all
+    parameters = mechanism.solver.parameters
+
+    c, α, βp, βc, γ, ψ, β, λα, λp, λc, sγ, sψ, sβ, sα, sp, sc =
+        unpack_variables(variables[contact.index.variables], contact)
+    vp25 = unpack_variables(variables[pbody.index.variables], pbody)
+
+    pp2, timestep_p = unpack_pose_timestep(parameters[pbody.index.parameters], pbody)
+
+    pp3 = pp2 + timestep_p[1] * vp25
+    # contact position in the world frame
+    contact_w = c + pp3[1:2]
+    # contact_p is expressed in pbody's frame
+    contact_p = x_2d_rotation(pp3[3:3])' * (contact_w - pp3[1:2])
+
+    # constraints
+    shape_p = contact.parent_shape
+    ∇p_gp = constraint_jacobian_p(shape_p, contact_p, α, βp)
+    normal = x_2d_rotation(pp3[3:3]) * ∇p_gp' * λp
+    R = [0 1; -1 0]
+    tangent = R * normal
+
+    return contact_w, normal, tangent
+end

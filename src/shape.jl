@@ -55,51 +55,6 @@ function constraint_jacobian_o(shape::PolytopeShape, p, α, β)
 end
 
 ################################################################################
-# sphere shape
-################################################################################
-struct SphereShape{T,Ng} <: Shape{T,Ng}
-    radius::Vector{T}
-    position_offset::Vector{T}
-end
-
-function SphereShape(radius::T, position_offset=zeros(T,2)) where T
-    return SphereShape{T,1}([radius], position_offset)
-end
-
-primal_dimension(shape::SphereShape) = 0
-cone_dimension(shape::SphereShape) = 1
-parameter_dimension(shape::SphereShape) = 1 + 2
-get_parameters(shape::SphereShape) = [shape.radius; shape.position_offset]
-
-function set_parameters!(shape::SphereShape, parameters)
-    off = 0
-    shape.radius .= parameters[off .+ (1:1)]; off += 1
-    shape.position_offset .= parameters[off .+ (1:2)]; off += 2
-    return nothing
-end
-
-function constraint(shape::SphereShape{T}, p, α, β) where {T}
-    r = shape.radius[1]
-    o = shape.position_offset
-    return [- (p - o)' * (p - o) + α^2 * r^2]
-end
-
-function constraint_jacobian_α(shape::SphereShape, p, α, β)
-    r = shape.radius[1]
-    return [2 * α * r^2;;]
-end
-
-function constraint_jacobian_p(shape::SphereShape, p, α, β)
-    o = shape.position_offset
-    return [-2 * (p - o)';;]
-end
-
-function constraint_jacobian_o(shape::SphereShape, p, α, β)
-    o = shape.position_offset
-    return [2 * (p - o)';;]
-end
-
-################################################################################
 # halfspace shape
 ################################################################################
 struct HalfspaceShape{T,Ng} <: Shape{T,Ng}
@@ -142,4 +97,49 @@ end
 function constraint_jacobian_o(shape::HalfspaceShape, p, α, β)
     n = shape.normal
     return [n';;]
+end
+
+################################################################################
+# sphere shape
+################################################################################
+struct SphereShape{T,Ng} <: Shape{T,Ng}
+    radius::Vector{T}
+    position_offset::Vector{T}
+end
+
+function SphereShape(radius::T, position_offset=zeros(T,2)) where T
+    return SphereShape{T,1}([radius], position_offset)
+end
+
+primal_dimension(shape::SphereShape) = 0
+cone_dimension(shape::SphereShape) = 1
+parameter_dimension(shape::SphereShape) = 1 + 2
+get_parameters(shape::SphereShape) = [shape.radius; shape.position_offset]
+
+function set_parameters!(shape::SphereShape, parameters)
+    off = 0
+    shape.radius .= parameters[off .+ (1:1)]; off += 1
+    shape.position_offset .= parameters[off .+ (1:2)]; off += 2
+    return nothing
+end
+
+function constraint(shape::SphereShape{T}, p, α, β) where {T}
+    r = shape.radius[1]
+    o = shape.position_offset
+    return [- (p - o)' * (p - o) + α^2 * r^2]
+end
+
+function constraint_jacobian_α(shape::SphereShape, p, α, β)
+    r = shape.radius[1]
+    return [2 * α * r^2;;]
+end
+
+function constraint_jacobian_p(shape::SphereShape, p, α, β)
+    o = shape.position_offset
+    return [-2 * (p - o)';;]
+end
+
+function constraint_jacobian_o(shape::SphereShape, p, α, β)
+    o = shape.position_offset
+    return [2 * (p - o)';;]
 end
