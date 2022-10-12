@@ -49,6 +49,7 @@ mech = get_polytope_collision(;
         )
     )
 # Mehrotra.solve!(mech.solver)
+
 ################################################################################
 # test simulation
 ################################################################################
@@ -76,77 +77,3 @@ plot(hcat([storage.v[i][2] for i=1:H0]...)')
 scatter(storage.iterations)
 # plot!(hcat(storage.variables...)')
 # RobotVisualizer.convert_frames_to_video_and_gif("sphere_polytope_drop")
-
-
-
-# timestep = 0.01
-# mass = 1.0
-# inertia = [1.0;;]
-# Ap = [
-#     1.0  0.0;
-#     0.0  1.0;
-#     -1.0  0.0;
-#     0.0 -1.0;
-#     ]
-# bp = 0.2*[
-#     +1,
-#     +1,
-#     +1,
-#     1,
-#     ];
-# Ac = [
-#      1.0  0.0;
-#      0.0  1.0;
-#     -1.0  0.0;
-#      0.0 -1.0;
-#     ]
-# bc = 0.2*[
-#     1,
-#     1,
-#     1,
-#     1,
-#     ];
-#
-# parent_shape = PolytopeShape(Ap, bp)
-# child_shape = PolytopeShape(Ac, bc)
-# parent_shapes = [parent_shape]
-# child_shapes = [child_shape]
-# parent_body = Body(timestep, mass, inertia, parent_shapes)
-# child_body = Body(timestep, mass, inertia, child_shapes)
-# contact = Contact2D(parent_body, child_body)
-#
-# num_primals = primal_dimension(contact)
-# num_cone = cone_dimension(contact)
-# num_params = parameter_dimension(contact)
-#
-# x = rand(num_primals + 2 * num_cone)
-# unpack_variables(x, contact)
-#
-# get_parameters(contact)
-#
-# θ = rand(num_params)
-# set_parameters!(contact, θ)
-#
-# unpack_parameters(θ, contact)
-#
-# nodes = [parent_body, child_body, contact]
-# bodies = [parent_body, child_body]
-# indexing!(nodes)
-# num_primals = sum(primal_dimension.(nodes))
-# num_cone = sum(cone_dimension.(nodes))
-# num_equality = num_primals + num_cone
-#
-# primals = zeros(num_primals)
-# duals = 0.1*ones(num_cone)
-# slacks = 0.1*ones(num_cone)
-#
-# x = [primals; duals; slacks]
-# e = zeros(eltype(x), num_equality)
-# θ = vcat(get_parameters.(nodes)...)
-#
-# # body
-# residual!(e, x, θ, parent_body)
-# residual!(e, x, θ, child_body)
-#
-# # contact
-# residual!(e, x, θ, contact, bodies)
