@@ -93,7 +93,6 @@ end
 ################################################################################
 struct Mechanism{T,D,NB,NC,B,C}
     variables::Vector{T}
-    # parameters::Vector{T}
     solver::Mehrotra.Solver{T}
     bodies::Vector{B}
     contacts::Vector{C}
