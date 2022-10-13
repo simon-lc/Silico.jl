@@ -26,6 +26,8 @@ include("quasistatic_dynamics/robot.jl")
 include("quasistatic_dynamics/object.jl")
 
 include("contact_2D/contact.jl")
+include("contact_2D/collision_detection.jl")
+include("contact_2D/bilevel_contact.jl")
 include("contact_3D/contact.jl")
 
 include("mechanism.jl")

@@ -207,3 +207,11 @@ function get_parameters(mechanism::Mechanism)
 end
 
 get_timestep(mechanism::Mechanism) = mechanism.bodies[1].timestep[1]
+
+function set_gravity!(mechanism::Mechanism, gravity=9.81)
+    for body in mechanism.bodies
+        body.gravity .= gravity
+    end
+    update_parameters!(mechanism)
+    return nothing
+end
