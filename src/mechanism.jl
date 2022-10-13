@@ -105,7 +105,9 @@ end
 function Mechanism(residual, bodies::Vector, contacts::Vector;
         options::Mehrotra.Options{T}=Mehrotra.Options(),
         D::Int=2,
-        method_type::Symbol=:finite_difference) where {T}
+        methods=nothing, # can provide custom methods
+        method_type::Symbol=:finite_difference,
+        ) where {T}
 
     # # Dimensions
     nodes = [bodies; contacts]
@@ -128,6 +130,7 @@ function Mechanism(residual, bodies::Vector, contacts::Vector;
             parameters=parameters,
             nonnegative_indices=collect(1:num_cone),
             second_order_indices=[collect(1:0)],
+            methods=methods,
             method_type=method_type,
             options=options
             )
@@ -140,7 +143,6 @@ function Mechanism(residual, bodies::Vector, contacts::Vector;
     nc = length(contacts)
     mechanism = Mechanism{T,D,nb,nc,eltype(bodies),eltype(contacts)}(
         variables,
-        # parameters,
         solver,
         bodies,
         contacts,

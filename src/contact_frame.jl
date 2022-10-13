@@ -194,3 +194,30 @@ function contact_frame(contact::EnvContact2D, mechanism::Mechanism)
 
     return contact_w, normal, tangent
 end
+
+# for visualization
+function contact_frame(contact::BilevelContact2D30, mechanism::Mechanism)
+    pbody = find_body(mechanism.bodies, contact.parent_name)
+    cbody = find_body(mechanism.bodies, contact.child_name)
+
+    variables = mechanism.solver.solution.all
+    parameters = mechanism.solver.parameters
+
+    γ, ψ, β, sγ, sψ, sβ =
+        unpack_variables(variables[contact.index.variables], contact)
+    vp25 = unpack_variables(variables[pbody.index.variables], pbody)
+    vc25 = unpack_variables(variables[cbody.index.variables], cbody)
+
+    pp2, timestep_p = unpack_pose_timestep(parameters[pbody.index.parameters], pbody)
+    pc2, timestep_c = unpack_pose_timestep(parameters[cbody.index.parameters], cbody)
+
+    pp3 = pp2 + timestep_p[1] * vp25
+    pc3 = pc2 + timestep_c[1] * vc25
+
+    ϕ, contact_w, normal_pw, normal_cw = contact_data(pp3, pc3, contact.detector)
+    normal = normal_pw
+    R = [0 1; -1 0]
+    tangent = R * normal
+
+    return contact_w, normal, tangent
+end

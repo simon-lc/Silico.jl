@@ -125,8 +125,6 @@ function residual!(e, x, θ, contact::PolyPoly{T,D,NP,NC},
 
     # unpack parameters
     friction_coefficient, Ap, bp, Ac, bc = unpack_parameters(θ[contact.index.parameters], contact)
-    # pp2, vp15, up2, timestep_p, gravity_p, mass_p, inertia_p = unpack_parameters(θ[pbody.index.parameters], pbody)
-    # pc2, vc15, uc2, timestep_c, gravity_c, mass_c, inertia_c = unpack_parameters(θ[cbody.index.parameters], cbody)
     pp2, timestep_p = unpack_pose_timestep(θ[pbody.index.parameters], pbody)
     pc2, timestep_c = unpack_pose_timestep(θ[cbody.index.parameters], cbody)
 
