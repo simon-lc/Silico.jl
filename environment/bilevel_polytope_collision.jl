@@ -55,7 +55,6 @@ function get_bilevel_polytope_collision(;
             ) for i=1:N]
 
     contacts = [body_contacts; env_contacts]
-    # contacts = [body_contacts;]
     indexing!([bodies; contacts])
 
     local_mechanism_residual(primals, duals, slacks, parameters) =

@@ -66,7 +66,7 @@ bilevel_mech = get_bilevel_polytope_collision(;
     A=A0, b=b0,
     options=Mehrotra.Options(
         verbose=true,
-        complementarity_tolerance=1e-4,
+        complementarity_tolerance=1e-6,
         compressed_search_direction=false,
         max_iterations=30,
         sparse_solver=true,
@@ -80,13 +80,13 @@ bilevel_mech = get_bilevel_polytope_collision(;
 ################################################################################
 # simulation
 ################################################################################
-H = 20
+H = 60
 
 ################################################################################
 # test no gravity
 ################################################################################
 xp2 = [+2.00, +2.00, -0.0]
-xc2 = [-0.00, +2.10, -0.0]
+xc2 = [-0.00, +2.00, -0.5]
 vp15 = [-1.0, +0.0, -0.0]
 vc15 = [+1.0, -0.0, +0.0]
 z0 = [xp2; vp15; xc2; vc15]

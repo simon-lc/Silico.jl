@@ -7,8 +7,11 @@ slackness_dimension(node::Node) = cone_dimension(node)
 equality_dimension(node::Node) = optimality_dimension(node) + slackness_dimension(node)
 
 function find_body(bodies::AbstractVector{<:AbstractBody}, name::Symbol)
-    idx = findfirst(x ->x == name, getfield.(bodies, :name))
+    idx = find_body_index(bodies, name)
     return bodies[idx]
+end
+function find_body_index(bodies::AbstractVector{<:AbstractBody}, name::Symbol)
+    idx = findfirst(x ->x == name, getfield.(bodies, :name))
 end
 
 mutable struct NodeIndices

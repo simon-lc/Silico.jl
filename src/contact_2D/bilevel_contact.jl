@@ -194,6 +194,8 @@ function residual!(e, x, θ, contact::EnvBilevelContact2D40{T,D,NP},
     pp3 = pp2 + timestep_p[1] * vp25
 
     ϕ, contact_w, normal_pw, normal_cw = contact_data(pp3, zeros(3), contact.detector)
+    normal_pw = [0.0, 1.0]
+    normal_cw = [0.0, 1.0]
     R = [0 1; -1 0]
     tangent_pw = R * normal_pw
 
