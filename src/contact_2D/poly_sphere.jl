@@ -14,17 +14,17 @@ struct PolySphere{T,D,NP} <: Node{T}
 end
 
 function PolySphere(parent_body::AbstractBody{T}, child_body::AbstractBody{T};
-        parent_collider_id::Int=1,
-        child_collider_id::Int=1,
+        parent_shape_id::Int=1,
+        child_shape_id::Int=1,
         name::Symbol=:contact,
         friction_coefficient=0.2) where {T}
 
     parent_name = parent_body.name
     child_name = child_body.name
-    Ap = copy(parent_body.shapes[parent_collider_id].A)
-    bp = copy(parent_body.shapes[parent_collider_id].b)
-    radc = copy(child_body.shapes[child_collider_id].radius)
-    offc = copy(child_body.shapes[child_collider_id].position_offset)
+    Ap = copy(parent_body.shapes[parent_shape_id].A)
+    bp = copy(parent_body.shapes[parent_shape_id].b)
+    radc = copy(child_body.shapes[child_shape_id].radius)
+    offc = copy(child_body.shapes[child_shape_id].position_offset)
 
     return PolySphere(parent_name, child_name, friction_coefficient, Ap, bp, radc, offc;
         name=name)

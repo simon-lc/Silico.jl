@@ -1,4 +1,4 @@
-function get_polytope_drop(;
+function get_polytope_insertion(;
     timestep=0.05,
     gravity=-9.81,
     mass=1.0,
@@ -27,20 +27,41 @@ function get_polytope_drop(;
         )
     )
 
-    normalize_A!(A)
+    Af = [0.0  +1.0]
+    bf = [0.0]
+    DojoLight.normalize_A!(A)
 
+    A1 = [
+        +1.0 +0.0;
+        +0.0 +1.0;
+        -1.0 +0.0;
+        +0.0 -1.0;
+        ]
+    b1 = 0.25*[
+        +1,
+        +2,
+        +1,
+        +2,
+        ]
+    o_left = [-0.5, 0.5]
+    o_right = [+0.5, 0.5]
     # nodes
     shapes = [PolytopeShape(A, b)]
     bodies = [
         Body(timestep, mass, inertia, shapes, gravity=+gravity, name=:pbody),
         ]
-    normal = [0.0, 1.0]
-    position_offset = [0.0, 0.0]
-    floor_shape = HalfspaceShape(normal, position_offset)
+    shape_left = PolytopeShape(A1, b1, o_left)
+    shape_right = PolytopeShape(A1, b1, o_right)
     contacts = [
-        EnvContact2D(bodies[1], floor_shape;
-            name=:floor,
-            friction_coefficient=friction_coefficient)
+        PolyHalfSpace(bodies[1], Af, bf,
+            friction_coefficient=friction_coefficient,
+            name=:floor),
+        EnvContact2D(bodies[1], shape_left;
+                name=:env_left,
+                friction_coefficient=friction_coefficient),
+        EnvContact2D(bodies[1], shape_right;
+                name=:env_right,
+                friction_coefficient=friction_coefficient),
         ]
     indexing!([bodies; contacts])
 

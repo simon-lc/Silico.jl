@@ -12,12 +12,12 @@ struct SphereHalfSpace{T,D} <: Node{T}
 end
 
 function SphereHalfSpace(parent_body::AbstractBody{T}, Ac::AbstractMatrix, bc::AbstractVector;
-        parent_collider_id::Int=1,
+        parent_shape_id::Int=1,
         name::Symbol=:halfspace,
         friction_coefficient=0.2) where {T}
 
     parent_name = parent_body.name
-    parent_radius = parent_body.shapes[parent_collider_id].radius[1]
+    parent_radius = parent_body.shapes[parent_shape_id].radius[1]
 
     return SphereHalfSpace(parent_name, friction_coefficient, parent_radius, Ac, bc;
         name=name)

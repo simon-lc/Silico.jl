@@ -81,7 +81,7 @@ cone_dimension(contact::Contact) = 1 + 1 + 2 + 1 + # γ, ψ, β, λα
     cone_dimension(contact.parent_shape) +
     cone_dimension(contact.child_shape)
 
-parameter_dimension(contact::Contact) = 1 +  # friction_coefficient
+parameter_dimension(contact::Contact) = 1 + # friction_coefficient
     parameter_dimension(contact.parent_shape) +
     parameter_dimension(contact.child_shape)
 
@@ -324,7 +324,7 @@ function residual!(e, x, θ, contact::EnvContact2D{T,D,NP},
     return nothing
 end
 
-function residual!(e, x, θ, contact::Contact2D, bodies::Vector)
+function residual!(e, x, θ, contact::Contact, bodies::Vector)
     pbody = find_body(bodies, contact.parent_name)
     cbody = find_body(bodies, contact.child_name)
     residual!(e, x, θ, contact, pbody, cbody)
@@ -333,7 +333,6 @@ end
 
 function residual!(e, x, θ, contact::EnvContact2D, bodies::Vector)
     pbody = find_body(bodies, contact.parent_name)
-    # cbody = find_body(bodies, contact.child_name)
     residual!(e, x, θ, contact, pbody)
     return nothing
 end

@@ -1,67 +1,41 @@
 ################################################################################
 # contact
 ################################################################################
-struct SphereSphere{T,D} <: Node{T}
+struct SphereSphere{T,D,NP,NC} <: Contact{T,D,NP,NC}
     name::Symbol
     parent_name::Symbol
     child_name::Symbol
     index::NodeIndices
+    parent_shape::Shape{T}
+    child_shape::Shape{T}
     friction_coefficient::Vector{T}
-    parent_radius::Vector{T}
-    parent_position_offset::Vector{T}
-    child_radius::Vector{T}
-    child_position_offset::Vector{T}
 end
 
 function SphereSphere(parent_body::AbstractBody{T}, child_body::AbstractBody{T};
-        parent_collider_id::Int=1,
-        child_collider_id::Int=1,
-        name::Symbol=:contact,
-        friction_coefficient=0.2) where {T}
-
     parent_name = parent_body.name
     child_name = child_body.name
-    radp = copy(parent_body.shapes[parent_collider_id].radius)
-    offp = copy(parent_body.shapes[parent_collider_id].position_offset)
-    radc = copy(child_body.shapes[child_collider_id].radius)
-    offc = copy(child_body.shapes[child_collider_id].position_offset)
-
-    return SphereSphere(parent_name, child_name, friction_coefficient,
-        radp, offp, radc, offc;
-        name=name)
-end
-
-function SphereSphere(
-        parent_name::Symbol,
-        child_name::Symbol,
-        friction_coefficient,
-        radp::Vector{T},
-        offp::Vector{T},
-        radc::Vector{T},
-        offc::Vector{T};
-        name::Symbol=:contact) where {T}
+    parent_shape = deepcopy(parent_body.shapes[parent_shape_id])
+    child_shape = deepcopy(child_body.shapes[child_shape_id])
 
     index = NodeIndices()
-    return SphereSphere{T,2}(
+
+    D = 2
+    Np = constraint_dimension(parent_shape)
+    Nc = constraint_dimension(child_shape)
+    return SphereSphere{T,D,Np,Nc}(
         name,
         parent_name,
         child_name,
         index,
+        parent_shape,
+        child_shape,
         [friction_coefficient],
-        radp,
-        offp,
-        radc,
-        offc,
-    )
+        )
 end
 
 primal_dimension(contact::SphereSphere{T,D}) where {T,D} = 0
 cone_dimension(contact::SphereSphere{T,D}) where {T,D} = 1 + 1 + 2 # γ ψ β
-
-function parameter_dimension(contact::SphereSphere{T,D}) where {T,D}
-    nθ = 1 + 1 + D + 1 + D
-    return nθ
-end
+parameter_dimension(contact::SphereSphere{T,D}) where {T,D} = 1 + 1 + D + 1 + D
 
 function unpack_variables(x::Vector, contact::SphereSphere{T,D}) where {T,D}
     num_cone = cone_dimension(contact)
@@ -77,44 +51,17 @@ function unpack_variables(x::Vector, contact::SphereSphere{T,D}) where {T,D}
     return γ, ψ, β, sγ, sψ, sβ
 end
 
-function get_parameters(contact::SphereSphere{T,D}) where {T,D}
-    θ = [
-        contact.friction_coefficient;
-        vec(contact.parent_radius); contact.parent_position_offset;
-        vec(contact.child_radius); contact.child_position_offset;
-        ]
-    return θ
-end
-
-function set_parameters!(contact::SphereSphere{T,D}, θ) where {T,D}
-    friction_coefficient, parent_radius, parent_position_offset, child_radius, child_position_offset =
-        unpack_parameters(θ, contact)
-    contact.friction_coefficient .= friction_coefficient
-    contact.parent_radius .= parent_radius
-    contact.parent_position_offset .= parent_position_offset
-    contact.child_radius .= child_radius
-    contact.child_position_offset .= child_position_offset
-    return nothing
-end
-
-function unpack_parameters(θ::Vector, contact::SphereSphere{T,D}) where {T,D}
-    @assert D == 2
-    off = 0
-    friction_coefficient = θ[off .+ (1:1)]; off += 1
-    parent_radius = θ[off .+ (1:1)]; off += 1
-    parent_position_offset = θ[off .+ (1:D)]; off += D
-    child_radius = θ[off .+ (1:1)]; off += 1
-    child_position_offset = θ[off .+ (1:D)]; off += D
-    return friction_coefficient, parent_radius, parent_position_offset, child_radius, child_position_offset
-end
-
 function residual!(e, x, θ, contact::SphereSphere{T,D},
         pbody::AbstractBody, cbody::AbstractBody) where {T,D}
 
     # unpack parameters
-    friction_coefficient, radp, offp, radc, offc = unpack_parameters(θ[contact.index.parameters], contact)
-    # pp2, vp15, up2, timestep_p, gravity_p, mass_p, inertia_p = unpack_parameters(θ[pbody.index.parameters], pbody)
-    # pc2, vc15, uc2, timestep_c, gravity_c, mass_c, inertia_c = unpack_parameters(θ[cbody.index.parameters], cbody)
+    friction_coefficient, parent_parameters, child_parameters =
+        unpack_parameters(θ[contact.index.parameters], contact)
+    shape_p = contact.parent_shape
+    shape_c = contact.child_shape
+    radp, offp = unpack_parameters(shape_p, parent_parameters)
+    radc, offc = unpack_parameters(shape_c, child_parameters)
+
     pp2, timestep_p = unpack_pose_timestep(θ[pbody.index.parameters], pbody)
     pc2, timestep_c = unpack_pose_timestep(θ[cbody.index.parameters], cbody)
 
@@ -173,12 +120,5 @@ function residual!(e, x, θ, contact::SphereSphere{T,D},
     e[contact.index.slackness] .+= slackness
     e[pbody.index.optimality] .-= wrench_p
     e[cbody.index.optimality] .-= wrench_c
-    return nothing
-end
-
-function residual!(e, x, θ, contact::SphereSphere, bodies::Vector)
-    pbody = find_body(bodies, contact.parent_name)
-    cbody = find_body(bodies, contact.child_name)
-    residual!(e, x, θ, contact, pbody, cbody)
     return nothing
 end

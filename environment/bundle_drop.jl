@@ -52,7 +52,7 @@ function get_bundle_drop(;
         ]
     contacts = [
         PolyHalfSpace(bodies[1], Af, bf,
-            parent_collider_id=i,
+            parent_shape_id=i,
             friction_coefficient=friction_coefficient,
             name=Symbol(:halfspace_p,i)) for i = 1:np]
     indexing!([bodies; contacts])

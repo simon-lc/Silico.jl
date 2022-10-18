@@ -13,22 +13,20 @@ set_background!(vis)
 # define mechanisms
 ################################################################################
 A0 = [
-    [
         +1.0 -0.0;
         -0.0 +1.0;
         -1.0 -0.0;
         +0.0 -1.0;
-        ],
+        +1.0 -0.2;
+        -1.0 -0.2;
     ]
-b0 = [
-        0.25*[+1.0, +1.0, +1.0, +1.0],
-    ]
+b0 = 0.249*[+1.0, +3.0, +1.0, +1.0, 0.9, 0.9]
 
-timestep = 0.02
+timestep = 0.05
 gravity = -9.81
 mass = 1.0
 inertia = 0.2 * ones(1,1)
-friction_coefficient = 0.50
+friction_coefficient = 1.0
 
 mech = get_polytope_insertion(;
     timestep=timestep,
@@ -41,7 +39,7 @@ mech = get_polytope_insertion(;
     A=A0, b=b0,
     options=Mehrotra.Options(
         verbose=true,
-        complementarity_tolerance=1e-10,
+        complementarity_tolerance=1e-5,
         compressed_search_direction=false,
         max_iterations=30,
         sparse_solver=true,
@@ -54,21 +52,14 @@ mech = get_polytope_insertion(;
 ################################################################################
 # simulation
 ################################################################################
-H = 200
-
+H = 40
 
 ################################################################################
 # test no gravity
 ################################################################################
-x12 = [+0.05, +2.40, +0.1]
-x22 = [-0.05, +1.80, -0.1]
-x32 = [-0.00, +1.00, -0.2]
-x42 = [-0.00, +0.30, -0.2]
-v115 = [-0.0, +0.0, -0.0]
-v215 = [-0.0, +0.0, -0.0]
-v315 = [+0.0, -0.0, +0.0]
-v415 = [+0.0, -0.0, +0.0]
-z0 = [x12; v115; x22; v215; x32; v315; x42; v415]
+x2 = [+0.00, +1.50, +0.07]
+v15 = [-0.0, +0.0, -0.0]
+z0 = [x2; v15]
 
 set_gravity!(mech, gravity)
 Mehrotra.initialize_solver!(mech.solver)
@@ -76,5 +67,4 @@ Mehrotra.initialize_solver!(mech.solver)
 vis, anim = visualize!(vis, mech, storage, name=:single, color=RGBA(1,1,1,0.8))
 scatter(storage.iterations, color=:red)
 
-
-# RobotVisualizer.convert_frames_to_video_and_gif("jenga_contact_point")
+# RobotVisualizer.convert_frames_to_video_and_gif("peg_in_hole_0.5percent")

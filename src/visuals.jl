@@ -25,6 +25,15 @@ function build_shape!(vis::Visualizer, shape::SphereShape;
     return nothing
 end
 
+function build_contact_shape!(vis::Visualizer, shape::Shape; collider_color=nothing)
+end
+
+function build_contact_shape!(vis::Visualizer, shape::PolytopeShape;
+        collider_color=RGBA(0.5,0.5,0.5,0.0))
+    build_shape!(vis, shape; collider_color=collider_color)
+    return nothing
+end
+
 ######################################################################
 # body
 ######################################################################
@@ -64,8 +73,9 @@ end
 ######################################################################
 function build_mechanism!(vis::Visualizer, mechanism::Mechanism;
         show_contact::Bool=true,
-        color=RGBA(0.2, 0.2, 0.2, 0.8),
+        color=RGBA(1, 1, 1, 0.8),
         center_of_mass_color=RGBA(1,1,1,1.0),
+        env_color=RGBA(0.5, 0.5, 0.5, 0.8),
         name::Symbol=:robot)
 
     for body in mechanism.bodies
@@ -75,6 +85,9 @@ function build_mechanism!(vis::Visualizer, mechanism::Mechanism;
         for contact in mechanism.contacts
             build_2d_frame!(vis[name], name=contact.name)
         end
+    end
+    for contact in mechanism.contacts
+        build_contact_shape!(vis[contact.name], contact.child_shape; collider_color=env_color)
     end
     return nothing
 end
