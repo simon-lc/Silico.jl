@@ -1,4 +1,31 @@
 # for visualization
+function contact_frame(contact::PolyHalfSpace, mechanism::Mechanism)
+    pbody = find_body(mechanism.bodies, contact.parent_name)
+
+    variables = mechanism.solver.solution.all
+    parameters = mechanism.solver.parameters
+
+    c, γ, ψ, β, λp, sγ, sψ, sβ, sp =
+        unpack_variables(variables[contact.index.variables], contact)
+    # unpack parameters
+    friction_coefficient, parent_parameters, child_parameters =
+        unpack_parameters(parameters[contact.index.parameters], contact)
+    shape_p = contact.parent_shape
+    Ap, bp, op = unpack_parameters(shape_p, parent_parameters)
+
+    vp25 = unpack_variables(variables[pbody.index.variables], pbody)
+    pp2, timestep_p = unpack_pose_timestep(parameters[pbody.index.parameters], pbody)
+
+    pp3 = pp2 + timestep_p[1] * vp25
+    contact_point = c + pp3[1:2]
+    normal = -x_2d_rotation(pp3[3:3]) * Ap' * λp
+    R = [0 1; -1 0]
+    tangent = R * normal
+
+    return contact_point, normal, tangent
+end
+
+# for visualization
 function contact_frame(contact::PolyPoly, mechanism::Mechanism)
     pbody = find_body(mechanism.bodies, contact.parent_name)
     cbody = find_body(mechanism.bodies, contact.child_name)
@@ -8,8 +35,15 @@ function contact_frame(contact::PolyPoly, mechanism::Mechanism)
 
     c, ϕ, γ, ψ, β, λp, λc, sγ, sψ, sβ, sp, sc =
         unpack_variables(variables[contact.index.variables], contact)
-    friction_coefficient, Ap, bp, Ac, bc =
+
+    # unpack parameters
+    friction_coefficient, parent_parameters, child_parameters =
         unpack_parameters(parameters[contact.index.parameters], contact)
+    shape_p = contact.parent_shape
+    shape_c = contact.child_shape
+    Ap, bp, op = unpack_parameters(shape_p, parent_parameters)
+    Ac, bc, oc = unpack_parameters(shape_c, child_parameters)
+
     vp25 = unpack_variables(variables[pbody.index.variables], pbody)
     vc25 = unpack_variables(variables[cbody.index.variables], cbody)
     pp2, timestep_p = unpack_pose_timestep(parameters[pbody.index.parameters], pbody)
@@ -26,22 +60,31 @@ function contact_frame(contact::PolyPoly, mechanism::Mechanism)
 end
 
 # for visualization
-function contact_frame(contact::PolyHalfSpace, mechanism::Mechanism)
+function contact_frame(contact::PolySphere, mechanism::Mechanism)
     pbody = find_body(mechanism.bodies, contact.parent_name)
+    cbody = find_body(mechanism.bodies, contact.child_name)
 
     variables = mechanism.solver.solution.all
     parameters = mechanism.solver.parameters
 
-    c, ϕ, γ, ψ, β, λp, λc, sγ, sψ, sβ, sp, sc =
+    c, γ, ψ, β, λp, sγ, sψ, sβ, sp =
         unpack_variables(variables[contact.index.variables], contact)
-    friction_coefficient, Ap, bp, Ac, bc =
+
+    # unpack parameters
+    friction_coefficient, parent_parameters, child_parameters =
         unpack_parameters(parameters[contact.index.parameters], contact)
+    shape_c = contact.child_shape
+    radc, offc = unpack_parameters(shape_c, child_parameters)
+
     vp25 = unpack_variables(variables[pbody.index.variables], pbody)
+    vc25 = unpack_variables(variables[cbody.index.variables], cbody)
     pp2, timestep_p = unpack_pose_timestep(parameters[pbody.index.parameters], pbody)
+    pc2, timestep_c = unpack_pose_timestep(parameters[cbody.index.parameters], cbody)
 
     pp3 = pp2 + timestep_p[1] * vp25
+    pc3 = pc2 + timestep_c[1] * vc25
     contact_point = c + pp3[1:2]
-    normal = -x_2d_rotation(pp3[3:3]) * Ap' * λp
+    normal = pc3[1:2] + offc - contact_point
     R = [0 1; -1 0]
     tangent = R * normal
 
@@ -56,8 +99,12 @@ function contact_frame(contact::SphereHalfSpace, mechanism::Mechanism)
     parameters = mechanism.solver.parameters
 
     # unpack parameters
-    friction_coefficient, parent_radius, Ac, bc =
+    friction_coefficient, parent_parameters, child_parameters =
         unpack_parameters(parameters[contact.index.parameters], contact)
+    shape_p = contact.parent_shape
+    shape_c = contact.child_shape
+    radp, offp = unpack_parameters(shape_p, parent_parameters)
+    normalc, offc = unpack_parameters(shape_c, child_parameters)
     pp2, timestep_p = unpack_pose_timestep(parameters[pbody.index.parameters], pbody)
 
     # unpack variables
@@ -65,15 +112,12 @@ function contact_frame(contact::SphereHalfSpace, mechanism::Mechanism)
     pp3 = pp2 + timestep_p[1] * vp25
 
     # analytical contact position in the world frame
-    contact_point = pp3[1:2] - parent_radius[1] * Ac[1,:] # assumes the child is fized, other need a rotation here
-    # analytical signed distance function
-    ϕ = [contact_point' * Ac[1,:]] - bc
-    # contact_p is expressed in pbody's frame
+    contact_point = pp3[1:2] + offp - radp[1] .* normalc
 
     # contact normal and tangent in the world frame
-    normal = Ac[1,:]
+    normal = normalc
     R = [0 1; -1 0]
-    tangent = R * normal
+    tangent = R * normalc
 
     return contact_point, normal, tangent
 end
@@ -86,8 +130,14 @@ function contact_frame(contact::SphereSphere, mechanism::Mechanism)
     variables = mechanism.solver.solution.all
     parameters = mechanism.solver.parameters
 
-    friction_coefficient, radp, offp, radc, offc =
+    # unpack parameters
+    friction_coefficient, parent_parameters, child_parameters =
         unpack_parameters(parameters[contact.index.parameters], contact)
+    shape_p = contact.parent_shape
+    shape_c = contact.child_shape
+    radp, offp = unpack_parameters(shape_p, parent_parameters)
+    radc, offc = unpack_parameters(shape_c, child_parameters)
+
     vp25 = unpack_variables(variables[pbody.index.variables], pbody)
     vc25 = unpack_variables(variables[cbody.index.variables], cbody)
     pp2, timestep_p = unpack_pose_timestep(parameters[pbody.index.parameters], pbody)
@@ -96,39 +146,12 @@ function contact_frame(contact::SphereSphere, mechanism::Mechanism)
     pp3 = pp2 + timestep_p[1] * vp25
     pc3 = pc2 + timestep_c[1] * vc25
     # contact normal and tangent in the world frame
-    normal = (pp3 - pc3)[1:2]
+    normal = (pp3[1:2] + offp - pc3[1:2] - offc)
     R = [0 1; -1 0]
     tangent = R * normal
     n = normal / (1e-6 + norm(normal))
     # contact position in the world frame
-    contact_point = 0.5 * (pp3[1:2] + radp[1] * n + pc3[1:2] - radc[1] * n)
-
-    return contact_point, normal, tangent
-end
-
-# for visualization
-function contact_frame(contact::PolySphere, mechanism::Mechanism)
-    pbody = find_body(mechanism.bodies, contact.parent_name)
-    cbody = find_body(mechanism.bodies, contact.child_name)
-
-    variables = mechanism.solver.solution.all
-    parameters = mechanism.solver.parameters
-
-    c, γ, ψ, β, λp, sγ, sψ, sβ, sp =
-        unpack_variables(variables[contact.index.variables], contact)
-    friction_coefficient, Ap, bp, radc, offc =
-        unpack_parameters(parameters[contact.index.parameters], contact)
-    vp25 = unpack_variables(variables[pbody.index.variables], pbody)
-    vc25 = unpack_variables(variables[cbody.index.variables], cbody)
-    pp2, timestep_p = unpack_pose_timestep(parameters[pbody.index.parameters], pbody)
-    pc2, timestep_c = unpack_pose_timestep(parameters[cbody.index.parameters], cbody)
-
-    pp3 = pp2 + timestep_p[1] * vp25
-    pc3 = pc2 + timestep_c[1] * vc25
-    contact_point = c + pp3[1:2]
-    normal = pc3[1:2] - contact_point
-    R = [0 1; -1 0]
-    tangent = R * normal
+    contact_point = 0.5 * (pp3[1:2] + offp + radp[1] * n + pc3[1:2] + offc - radc[1] * n)
 
     return contact_point, normal, tangent
 end

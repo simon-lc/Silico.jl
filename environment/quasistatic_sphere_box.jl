@@ -16,8 +16,6 @@ function get_quasistatic_sphere_box2(;
         )
     )
 
-    Af = [0.0  +1.0]
-    bf = [0.0]
     Ap1 = [
         1.0  0.0;
         0.0  1.0;
@@ -41,15 +39,17 @@ function get_quasistatic_sphere_box2(;
         QuasistaticRobot(timestep, mass, inertia, child_shapes, gravity=+0.000000000000000000000*gravity, name=:sphere) :
         QuasistaticObject(timestep, mass, inertia, child_shapes, gravity=+gravity, name=:sphere)
     bodies = [box, sphere]
-
+    normal = [0.0, 1.0]
+    position_offset = [0.0, 0.0]
+    floor_shape = HalfspaceShape(normal, position_offset)
     contacts = [
         PolySphere(bodies[1], bodies[2],
             friction_coefficient=friction_coefficient,
             name=:box_sphere),
-        PolyHalfSpace(bodies[1], Af, bf,
+        PolyHalfSpace(bodies[1], floor_shape,
             friction_coefficient=friction_coefficient,
             name=:halfspace_box),
-        SphereHalfSpace(bodies[2], Af, bf,
+        SphereHalfSpace(bodies[2], floor_shape,
             friction_coefficient=friction_coefficient,
             name=:halfspace_sphere),
         ]

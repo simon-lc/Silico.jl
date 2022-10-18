@@ -27,8 +27,6 @@ function get_polytope_insertion(;
         )
     )
 
-    Af = [0.0  +1.0]
-    bf = [0.0]
     DojoLight.normalize_A!(A)
 
     A1 = [
@@ -52,8 +50,11 @@ function get_polytope_insertion(;
         ]
     shape_left = PolytopeShape(A1, b1, o_left)
     shape_right = PolytopeShape(A1, b1, o_right)
+    normal = [0.0, 1.0]
+    position_offset = [0.0, 0.0]
+    floor_shape = HalfspaceShape(normal, position_offset)
     contacts = [
-        PolyHalfSpace(bodies[1], Af, bf,
+        PolyHalfSpace(bodies[1], floor_shape,
             friction_coefficient=friction_coefficient,
             name=:floor),
         EnvContact2D(bodies[1], shape_left;

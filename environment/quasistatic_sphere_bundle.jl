@@ -15,8 +15,6 @@ function get_quasistatic_sphere_bundle(;
         )
     )
 
-    Af = [0.0  +1.0]
-    bf = [0.0]
     Ap1 = [
         1.0  0.0;
         0.0  1.0;
@@ -48,9 +46,11 @@ function get_quasistatic_sphere_bundle(;
     child_shapes = [SphereShape(child_radius)]
     bodies = [
         QuasistaticObject(timestep, mass, inertia, parent_shapes, gravity=+gravity, name=:pbody),
-        # QuasistaticObject(timestep, mass, inertia, child_shapes, gravity=+gravity, name=:cbody),
         QuasistaticRobot(timestep, mass, inertia, child_shapes, gravity=+gravity, name=:cbody),
         ]
+    normal = [0.0, 1.0]
+    position_offset = [0.0, 0.0]
+    floor_shape = HalfspaceShape(normal, position_offset)
     contacts = [
         PolySphere(bodies[1], bodies[2],
             friction_coefficient=friction_coefficient,
@@ -59,14 +59,14 @@ function get_quasistatic_sphere_bundle(;
             parent_shape_id=2,
             friction_coefficient=friction_coefficient,
             name=:contact_2),
-        PolyHalfSpace(bodies[1], Af, bf,
+        PolyHalfSpace(bodies[1], floor_shape,
             friction_coefficient=friction_coefficient,
             name=:halfspace_p1),
-        PolyHalfSpace(bodies[1], Af, bf,
+        PolyHalfSpace(bodies[1], floor_shape,
             parent_shape_id=2,
             friction_coefficient=friction_coefficient,
             name=:halfspace_p2),
-        SphereHalfSpace(bodies[2], Af, bf,
+        SphereHalfSpace(bodies[2], floor_shape,
             friction_coefficient=friction_coefficient,
             name=:halfspace_c),
         ]

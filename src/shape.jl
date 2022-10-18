@@ -33,6 +33,14 @@ function set_parameters!(shape::PolytopeShape{T,Ng}, parameters) where {T,Ng}
     return nothing
 end
 
+function unpack_parameters(shape::PolytopeShape{T,Ng}, parameters) where {T,Ng}
+    off = 0
+    A = reshape(parameters[off .+ (1:2Ng)], (Ng,2)); off += 2Ng
+    b = parameters[off .+ (1:Ng)]; off += Ng
+    o = parameters[off .+ (1:2)]; off += 2
+    return A, b, o
+end
+
 function constraint(shape::PolytopeShape{T,Ng}, p, α, β) where {T,Ng}
     A = shape.A
     b = shape.b
@@ -78,6 +86,13 @@ function set_parameters!(shape::HalfspaceShape, parameters)
     return nothing
 end
 
+function unpack_parameters(shape::HalfspaceShape, parameters)
+    off = 0
+    normal = parameters[off .+ (1:2)]; off += 2
+    position_offset = parameters[off .+ (1:2)]; off += 2
+    return normal, position_offset
+end
+
 function constraint(shape::HalfspaceShape, p, α, β)
     n = shape.normal
     o = shape.position_offset
@@ -121,6 +136,13 @@ function set_parameters!(shape::SphereShape, parameters)
     shape.radius .= parameters[off .+ (1:1)]; off += 1
     shape.position_offset .= parameters[off .+ (1:2)]; off += 2
     return nothing
+end
+
+function unpack_parameters(shape::SphereShape, parameters)
+    off = 0
+    radius = parameters[off .+ (1:1)]; off += 1
+    position_offset = parameters[off .+ (1:2)]; off += 2
+    return radius, position_offset
 end
 
 function constraint(shape::SphereShape{T}, p, α, β) where {T}

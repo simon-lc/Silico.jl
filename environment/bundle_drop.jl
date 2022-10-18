@@ -41,8 +41,6 @@ function get_bundle_drop(;
         )
 
     np = length(A)
-    Af = [0.0  +1.0]
-    bf = [0.0]
     normalize_A!.(A)
 
     # nodes
@@ -50,8 +48,11 @@ function get_bundle_drop(;
     bodies = [
         Body(timestep, mass, inertia, parent_shapes, gravity=gravity, name=:pbody),
         ]
+    normal = [0.0, 1.0]
+    position_offset = [0.0, 0.0]
+    floor_shape = HalfspaceShape(normal, position_offset)
     contacts = [
-        PolyHalfSpace(bodies[1], Af, bf,
+        PolyHalfSpace(bodies[1], floor_shape,
             parent_shape_id=i,
             friction_coefficient=friction_coefficient,
             name=Symbol(:halfspace_p,i)) for i = 1:np]

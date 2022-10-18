@@ -12,6 +12,11 @@ struct SphereSphere{T,D,NP,NC} <: Contact{T,D,NP,NC}
 end
 
 function SphereSphere(parent_body::AbstractBody{T}, child_body::AbstractBody{T};
+        parent_shape_id::Int=1,
+        child_shape_id::Int=1,
+        name::Symbol=:contact,
+        friction_coefficient=0.2) where {T}
+
     parent_name = parent_body.name
     child_name = child_body.name
     parent_shape = deepcopy(parent_body.shapes[parent_shape_id])
@@ -35,7 +40,6 @@ end
 
 primal_dimension(contact::SphereSphere{T,D}) where {T,D} = 0
 cone_dimension(contact::SphereSphere{T,D}) where {T,D} = 1 + 1 + 2 # γ ψ β
-parameter_dimension(contact::SphereSphere{T,D}) where {T,D} = 1 + 1 + D + 1 + D
 
 function unpack_variables(x::Vector, contact::SphereSphere{T,D}) where {T,D}
     num_cone = cone_dimension(contact)
@@ -72,18 +76,18 @@ function residual!(e, x, θ, contact::SphereSphere{T,D},
     pp3 = pp2 + timestep_p[1] * vp25
     pc3 = pc2 + timestep_c[1] * vc25
     # signed distance function
-    ϕ = [norm(pp3[1:2] - pc3[1:2])] - radp - radc
+    ϕ = [norm(pp3[1:2] + offp - pc3[1:2] - offc)] - radp - radc
 
     # contact normal and tangent in the world frame
-    normal_pw = (pp3 - pc3)[1:2]
-    normal_cw = (pp3 - pc3)[1:2]
+    normal_pw = (pp3[1:2] + offp - pc3[1:2] - offc)
+    normal_cw = (pp3[1:2] + offp - pc3[1:2] - offc)
     R = [0 1; -1 0]
     tangent_pw = R * normal_pw
     tangent_cw = R * normal_cw
 
     # contact position in the world frame
     n = normal_pw / (1e-6 + norm(normal_pw))
-    contact_w = 0.5 * (pp3[1:2] + radp[1] * n + pc3[1:2] - radc[1] * n)
+    contact_w = 0.5 * (pp3[1:2] + offp + radp[1] * n + pc3[1:2] + offc - radc[1] * n)
 
     # rotation matrix from contact frame to world frame
     wRp = [tangent_pw normal_pw] # n points towards the parent body, [t,n,z] forms an oriented vector basis

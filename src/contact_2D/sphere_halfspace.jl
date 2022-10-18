@@ -1,59 +1,41 @@
 ################################################################################
 # contact
 ################################################################################
-struct SphereHalfSpace{T,D} <: Node{T}
+struct SphereHalfSpace{T,D,NP,NC} <: Contact{T,D,NP,NC}
     name::Symbol
     parent_name::Symbol
     index::NodeIndices
+    parent_shape::Shape{T}
+    child_shape::Shape{T}
     friction_coefficient::Vector{T}
-    parent_radius::Vector{T} #sphere
-    A_child_collider::Matrix{T} #polytope
-    b_child_collider::Vector{T} #polytope
 end
 
-function SphereHalfSpace(parent_body::AbstractBody{T}, Ac::AbstractMatrix, bc::AbstractVector;
+function SphereHalfSpace(parent_body::AbstractBody{T}, child_shape::Shape{T};
         parent_shape_id::Int=1,
-        name::Symbol=:halfspace,
+        name::Symbol=:contact,
         friction_coefficient=0.2) where {T}
 
     parent_name = parent_body.name
-    parent_radius = parent_body.shapes[parent_shape_id].radius[1]
+    parent_shape = deepcopy(parent_body.shapes[parent_shape_id])
+    child_shape = deepcopy(child_shape)
 
-    return SphereHalfSpace(parent_name, friction_coefficient, parent_radius, Ac, bc;
-        name=name)
-end
-
-function SphereHalfSpace(
-        parent_name::Symbol,
-        friction_coefficient,
-        parent_radius,
-        Ac::Matrix{T},
-        bc::Vector{T};
-        name::Symbol=:halfspace) where {T}
-
-    d = size(Ac, 2)
     index = NodeIndices()
-    return SphereHalfSpace{T,d}(
+
+    D = 2
+    Np = constraint_dimension(parent_shape)
+    Nc = constraint_dimension(child_shape)
+    return SphereHalfSpace{T,D,Np,Nc}(
         name,
         parent_name,
         index,
+        parent_shape,
+        child_shape,
         [friction_coefficient],
-        [parent_radius],
-        Ac,
-        bc,
-    )
+        )
 end
 
 primal_dimension(contact::SphereHalfSpace{T,D}) where {T,D} = 0
 cone_dimension(contact::SphereHalfSpace{T,D}) where {T,D} = 1 + 1 + 2 # γ ψ β
-
-
-function parameter_dimension(contact::SphereHalfSpace{T,D}) where {T,D}
-    nAc = length(contact.A_child_collider)
-    nbc = length(contact.b_child_collider)
-    nθ = 1 + 1 + nAc + nbc
-    return nθ
-end
 
 function unpack_variables(x::Vector, contact::SphereHalfSpace{T,D}) where {T,D}
     num_cone = cone_dimension(contact)
@@ -70,62 +52,34 @@ function unpack_variables(x::Vector, contact::SphereHalfSpace{T,D}) where {T,D}
     return γ, ψ, β, sγ, sψ, sβ
 end
 
-function get_parameters(contact::SphereHalfSpace{T,D}) where {T,D}
-    θ = [
-        contact.friction_coefficient;
-        contact.parent_radius;
-        vec(contact.A_child_collider); contact.b_child_collider;
-        ]
-    return θ
-end
-
-function set_parameters!(contact::SphereHalfSpace{T,D}, θ) where {T,D}
-    friction_coefficient, parent_radius, A_child_collider, b_child_collider =
-        unpack_parameters(θ, contact)
-    contact.friction_coefficient .= friction_coefficient
-    contact.parent_radius .= parent_radius
-    contact.A_child_collider .= A_child_collider
-    contact.b_child_collider .= b_child_collider
-    return nothing
-end
-
-function unpack_parameters(θ::Vector, contact::SphereHalfSpace{T,D}) where {T,D}
-    @assert D == 2
-    NC = 1
-    off = 0
-    friction_coefficient = θ[off .+ (1:1)]; off += 1
-    parent_radius = θ[off .+ (1:1)]; off += 1
-    A_child_collider = reshape(θ[off .+ (1:NC*D)], (NC,D)); off += NC*D
-    b_child_collider = θ[off .+ (1:NC)]; off += NC
-    return friction_coefficient, parent_radius, A_child_collider, b_child_collider
-end
-
 function residual!(e, x, θ, contact::SphereHalfSpace{T,D},
         pbody::AbstractBody) where {T,D}
     NC = 1
     # unpack parameters
-    friction_coefficient, parent_radius, Ac, bc = unpack_parameters(θ[contact.index.parameters], contact)
-    # pp2, vp15, up2, timestep_p, gravity_p, mass_p, inertia_p = unpack_parameters(θ[pbody.index.parameters], pbody)
+    friction_coefficient, parent_parameters, child_parameters =
+        unpack_parameters(θ[contact.index.parameters], contact)
+    shape_p = contact.parent_shape
+    shape_c = contact.child_shape
+    radp, offp = unpack_parameters(shape_p, parent_parameters)
+    normalc, offc = unpack_parameters(shape_c, child_parameters)
+
+    parent_radius, Ac, bc = unpack_parameters(θ[contact.index.parameters], contact)
     pp2, timestep_p = unpack_pose_timestep(θ[pbody.index.parameters], pbody)
 
     # unpack variables
     γ, ψ, β, sγ, sψ, sβ = unpack_variables(x[contact.index.variables], contact)
     vp25 = unpack_variables(x[pbody.index.variables], pbody)
     pp3 = pp2 + timestep_p[1] * vp25
-    pc3 = zeros(3)
 
     # analytical contact position in the world frame
-    contact_w = pp3[1:2] - parent_radius[1] * Ac[1,:] # assumes the child is fized, other need a rotation here
+    contact_w = pp3[1:2] + offp - radp[1] .* normalc
     # analytical signed distance function
-    ϕ = [contact_w' * Ac[1,:]] - bc
+    ϕ = [(contact_w - offc)' * normalc]
     # contact_p is expressed in pbody's frame
     contact_p = x_2d_rotation(pp3[3:3])' * (contact_w - pp3[1:2])
-    # contact_c is expressed in cbody's frame
-    contact_c = x_2d_rotation(pc3[3:3])' * (contact_w - pc3[1:2])
 
     # contact normal and tangent in the world frame
-    # normal_pw = -x_2d_rotation(pp3[3:3]) * Ap' * λp
-    normal_pw = Ac[1,:]
+    normal_pw = normalc
     R = [0 1; -1 0]
     tangent_pw = R * normal_pw
 

@@ -1,16 +1,14 @@
 ################################################################################
 # contact
 ################################################################################
-struct PolyPoly{T,D,NP,NC} <: Node{T}
+struct PolyPoly{T,D,NP,NC} <: Contact{T,D,NP,NC}
     name::Symbol
     parent_name::Symbol
     child_name::Symbol
     index::NodeIndices
+    parent_shape::Shape{T}
+    child_shape::Shape{T}
     friction_coefficient::Vector{T}
-    A_parent_collider::Matrix{T} #polytope
-    b_parent_collider::Vector{T} #polytope
-    A_child_collider::Matrix{T} #polytope
-    b_child_collider::Vector{T} #polytope
 end
 
 function PolyPoly(parent_body::AbstractBody{T}, child_body::AbstractBody{T};
@@ -21,53 +19,27 @@ function PolyPoly(parent_body::AbstractBody{T}, child_body::AbstractBody{T};
 
     parent_name = parent_body.name
     child_name = child_body.name
-    Ap = copy(parent_body.shapes[parent_shape_id].A)
-    bp = copy(parent_body.shapes[parent_shape_id].b)
-    Ac = copy(child_body.shapes[child_shape_id].A)
-    bc = copy(child_body.shapes[child_shape_id].b)
+    parent_shape = deepcopy(parent_body.shapes[parent_shape_id])
+    child_shape = deepcopy(child_body.shapes[child_shape_id])
 
-    return PolyPoly(parent_name, child_name, friction_coefficient, Ap, bp, Ac, bc;
-        name=name)
-end
-
-function PolyPoly(
-        parent_name::Symbol,
-        child_name::Symbol,
-        friction_coefficient,
-        Ap::Matrix{T},
-        bp::Vector{T},
-        Ac::Matrix{T},
-        bc::Vector{T};
-        name::Symbol=:contact) where {T}
-
-    d = size(Ap, 2)
-    np = size(Ap, 1)
-    nc = size(Ac, 1)
     index = NodeIndices()
-    return PolyPoly{T,d,np,nc}(
+
+    D = 2
+    Np = constraint_dimension(parent_shape)
+    Nc = constraint_dimension(child_shape)
+    return PolyPoly{T,D,Np,Nc}(
         name,
         parent_name,
         child_name,
         index,
+        parent_shape,
+        child_shape,
         [friction_coefficient],
-        Ap,
-        bp,
-        Ac,
-        bc,
-    )
+        )
 end
 
 primal_dimension(contact::PolyPoly{T,D}) where {T,D} = D + 1 # x, ϕ
 cone_dimension(contact::PolyPoly{T,D,NP,NC}) where {T,D,NP,NC} = 1 + 1 + 2 + NP + NC # γ ψ β λp, λc
-
-function parameter_dimension(contact::PolyPoly{T,D}) where {T,D}
-    nAp = length(contact.A_parent_collider)
-    nbp = length(contact.b_parent_collider)
-    nAc = length(contact.A_child_collider)
-    nbc = length(contact.b_child_collider)
-    nθ = 1 + nAp + nbp + nAc + nbc
-    return nθ
-end
 
 function unpack_variables(x::Vector, contact::PolyPoly{T,D,NP,NC}) where {T,D,NP,NC}
     num_cone = cone_dimension(contact)
@@ -89,42 +61,19 @@ function unpack_variables(x::Vector, contact::PolyPoly{T,D,NP,NC}) where {T,D,NP
     return c, ϕ, γ, ψ, β, λp, λc, sγ, sψ, sβ, sp, sc
 end
 
-function get_parameters(contact::PolyPoly{T,D}) where {T,D}
-    θ = [
-        contact.friction_coefficient;
-        vec(contact.A_parent_collider); contact.b_parent_collider;
-        vec(contact.A_child_collider); contact.b_child_collider;
-        ]
-    return θ
-end
-
-function set_parameters!(contact::PolyPoly{T,D,NP,NC}, θ) where {T,D,NP,NC}
-    friction_coefficient, A_parent_collider, b_parent_collider, A_child_collider, b_child_collider =
-        unpack_parameters(θ, contact)
-    contact.friction_coefficient .= friction_coefficient
-    contact.A_parent_collider .= A_parent_collider
-    contact.b_parent_collider .= b_parent_collider
-    contact.A_child_collider .= A_child_collider
-    contact.b_child_collider .= b_child_collider
-    return nothing
-end
-
-function unpack_parameters(θ::Vector, contact::PolyPoly{T,D,NP,NC}) where {T,D,NP,NC}
-    @assert D == 2
-    off = 0
-    friction_coefficient = θ[off .+ (1:1)]; off += 1
-    A_parent_collider = reshape(θ[off .+ (1:NP*D)], (NP,D)); off += NP*D
-    b_parent_collider = θ[off .+ (1:NP)]; off += NP
-    A_child_collider = reshape(θ[off .+ (1:NC*D)], (NC,D)); off += NC*D
-    b_child_collider = θ[off .+ (1:NC)]; off += NC
-    return friction_coefficient, A_parent_collider, b_parent_collider, A_child_collider, b_child_collider
-end
-
 function residual!(e, x, θ, contact::PolyPoly{T,D,NP,NC},
         pbody::AbstractBody, cbody::AbstractBody) where {T,D,NP,NC}
 
     # unpack parameters
-    friction_coefficient, Ap, bp, Ac, bc = unpack_parameters(θ[contact.index.parameters], contact)
+    friction_coefficient, parent_parameters, child_parameters =
+        unpack_parameters(θ[contact.index.parameters], contact)
+    shape_p = contact.parent_shape
+    shape_c = contact.child_shape
+    Ap, bp, op = unpack_parameters(shape_p, parent_parameters)
+    Ac, bc, oc = unpack_parameters(shape_c, child_parameters)
+    bop = bp + Ap * op
+    boc = bc + Ac * oc
+
     pp2, timestep_p = unpack_pose_timestep(θ[pbody.index.parameters], pbody)
     pc2, timestep_c = unpack_pose_timestep(θ[cbody.index.parameters], cbody)
 
@@ -182,8 +131,8 @@ function residual!(e, x, θ, contact::PolyPoly{T,D,NP,NC},
         sγ - ϕ;
         sψ - (friction_coefficient[1] * γ - [sum(β)]);
         sβ - ([+tanvel; -tanvel] + ψ[1]*ones(2));
-        sp - (- Ap * contact_p + bp + ϕ .* ones(NP));
-        sc - (- Ac * contact_c + bc + ϕ .* ones(NC));
+        sp - (- Ap * contact_p + bop + ϕ .* ones(NP));
+        sc - (- Ac * contact_c + boc + ϕ .* ones(NC));
     ]
 
     # fill the equality vector (residual of the equality constraints)
@@ -193,67 +142,3 @@ function residual!(e, x, θ, contact::PolyPoly{T,D,NP,NC},
     e[cbody.index.optimality] .-= wrench_c
     return nothing
 end
-
-function residual!(e, x, θ, contact::PolyPoly, bodies::Vector)
-    pbody = find_body(bodies, contact.parent_name)
-    cbody = find_body(bodies, contact.child_name)
-    residual!(e, x, θ, contact, pbody, cbody)
-    return nothing
-end
-
-
-#
-#
-# options=Mehrotra.Options(
-#         verbose=false,
-#         complementarity_tolerance=1e-4,
-#         # compressed_search_direction=true,
-#         max_iterations=30,
-#         sparse_solver=false,
-#         warm_start=true,
-#         )
-#
-# bodies, contacts = get_polytope_drop(;
-#     timestep=0.05,
-#     gravity=-9.81,
-#     mass=1.0,
-#     inertia=0.2 * ones(1,1),
-#     friction_coefficient=0.9,
-#     options=options,
-#     )
-#
-# nodes = [bodies; contacts]
-# num_variables = sum(variable_dimension.(nodes))
-# num_primals = sum(primal_dimension.(nodes))
-# num_cone = sum(cone_dimension.(nodes))
-# num_parameters = sum(parameter_dimension.(nodes))
-# num_equality = num_primals + num_cone
-#
-# dim = Dimensions(num_primals, num_cone, num_parameters);
-# idx = Indices(num_primals, num_cone, num_parameters);
-#
-# contact = contacts[1]
-# pbody = find_body(bodies, contact.parent_name)
-# cbody = find_body(bodies, contact.child_name)
-#
-# x = Symbolics.variables(:x, 1:dim.variables);
-# θ = Symbolics.variables(:θ, 1:dim.parameters);
-# e = Symbolics.variables(:e, 1:dim.equality);
-# f = Symbolics.variables(:e, 1:dim.equality);
-# f .= e;
-#
-# # residual!(f, x, θ, pbody);
-# residual!(f, x, θ, contacts[1], pbody, cbody);
-# # residual!(f, x, θ, contacts[2], pbody);
-#
-# f;
-# # fx = Matrix(Symbolics.sparsejacobian(f, x))
-# # fθ = Matrix(Symbolics.sparsejacobian(f, θ))
-# fx = Symbolics.sparsejacobian(f, x).nzval
-# # fθ = Symbolics.sparsejacobian(f, θ).nzval
-# for entry in Symbolics.sparsejacobian(f, x).nzval
-#     @show entry
-# end
-#
-#
-# a = 1

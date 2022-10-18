@@ -16,8 +16,6 @@ function get_sphere_collision(;
     )
 
     sphere_radius = 0.2
-    Af = [0.0  +1.0]
-    bf = [0.0]
 
     # nodes
     shapes = [SphereShape(sphere_radius)]
@@ -25,13 +23,16 @@ function get_sphere_collision(;
         Body(timestep, mass, inertia, shapes, gravity=+gravity, name=:pbody1),
         Body(timestep, mass, inertia, shapes, gravity=+gravity, name=:pbody2),
         ]
+    normal = [0.0, 1.0]
+    position_offset = [0.0, 0.0]
+    floor_shape = HalfspaceShape(normal, position_offset)
     contacts = [
-        SphereHalfSpace(bodies[1], Af, bf,
+        SphereHalfSpace(bodies[1], floor_shape,
             friction_coefficient=friction_coefficient,
-            name=:halfspace_p1),
-        SphereHalfSpace(bodies[2], Af, bf,
+            name=:floor1),
+        SphereHalfSpace(bodies[2], floor_shape,
             friction_coefficient=friction_coefficient,
-            name=:halfspace_p2),
+            name=:floor2),
         SphereSphere(bodies[1], bodies[2],
             friction_coefficient=friction_coefficient,
             name=:sphere_sphere),

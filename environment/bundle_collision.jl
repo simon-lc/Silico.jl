@@ -15,8 +15,6 @@ function get_bundle_collsion(;
         )
     )
 
-    Af = [0.0  +1.0]
-    bf = [0.0]
     Ap1 = [
         1.0  0.0;
         0.0  1.0;
@@ -61,6 +59,9 @@ function get_bundle_collsion(;
         Body(timestep, mass, inertia, parent_shapes, gravity=+gravity, name=:pbody),
         Body(timestep, mass, inertia, child_shapes, gravity=+gravity, name=:cbody),
         ]
+    normal = [0.0, 1.0]
+    position_offset = [0.0, 0.0]
+    floor_shape = HalfspaceShape(normal, position_offset)
     contacts = [
         PolyPoly(bodies[1], bodies[2],
             friction_coefficient=friction_coefficient,
@@ -69,14 +70,14 @@ function get_bundle_collsion(;
             parent_shape_id=2,
             friction_coefficient=friction_coefficient,
             name=:contact_2),
-        PolyHalfSpace(bodies[1], Af, bf,
+        PolyHalfSpace(bodies[1], floor_shape,
             friction_coefficient=friction_coefficient,
             name=:halfspace_p1),
-        PolyHalfSpace(bodies[1], Af, bf,
+        PolyHalfSpace(bodies[1], floor_shape,
             parent_shape_id=2,
             friction_coefficient=friction_coefficient,
             name=:halfspace_p2),
-        PolyHalfSpace(bodies[2], Af, bf,
+        PolyHalfSpace(bodies[2], floor_shape,
             friction_coefficient=friction_coefficient,
             name=:halfspace_c),
         ]

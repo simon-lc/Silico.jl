@@ -16,8 +16,6 @@ function get_quasistatic_manipulation(;
         )
     )
 
-    Af = [0.0  +1.0]
-    bf = [0.0]
     Ap1 = [
         1.0  0.0;
         0.0  1.0;
@@ -43,6 +41,9 @@ function get_quasistatic_manipulation(;
         QuasistaticRobot(timestep, mass, inertia, finger1_shapes, gravity=gravity, name=:finger1),
         QuasistaticRobot(timestep, mass, inertia, finger2_shapes, gravity=gravity, name=:finger2),
         ]
+    normal = [0.0, 1.0]
+    position_offset = [0.0, 0.0]
+    floor_shape = HalfspaceShape(normal, position_offset)
     contacts = [
         PolySphere(bodies[1], bodies[2],
             friction_coefficient=finger_friction_coefficient,
@@ -53,13 +54,13 @@ function get_quasistatic_manipulation(;
         SphereSphere(bodies[2], bodies[3],
             friction_coefficient=friction_coefficient,
             name=:object_finger2),
-        PolyHalfSpace(bodies[1], Af, bf,
+        PolyHalfSpace(bodies[1], floor_shape,
             friction_coefficient=friction_coefficient,
             name=:object_halfspace),
-        SphereHalfSpace(bodies[2], Af, bf,
+        SphereHalfSpace(bodies[2], floor_shape,
             friction_coefficient=friction_coefficient,
             name=:finger1_halfspace),
-        SphereHalfSpace(bodies[3], Af, bf,
+        SphereHalfSpace(bodies[3], floor_shape,
             friction_coefficient=friction_coefficient,
             name=:finger2_halfspace),
         ]
