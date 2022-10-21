@@ -16,22 +16,28 @@ set_background!(vis)
 ################################################################################
 A0 = [
     [
-        +1.0 +0.2;
+        +1.0 -0.0;
         -0.0 +1.0;
-        -1.0 -0.3;
+        -1.0 -0.0;
         +0.0 -1.0;
-        +0.8 -0.8;
+        ],
+    [
+        +1.0 -0.0;
+        -0.0 +1.0;
+        -1.0 -0.0;
+        +0.0 -1.0;
         ],
     ]
 b0 = [
-        0.40*[+1.0, +1.0, +1.0, +1.0, +1.0],
+        0.25*[+1.0, +1.0, +1.0, +1.0],
+        0.25*[+1.0, +1.0, +1.0, +1.0],
     ]
 
-timestep = 0.02
+timestep = 0.10
 gravity = -9.81
 mass = 1.0
 inertia = 0.2 * ones(1,1)
-friction_coefficient = 0.20
+friction_coefficient = 0.50
 
 mech = get_polytope_collision(;
     timestep=timestep,
@@ -43,12 +49,11 @@ mech = get_polytope_collision(;
     A=A0, b=b0,
     options=Mehrotra.Options(
         verbose=false,
-        complementarity_tolerance=1e-4,
+        complementarity_tolerance=1e-3,
         compressed_search_direction=true,
         max_iterations=30,
         sparse_solver=true,
         warm_start=false,
-        # warm_start=true,
         # complementarity_backstep=1e-1,
         )
     )
@@ -63,11 +68,11 @@ bilevel_mech = get_bilevel_polytope_collision(;
     A=A0, b=b0,
     options=Mehrotra.Options(
         verbose=false,
-        complementarity_tolerance=1e-4,
+        complementarity_tolerance=1e-3,
         compressed_search_direction=false,
         max_iterations=30,
         sparse_solver=true,
-        warm_start=false,
+        # warm_start=true,
         # complementarity_backstep=1e-1,
         )
     )
@@ -77,11 +82,13 @@ bilevel_mech = get_bilevel_polytope_collision(;
 ################################################################################
 # simulation
 ################################################################################
-H = 40
+H = 25
 
-xp2  = [+0.00, +0.90, -0.00]
-vp15 = [-0.00, +0.00, -3.00]
-z0 = [xp2; vp15]
+x12  = [+0.20, +0.25, -0.00]
+v115 = [+0.00, +0.00, -0.00]
+x22  = [+0.00, +0.75, -0.00]
+v215 = [+0.00, +0.00, -0.00]
+z0 = [x12; v115; x22; v215]
 
 set_gravity!(mech, gravity)
 set_gravity!(bilevel_mech, gravity)
@@ -98,52 +105,59 @@ vis, anim = visualize!(vis, bilevel_mech, bilevel_storage, animation=anim, name=
 scatter(storage.iterations, color=:red)
 scatter!(bilevel_storage.iterations, color=:blue)
 
+m = momentum(mech, storage)
+bilevel_m = momentum(bilevel_mech, bilevel_storage)
+
+plot(m[1,:], color="red")
+plot!(m[2,:], color="green")
+plot!(m[3,:], color="blue")
+
+plot(bilevel_m[1,:], color="red")
+plot!(bilevel_m[2,:], color="green")
+plot!(bilevel_m[3,:], color="blue")
+
 ################################################################################
 # performance evaluation
 ################################################################################
 timesteps = 1 ./ [10, 20, 30, 50, 70, 100]
-complementarity_tolerances = [1e-3, 3e-4, 1e-4, 1e-5, 1e-7, 1e-10]
-z_min = [0.0, +sqrt(2)/2, 0, -1, -2, -1]
-z_max = [0.0, +1.5, 2π, +1, +0, +1]
-initial_conditions = generate_initial_conditions(20, z_min, z_max)
+complementarity_tolerances = [1e-3, 1e-4, 1e-5, 1e-6, 1e-8, 1e-10]
+initial_conditions = [[0.02i, 0.25, 0, 0,0,0, 0, 0.75, 0, 0,0,0] for i = 10:10]
 
 
-performance_evaluation(mech, timesteps[1], complementarity_tolerances[1],
+momentum_evaluation(mech, timesteps[1], complementarity_tolerances[1],
     initial_conditions[1], H, vis=vis)
-performance_evaluation(bilevel_mech, timesteps[1], complementarity_tolerances[1],
+momentum_evaluation(bilevel_mech, timesteps[1], complementarity_tolerances[1],
     initial_conditions[1], H, vis=vis)
 
-horizon = 1.5
-performances = grid_benchmark_evaluation(
-    mech,
-    timesteps,
-    complementarity_tolerances,
-    initial_conditions,
-    horizon,
-    evaluation_metric=performance_evaluation,
-    vis=vis,
-    verbose=true)
-bilevel_performances = grid_benchmark_evaluation(
+horizon = 1.0
+# results = grid_benchmark_evaluation(
+#     mech,
+#     timesteps,
+#     complementarity_tolerances,
+#     initial_conditions,
+#     horizon,
+#     evaluation_metric=momentum_evaluation,
+#     vis=vis,
+#     verbose=true)
+bilevel_results = grid_benchmark_evaluation(
     bilevel_mech,
     timesteps,
     complementarity_tolerances,
     initial_conditions,
     horizon,
-    evaluation_metric=performance_evaluation,
+    evaluation_metric=momentum_evaluation,
     vis=vis,
     verbose=true)
 
+folder_path = joinpath(@__DIR__, "momentum_data")
 
-
-folder_path = joinpath(@__DIR__, "performance_data")
-
-plt = process_performances(timesteps, complementarity_tolerances,
-    initial_conditions, performances,
+plt = process_momentum(timesteps, complementarity_tolerances,
+    initial_conditions, results,
     offset=[0,0],
     suffix="single_level",
     folder_path=folder_path)
-plt = process_performances(timesteps, complementarity_tolerances,
-    initial_conditions, bilevel_performances,
+plt = process_momentum(timesteps, complementarity_tolerances,
+    initial_conditions, bilevel_results,
     offset=[1+length(timesteps),0],
     suffix="bilevel",
     folder_path=folder_path)
