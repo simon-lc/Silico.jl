@@ -55,8 +55,8 @@ function get_3d_body_drop(;
     bodies = [
         Body3D(timestep, mass, inertia, shapes, gravity=+gravity, name=:pbody),
         ]
-    normal = [0.0, 1.0]
-    position_offset = [0.0, 0.0]
+    normal = [0.0, 0.0, 1.0]
+    position_offset = [0.0, 0.0, 0.0]
     floor_shape = HalfspaceShape(normal, position_offset)
     contacts = [
         SphereHalfSpace(bodies[1], floor_shape;
@@ -146,5 +146,6 @@ set_mechanism!(vis, mech, storage, 10)
 
 visualize!(vis, mech, storage, build=false)
 
-# scatter(storage.iterations)
-# plot!(hcat(storage.variables...)')
+scatter(storage.iterations)
+plot(hcat(storage.variables...)')
+mech.dimensions

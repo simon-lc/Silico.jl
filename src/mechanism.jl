@@ -46,8 +46,6 @@ struct MechanismDimensions
     # equality::Int
 end
 
-typeof(mech.bodies) <: Vector{<:AbstractBody{Float64,3}}
-
 function MechanismDimensions(bodies::Vector{<:AbstractBody{T,D}}, contacts::Vector) where {T,D}
     # dimensions
     body_configuration = (D==2) ? 3 : 7
