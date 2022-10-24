@@ -1,9 +1,9 @@
 ######################################################################
 # shape
 ######################################################################
-function build_shape!(vis::Visualizer, shape::PolytopeShape;
+function build_shape!(vis::Visualizer, shape::PolytopeShape{T,Ng,D};
         collider_color=RGBA(0.2, 0.2, 0.2, 0.8),
-        ) where T
+        ) where {T,Ng,D}
 
     A = shape.A
     b = shape.b
@@ -12,15 +12,23 @@ function build_shape!(vis::Visualizer, shape::PolytopeShape;
     return nothing
 end
 
-function build_shape!(vis::Visualizer, shape::SphereShape;
+function build_shape!(vis::Visualizer, shape::SphereShape{T,Ng,D};
         collider_color=RGBA(0.2, 0.2, 0.2, 0.8),
-        ) where T
+        ) where {T,Ng,D}
 
+    δ = [0, 0, 5e-4]
+    @show D
+    @show typeof(shape)
+    offset = [zeros(3-D); shape.position_offset]
+    radius = shape.radius[1]
+    @show shape.position_offset
+    @show shape.radius
+    @show offset
     setobject!(vis,
-        HyperSphere(GeometryBasics.Point(0,0,0.), shape.radius[1]),
+        HyperSphere(GeometryBasics.Point(offset...), radius),
         MeshPhongMaterial(color=collider_color));
     setobject!(vis[:fake],
-        HyperSphere(GeometryBasics.Point(0,0,0.0005), shape.radius[1]),
+        HyperSphere(GeometryBasics.Point((offset .+ δ)...), radius),
         MeshPhongMaterial(color=RGBA(0.8, 0.8, 0.8, 0.8)));
     return nothing
 end

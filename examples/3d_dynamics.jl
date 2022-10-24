@@ -51,9 +51,9 @@ function get_3d_body_drop(;
     )
 
     # nodes
-    shapes = [SphereShape(0.2)]
+    shapes = [SphereShape(0.2,zeros(3))]
     bodies = [
-        Body3D(timestep, mass, inertia, shapes, gravity=+gravity, name=:pbody),
+        Body(timestep, mass, inertia, shapes, gravity=+gravity, name=:pbody, D=3),
         ]
     normal = [0.0, 0.0, 1.0]
     position_offset = [0.0, 0.0, 0.0]
@@ -87,16 +87,16 @@ using Plots
 using Statistics
 using Random
 
-include("3d_body.jl")
+include("body.jl")
 
 ################################################################################
 # visualization
 ################################################################################
-vis = Visualizer()
-open(vis)
-set_floor!(vis)
-set_light!(vis)
-set_background!(vis)
+# vis = Visualizer()
+# open(vis)
+# set_floor!(vis)
+# set_light!(vis)
+# set_background!(vis)
 
 ################################################################################
 # define mechanism
@@ -128,21 +128,22 @@ mech = get_3d_body_drop(;
 ################################################################################
 # test simulation
 ################################################################################
-xp2 = [+0.25, +0.80, -0.1, 1,0,0,0]
-vp15 = [-0.0, +0.0, -0.0, 0,0,0]
+xp2 =  [+0.25, +0.80, -0.10, 1,0,0,0]
+vp15 = [+0.00, +0.00, +0.00, 0,0,0]
 z0 = [xp2; vp15]
 
 u0 = zeros(6)
-H0 = 150
+H0 = 100
 
-@elapsed storage = simulate!(mech, z0, H0)
+@elapsed storage = simulate!(mech, deepcopy(z0), H0)
 
 
 ################################################################################
 # visualization
 ################################################################################
 build_mechanism!(vis, mech)
-set_mechanism!(vis, mech, storage, 10)
+set_mechanism!(vis, mech, storage, 1)
+
 
 visualize!(vis, mech, storage, build=false)
 
