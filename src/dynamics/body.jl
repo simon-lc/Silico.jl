@@ -1,7 +1,7 @@
 ################################################################################
 # body
 ################################################################################
-struct Body{T,D} <: AbstractBody{T}
+struct Body{T,D} <: AbstractBody{T,D}
     name::Symbol
     index::NodeIndices
     pose::Vector{T}

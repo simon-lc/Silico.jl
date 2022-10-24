@@ -68,7 +68,7 @@ bilevel_mech = get_bilevel_polytope_collision(;
     A=A0, b=b0,
     options=Mehrotra.Options(
         verbose=false,
-        complementarity_tolerance=1e-3,
+        complementarity_tolerance=1e-4,
         compressed_search_direction=false,
         max_iterations=30,
         sparse_solver=true,
@@ -121,7 +121,7 @@ plot!(bilevel_m[3,:], color="blue")
 ################################################################################
 timesteps = 1 ./ [10, 20, 30, 50, 70, 100]
 complementarity_tolerances = [1e-3, 1e-4, 1e-5, 1e-6, 1e-8, 1e-10]
-initial_conditions = [[0.02i, 0.25, 0, 0,0,0, 0, 0.75, 0, 0,0,0] for i = 10:10]
+initial_conditions = [[0.02i, 0.25, 0, 0,0,0, 0, 0.75, 0, 0,0,0] for i = 1:10]
 
 
 momentum_evaluation(mech, timesteps[1], complementarity_tolerances[1],
@@ -130,15 +130,15 @@ momentum_evaluation(bilevel_mech, timesteps[1], complementarity_tolerances[1],
     initial_conditions[1], H, vis=vis)
 
 horizon = 1.0
-# results = grid_benchmark_evaluation(
-#     mech,
-#     timesteps,
-#     complementarity_tolerances,
-#     initial_conditions,
-#     horizon,
-#     evaluation_metric=momentum_evaluation,
-#     vis=vis,
-#     verbose=true)
+results = grid_benchmark_evaluation(
+    mech,
+    timesteps,
+    complementarity_tolerances,
+    initial_conditions,
+    horizon,
+    evaluation_metric=momentum_evaluation,
+    vis=vis,
+    verbose=true)
 bilevel_results = grid_benchmark_evaluation(
     bilevel_mech,
     timesteps,
@@ -161,3 +161,5 @@ plt = process_momentum(timesteps, complementarity_tolerances,
     offset=[1+length(timesteps),0],
     suffix="bilevel",
     folder_path=folder_path)
+
+# saved_bilevel_results = deepcopy(bilevel_results)

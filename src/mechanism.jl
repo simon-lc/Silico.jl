@@ -46,16 +46,17 @@ struct MechanismDimensions
     # equality::Int
 end
 
-function MechanismDimensions(bodies::Vector, contacts::Vector)
+typeof(mech.bodies) <: Vector{<:AbstractBody{Float64,3}}
+
+function MechanismDimensions(bodies::Vector{<:AbstractBody{T,D}}, contacts::Vector) where {T,D}
     # dimensions
-    body_configuration = 3 # in 2D
-    body_velocity = 3 # in 2D
-    body_state = 6 # in 2D
-    body_input = 3 # in 2D
+    body_configuration = (D==2) ? 3 : 7
+    body_velocity = (D==2) ? 3 : 6
+    body_state = (D==2) ? 6 : 13
+    body_input = (D==2) ? 3 : 6
 
     num_bodies = length(bodies)
     num_contacts = length(contacts)
-
 
     state = sum(state_dimension.(bodies))
     input = num_bodies * body_input

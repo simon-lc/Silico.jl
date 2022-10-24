@@ -1,15 +1,16 @@
-abstract type Shape{T,Ng} end
+abstract type Shape{T,Ng,D} end
 
+space_dimension(shape::Shape{T,Ng,D}) where {T,Ng,D} = D
+constraint_dimension(shape::Shape{T,Ng}) where {T,Ng} = Ng
 function constraint_jacobian_β(shape::Shape{T,Ng}, p, α, β) where {T,Ng}
     return zeros(T,Ng,0)
 end
 
-constraint_dimension(shape::Shape{T,Ng}) where {T,Ng} = Ng
 
 ################################################################################
 # polytope shape
 ################################################################################
-struct PolytopeShape{T,Ng} <: Shape{T,Ng}
+struct PolytopeShape{T,Ng,D} <: Shape{T,Ng,D}
     A::Matrix{T}
     b::Vector{T}
     o::Vector{T}
@@ -17,31 +18,32 @@ end
 
 function PolytopeShape(A, b::Vector{T}, o=zeros(T,size(A,2))) where T
     Ng = length(b)
-    return PolytopeShape{T,Ng}(A, b, o)
+    D = size(A, 2)
+    return PolytopeShape{T,Ng,D}(A, b, o)
 end
 
 primal_dimension(shape::PolytopeShape) = 0
 cone_dimension(shape::PolytopeShape{T,Ng}) where {T,Ng} = Ng
-parameter_dimension(shape::PolytopeShape{T,Ng}) where {T,Ng} = 3Ng + 2
+parameter_dimension(shape::PolytopeShape{T,Ng,D}) where {T,Ng,D} = Ng + D * (Ng + 1)
 get_parameters(shape::PolytopeShape) = [vec(shape.A); shape.b; shape.o]
 
-function set_parameters!(shape::PolytopeShape{T,Ng}, parameters) where {T,Ng}
+function set_parameters!(shape::PolytopeShape{T,Ng,D}, parameters) where {T,Ng,D}
     off = 0
-    shape.A .= reshape(parameters[off .+ (1:2Ng)], (Ng,2)); off += 2Ng
+    shape.A .= reshape(parameters[off .+ (1:D*Ng)], (Ng,D)); off += D*Ng
     shape.b .= parameters[off .+ (1:Ng)]; off += Ng
-    shape.o .= parameters[off .+ (1:2)]; off += 2
+    shape.o .= parameters[off .+ (1:D)]; off += D
     return nothing
 end
 
-function unpack_parameters(shape::PolytopeShape{T,Ng}, parameters) where {T,Ng}
+function unpack_parameters(shape::PolytopeShape{T,Ng,D}, parameters) where {T,Ng,D}
     off = 0
-    A = reshape(parameters[off .+ (1:2Ng)], (Ng,2)); off += 2Ng
+    A = reshape(parameters[off .+ (1:D*Ng)], (Ng,D)); off += D*Ng
     b = parameters[off .+ (1:Ng)]; off += Ng
-    o = parameters[off .+ (1:2)]; off += 2
+    o = parameters[off .+ (1:D)]; off += D
     return A, b, o
 end
 
-function constraint(shape::PolytopeShape{T,Ng}, p, α, β) where {T,Ng}
+function constraint(shape::PolytopeShape, p, α, β)
     A = shape.A
     b = shape.b
     o = shape.o
@@ -65,31 +67,32 @@ end
 ################################################################################
 # halfspace shape
 ################################################################################
-struct HalfspaceShape{T,Ng} <: Shape{T,Ng}
+struct HalfspaceShape{T,Ng,D} <: Shape{T,Ng,D}
     normal::Vector{T}
     position_offset::Vector{T}
 end
 
 function HalfspaceShape(normal::AbstractVector{T}, position_offset=zeros(T,2)) where T
-    return HalfspaceShape{T,1}(normal, position_offset)
+    D = length(normal)
+    return HalfspaceShape{T,1,D}(normal, position_offset)
 end
 
 primal_dimension(shape::HalfspaceShape) = 0
 cone_dimension(shape::HalfspaceShape) = 1
-parameter_dimension(shape::HalfspaceShape) = 2 + 2
+parameter_dimension(shape::HalfspaceShape{T,Ng,D}) where {T,Ng,D} = 2D
 get_parameters(shape::HalfspaceShape) = [shape.normal; shape.position_offset]
 
-function set_parameters!(shape::HalfspaceShape, parameters)
+function set_parameters!(shape::HalfspaceShape{T,Ng,D}, parameters) where {T,Ng,D}
     off = 0
-    shape.normal .= parameters[off .+ (1:2)]; off += 2
-    shape.position_offset .= parameters[off .+ (1:2)]; off += 2
+    shape.normal .= parameters[off .+ (1:D)]; off += D
+    shape.position_offset .= parameters[off .+ (1:D)]; off += D
     return nothing
 end
 
-function unpack_parameters(shape::HalfspaceShape, parameters)
+function unpack_parameters(shape::HalfspaceShape{T,Ng,D}, parameters) where {T,Ng,D}
     off = 0
-    normal = parameters[off .+ (1:2)]; off += 2
-    position_offset = parameters[off .+ (1:2)]; off += 2
+    normal = parameters[off .+ (1:D)]; off += D
+    position_offset = parameters[off .+ (1:D)]; off += D
     return normal, position_offset
 end
 
@@ -117,31 +120,32 @@ end
 ################################################################################
 # sphere shape
 ################################################################################
-struct SphereShape{T,Ng} <: Shape{T,Ng}
+struct SphereShape{T,Ng,D} <: Shape{T,Ng,D}
     radius::Vector{T}
     position_offset::Vector{T}
 end
 
 function SphereShape(radius::T, position_offset=zeros(T,2)) where T
-    return SphereShape{T,1}([radius], position_offset)
+    D = length(position_offset)
+    return SphereShape{T,1,D}([radius], position_offset)
 end
 
 primal_dimension(shape::SphereShape) = 0
 cone_dimension(shape::SphereShape) = 1
-parameter_dimension(shape::SphereShape) = 1 + 2
+parameter_dimension(shape::SphereShape{T,Ng,D}) where {T,Ng,D} = 1 + D
 get_parameters(shape::SphereShape) = [shape.radius; shape.position_offset]
 
-function set_parameters!(shape::SphereShape, parameters)
+function set_parameters!(shape::SphereShape{T,Ng,D}, parameters) where {T,Ng,D}
     off = 0
     shape.radius .= parameters[off .+ (1:1)]; off += 1
-    shape.position_offset .= parameters[off .+ (1:2)]; off += 2
+    shape.position_offset .= parameters[off .+ (1:D)]; off += D
     return nothing
 end
 
-function unpack_parameters(shape::SphereShape, parameters)
+function unpack_parameters(shape::SphereShape{T,Ng,D}, parameters) where {T,Ng,D}
     off = 0
     radius = parameters[off .+ (1:1)]; off += 1
-    position_offset = parameters[off .+ (1:2)]; off += 2
+    position_offset = parameters[off .+ (1:D)]; off += D
     return radius, position_offset
 end
 

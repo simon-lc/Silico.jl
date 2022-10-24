@@ -2,6 +2,8 @@ using Plots
 using Statistics
 using Random
 
+include("benchmark_methods.jl")
+
 ################################################################################
 # visualization
 ################################################################################
@@ -9,6 +11,9 @@ vis = Visualizer()
 open(vis)
 set_floor!(vis)
 set_light!(vis)
+set_background!(vis)
+set_floor!(vis, origin=[-0.05, 0, 0], x=0.1)
+set_light!(vis, direction="Negative")
 set_background!(vis)
 
 ################################################################################
@@ -92,7 +97,7 @@ Mehrotra.initialize_solver!(bilevel_mech.solver)
 @elapsed storage = simulate!(mech, deepcopy(z0), H)
 @elapsed bilevel_storage = simulate!(bilevel_mech, deepcopy(z0), H)
 
-vis, anim = visualize!(vis, mech, storage, name=:single, color=RGBA(1,1,1,0.3))
+vis, anim = visualize!(vis, mech, storage, name=:single, color=RGBA(4/255,191/255,173/255,1.0))
 vis, anim = visualize!(vis, bilevel_mech, bilevel_storage, animation=anim, name=:bilevel)
 
 scatter(storage.iterations, color=:red)
@@ -102,10 +107,10 @@ scatter!(bilevel_storage.iterations, color=:blue)
 # performance evaluation
 ################################################################################
 timesteps = 1 ./ [10, 20, 30, 50, 70, 100]
-complementarity_tolerances = [1e-3, 3e-4, 1e-4, 1e-5, 1e-7, 1e-10]
+complementarity_tolerances = [1e-3, 1e-4, 1e-5, 1e-6, 1e-8, 1e-10]
 z_min = [0.0, +sqrt(2)/2, 0, -1, -2, -1]
 z_max = [0.0, +1.5, 2π, +1, +0, +1]
-initial_conditions = generate_initial_conditions(20, z_min, z_max)
+initial_conditions = generate_initial_conditions(100, z_min, z_max)
 
 
 performance_evaluation(mech, timesteps[1], complementarity_tolerances[1],

@@ -40,10 +40,10 @@ function record!(storage::TraceStorage{T,H}, mechanism::Mechanism{T,D,NB,NC}, i:
     variables = mechanism.solver.solution.all
     parameters = mechanism.solver.parameters
     for (j, contact) in enumerate(mechanism.contacts)
-        contact_point, normal, tangent = contact_frame(contact, mechanism)
-        storage.contact_point[i][j] .= contact_point
-        storage.normal[i][j] .= normal
-        storage.tangent[i][j] .= tangent
+        # contact_point, normal, tangent = contact_frame(contact, mechanism)
+        # storage.contact_point[i][j] .= contact_point
+        # storage.normal[i][j] .= normal
+        # storage.tangent[i][j] .= tangent
     end
 
     storage.variables[i] .= variables

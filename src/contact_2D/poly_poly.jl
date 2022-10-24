@@ -6,16 +6,16 @@ struct PolyPoly{T,D,NP,NC} <: Contact{T,D,NP,NC}
     parent_name::Symbol
     child_name::Symbol
     index::NodeIndices
-    parent_shape::Shape{T}
-    child_shape::Shape{T}
+    parent_shape::Shape{T,NP,D}
+    child_shape::Shape{T,NC,D}
     friction_coefficient::Vector{T}
 end
 
-function PolyPoly(parent_body::AbstractBody{T}, child_body::AbstractBody{T};
+function PolyPoly(parent_body::AbstractBody{T,D}, child_body::AbstractBody{T};
         parent_shape_id::Int=1,
         child_shape_id::Int=1,
         name::Symbol=:contact,
-        friction_coefficient=0.2) where {T}
+        friction_coefficient=0.2) where {T,D}
 
     parent_name = parent_body.name
     child_name = child_body.name
@@ -24,7 +24,6 @@ function PolyPoly(parent_body::AbstractBody{T}, child_body::AbstractBody{T};
 
     index = NodeIndices()
 
-    D = 2
     Np = constraint_dimension(parent_shape)
     Nc = constraint_dimension(child_shape)
     return PolyPoly{T,D,Np,Nc}(

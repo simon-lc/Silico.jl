@@ -1,5 +1,5 @@
 abstract type Node{T} end
-abstract type AbstractBody{T} <: Node{T} end
+abstract type AbstractBody{T,D} <: Node{T} end
 
 variable_dimension(node::Node) = primal_dimension(node) + 2 * cone_dimension(node)
 optimality_dimension(node::Node) = primal_dimension(node)

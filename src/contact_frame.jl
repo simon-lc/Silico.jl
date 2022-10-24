@@ -99,12 +99,8 @@ function contact_frame(contact::SphereHalfSpace, mechanism::Mechanism)
     parameters = mechanism.solver.parameters
 
     # unpack parameters
-    friction_coefficient, parent_parameters, child_parameters =
-        unpack_parameters(parameters[contact.index.parameters], contact)
-    shape_p = contact.parent_shape
-    shape_c = contact.child_shape
-    radp, offp = unpack_parameters(shape_p, parent_parameters)
-    normalc, offc = unpack_parameters(shape_c, child_parameters)
+    friction_coefficient, radp, offp, normalc, offc =
+        split_parameters(parameters[contact.index.parameters], contact)
     pp2, timestep_p = unpack_pose_timestep(parameters[pbody.index.parameters], pbody)
 
     # unpack variables

@@ -131,7 +131,6 @@ function set_parameters!(contact::Contact{T,D,NP,NC}, θ) where {T,D,NP,NC}
 end
 
 function unpack_parameters(θ::Vector, contact::Contact{T,D,NP,NC}) where {T,D,NP,NC}
-    @assert D == 2
     np = parameter_dimension(contact.parent_shape)
     nc = parameter_dimension(contact.child_shape)
 

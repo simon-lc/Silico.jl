@@ -5,15 +5,15 @@ struct PolyHalfSpace{T,D,NP,NC} <: Contact{T,D,NP,NC}
     name::Symbol
     parent_name::Symbol
     index::NodeIndices
-    parent_shape::Shape{T}
-    child_shape::Shape{T}
+    parent_shape::Shape{T,NP,D}
+    child_shape::Shape{T,NC,D}
     friction_coefficient::Vector{T}
 end
 
-function PolyHalfSpace(parent_body::AbstractBody{T}, child_shape::Shape{T};
+function PolyHalfSpace(parent_body::AbstractBody{T,D}, child_shape::Shape{T};
         parent_shape_id::Int=1,
         name::Symbol=:contact,
-        friction_coefficient=0.2) where {T}
+        friction_coefficient=0.2) where {T,D}
 
     parent_name = parent_body.name
     parent_shape = deepcopy(parent_body.shapes[parent_shape_id])
@@ -21,7 +21,6 @@ function PolyHalfSpace(parent_body::AbstractBody{T}, child_shape::Shape{T};
 
     index = NodeIndices()
 
-    D = 2
     Np = constraint_dimension(parent_shape)
     Nc = constraint_dimension(child_shape)
     return PolyHalfSpace{T,D,Np,Nc}(
