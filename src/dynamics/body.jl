@@ -18,15 +18,23 @@ function Body(timestep::T, mass, inertia::Matrix,
         shapes::Vector;
         gravity=-9.81,
         name::Symbol=:body,
-        index::NodeIndices=NodeIndices()) where T
+        index::NodeIndices=NodeIndices(),
+        D=2) where T
 
-    D = 2
+    pose = zeros(3)
+    velocity = zeros(3)
+    input = zeros(3)
+    if D == 3
+        pose = zeros(7)
+        velocity = zeros(6)
+        input = zeros(6)
+    end
     return Body{T,D}(
         name,
         index,
-        zeros(D+1),
-        zeros(D+1),
-        zeros(D+1),
+        pose,
+        velocity,
+        input,
         [gravity],
         [timestep],
         [mass],
@@ -35,28 +43,29 @@ function Body(timestep::T, mass, inertia::Matrix,
     )
 end
 
-primal_dimension(body::Body{T,D}) where {T,D} = 3
+primal_dimension(body::Body{T,D}) where {T,D} = (D == 2) ? 3 : 6
 cone_dimension(body::Body{T,D}) where {T,D} = 0
 
 function parameter_dimension(body::Body{T,D}) where {T,D}
-    @assert D == 2
-    nq = 3 # configuration
-    nv = 3 # velocity
-    nu = 3 # input
+    nq = (D==2) ? 3 : 7 # configuration
+    nv = (D==2) ? 3 : 6 # velocity
+    nu = (D==2) ? 3 : 6 # input
     n_gravity = 1 # mass
     n_timestep = 1 # mass
     n_mass = 1 # mass
-    n_inertia = 1 # inertia
+    n_inertia = (D==2) ? 1 : 3 # inertia
     nθ = nq + nv + nu + n_gravity + n_timestep + n_mass + n_inertia
     return nθ
 end
 
-function unpack_variables(x::Vector, body::Body{T}) where T
-    return x
+unpack_variables(x::Vector, body::Body{T,2}) where T = x
+function unpack_variables(x::Vector, body::Body{T,3}) where T
+    v25 = x[1:3]
+    ϕ25 = x[4:6]
+    return v25, ϕ25
 end
 
 function get_parameters(body::Body{T,D}) where {T,D}
-    @assert D == 2
     pose = body.pose
     velocity = body.velocity
     input = body.input
@@ -65,7 +74,8 @@ function get_parameters(body::Body{T,D}) where {T,D}
     timestep = body.timestep
     mass = body.mass
     inertia = body.inertia
-    θ = [pose; velocity; input; gravity; timestep; mass; inertia[1]]
+    inertia_vec = (D==2) ? inertia[1] : diag(inertia)
+    θ = [pose; velocity; input; gravity; timestep; mass; inertia_vec]
     return θ
 end
 
@@ -78,16 +88,19 @@ function set_parameters!(body::Body{T,D}, θ) where {T,D}
     body.gravity .= gravity
     body.timestep .= timestep
     body.mass .= mass
-    body.inertia .= inertia
+    if D == 2
+        body.inertia .= inertia
+    else
+        body.inertia[diagind(3,3)] .= inertia
+    end
     return nothing
 end
 
-function unpack_parameters(θ::Vector, body::Body{T,D}) where {T,D}
-    @assert D == 2
+function unpack_parameters(θ::Vector, body::Body{T,2}) where T
     off = 0
-    pose = θ[off .+ (1:D+1)]; off += D+1
-    velocity = θ[off .+ (1:D+1)]; off += D+1
-    input = θ[off .+ (1:D+1)]; off += D+1
+    pose = θ[off .+ (1:3)]; off += 3
+    velocity = θ[off .+ (1:3)]; off += 3
+    input = θ[off .+ (1:3)]; off += 3
 
     gravity = θ[off .+ (1:1)]; off += 1
     timestep = θ[off .+ (1:1)]; off += 1
@@ -95,8 +108,24 @@ function unpack_parameters(θ::Vector, body::Body{T,D}) where {T,D}
     inertia = θ[off .+ 1] * ones(1,1); off += 1
     return pose, velocity, input, timestep, gravity, mass, inertia
 end
-parameter_state_indices(body::Body) = Vector(1:6)
-parameter_input_indices(body::Body) = Vector(7:9)
+
+function unpack_parameters(θ::Vector, body::Body{T,3}) where T
+    off = 0
+    pose = θ[off .+ (1:7)]; off += 7
+    velocity = θ[off .+ (1:6)]; off += 6
+    input = θ[off .+ (1:6)]; off += 6
+
+    gravity = θ[off .+ (1:1)]; off += 1
+    timestep = θ[off .+ (1:1)]; off += 1
+    mass = θ[off .+ (1:1)]; off += 1
+    inertia = Matrix(Diagonal(θ[off .+ (1:3)])); off += 3
+    return pose, velocity, input, timestep, gravity, mass, inertia
+end
+
+parameter_state_indices(body::Body{T,2}) where T = Vector(1:6)
+parameter_input_indices(body::Body{T,2}) where T = Vector(7:9)
+parameter_state_indices(body::Body{T,3}) where T = Vector(1:13)
+parameter_input_indices(body::Body{T,3}) where T = Vector(14:19)
 
 function unpack_pose_timestep(θ::Vector, body::Body{T,D}) where {T,D}
     pose, velocity, input, timestep, gravity, mass, inertia = unpack_parameters(θ, body)
@@ -108,7 +137,7 @@ function find_body(bodies::AbstractVector{<:Body}, name::Symbol)
     return bodies[idx]
 end
 
-function residual!(e, x, θ, body::Body)
+function residual!(e, x, θ, body::Body{T,2}) where T
     index = body.index
     # variables = primals = velocity
     v25 = unpack_variables(x[index.variables], body)
@@ -126,39 +155,107 @@ function residual!(e, x, θ, body::Body)
     return nothing
 end
 
+function residual!(e, x, θ, body::Body{T,3}) where T
+    index = body.index
+    # variables = primals = velocity
+    v25, ϕ25 = unpack_variables(x[index.variables], body)
+    # parameters
+    p2, vϕ15, u, timestep, gravity, mass, inertia = unpack_parameters(θ[index.parameters], body)
+    x2 = p2[1:3]
+    q2 = p2[4:7]
+    v15 = vϕ15[1:3]
+    ϕ15 = vϕ15[4:6]
+    # integrator
+    Δt = timestep[1]
+    x1 = x2 - Δt * v15
+    x3 = x2 + Δt * v25
+    Δϕ15 = Δt * ϕ15
+    Δϕ25 = Δt * ϕ25
+
+    # dynamics
+    # @show x1
+    # @show x2
+    # @show x3
+    # @show x3 - 2*x2 + x1
+    # @show mass[1] * (x3 - 2*x2 + x1)/Δt
+    # @show - Δt * [0; 0; mass .* gravity]
+    # @show - u[1:3] * Δt
+    linear_optimality = mass[1] * (x3 - 2*x2 + x1)/Δt - Δt * [0; 0; mass .* gravity] - u[1:3] * Δt;
+    angular_optimality =
+        + sqrt(1 - Δϕ25'*Δϕ25) * inertia * Δϕ25 + cross(Δϕ25, inertia * Δϕ25) +
+        - sqrt(1 - Δϕ15'*Δϕ15) * inertia * Δϕ15 + cross(Δϕ15, inertia * Δϕ15) +
+        - Δt^2 * u[4:6] / 2
+
+    # @show Δϕ15
+    # @show Δϕ25
+    # @show - Δt^2 * u[4:6] / 2
+    # @show + sqrt(1 - Δϕ25'*Δϕ25) * inertia * Δϕ25 + cross(Δϕ25, inertia * Δϕ25)
+    # @show - sqrt(1 - Δϕ15'*Δϕ15) * inertia * Δϕ15 + cross(Δϕ15, inertia * Δϕ15)
+
+    e[index.optimality] .+= [linear_optimality; angular_optimality]
+    return nothing
+end
+
 function get_current_state(body::Body{T}) where T
-    nx = length(body.pose)
-    nv = length(body.velocity)
+    np = pose_dimension(body)
+    nv = velocity_dimension(body)
 
     off = 0
-    z = zeros(T,nx+nv)
-    z[off .+ (1:nx)] .= body.pose; off += nx
+    z = zeros(T,np+nv)
+    z[off .+ (1:np)] .= body.pose; off += np
     z[off .+ (1:nv)] .= body.velocity; off += nv
     return z
 end
 
 function set_current_state!(body::Body, z)
-    nx = length(body.pose)
-    nv = length(body.velocity)
+    np = pose_dimension(body)
+    nv = velocity_dimension(body)
 
     off = 0
-    body.pose .= z[off .+ (1:nx)]; off += nx
+    body.pose .= z[off .+ (1:np)]; off += np
     body.velocity .= z[off .+ (1:nv)]; off += nv
     return nothing
 end
 
-function get_next_state!(z, variables, body::Body{T}) where T
+function get_next_state!(z, variables, body::Body{T,2}) where T
     p2 = body.pose
     timestep = body.timestep
     v25 = unpack_variables(variables[body.index.variables], body)
 
-    nx = length(p2)
-    nv = length(v25)
+    np = pose_dimension(body)
+    nv = velocity_dimension(body)
     off = 0
-    z[off .+ (1:nx)] .= p2 + timestep[1] .* v25; off += nx
+    z[off .+ (1:np)] .= p2 + timestep[1] .* v25; off += np
     z[off .+ (1:nv)] .= v25; off += nv
     return nothing
 end
 
-state_dimension(body::Body) = 3 + 3
-input_dimension(body::Body) = 3
+function get_next_state!(z, variables, body::Body{T,3}) where T
+    x2 = body.pose[1:3]
+    q2 = body.pose[4:7]
+    timestep = body.timestep
+    v25, ϕ25 = unpack_variables(variables[body.index.variables], body)
+    # @show v25
+    # @show ϕ25
+
+    nv = velocity_dimension(body)
+    off = 0
+    z[off .+ (1:3)] .= x2 + timestep[1] .* v25; off += 3
+    z[off .+ (1:4)] .= quaternion_increment(q2, timestep[1] .* ϕ25); off += 4
+    @show round.(q2, digits=3)
+    @show round.(z[4:7], digits=3)
+    # @show quaternion_increment(q2, timestep[1] .* ϕ25)
+    # @show timestep[1] .* ϕ25
+
+    z[off .+ (1:nv)] .= [v25; ϕ25]; off += nv
+    return nothing
+end
+
+state_dimension(body::Body{T,3}) where T = pose_dimension(body) + velocity_dimension(body)
+pose_dimension(body::Body{T,2}) where T = 3
+velocity_dimension(body::Body{T,2}) where T = 3
+input_dimension(body::Body{T,2}) where T = 3
+
+pose_dimension(body::Body{T,3}) where T = 7
+velocity_dimension(body::Body{T,3}) where T = 6
+input_dimension(body::Body{T,3}) where T = 6
