@@ -16,14 +16,9 @@ function build_shape!(vis::Visualizer, shape::SphereShape{T,Ng,D};
         collider_color=RGBA(0.2, 0.2, 0.2, 0.8),
         ) where {T,Ng,D}
 
-    δ = [0, 0, 5e-4]
-    @show D
-    @show typeof(shape)
+    δ = 5e-3 * [0, 0, 1]
     offset = [zeros(3-D); shape.position_offset]
     radius = shape.radius[1]
-    @show shape.position_offset
-    @show shape.radius
-    @show offset
     setobject!(vis,
         HyperSphere(GeometryBasics.Point(offset...), radius),
         MeshPhongMaterial(color=collider_color));
@@ -64,17 +59,25 @@ function build_body!(vis::Visualizer, body::AbstractBody;
     return nothing
 end
 
-function set_body!(vis::Visualizer, body::AbstractBody, pose; name=body.name)
-    p = pose[1:2]
-    q = pose[3:3]
-    pe = [0; p]
+function set_body!(vis::Visualizer, body::AbstractBody{T,D}, pose; name=body.name) where {T,D}
+    x = [0; pose[1:2]]
+    q = RotX(pose[3])
+    @show D
+    @show q
+    if D == 3
+        x = pose[1:3]
+        q = Quaternion(pose[4:7]...)
+    end
+    @show q
     settransform!(vis[:bodies][name], MeshCat.compose(
-        MeshCat.Translation(SVector{3}(pe)),
-        MeshCat.LinearMap(rotationmatrix(RotX(q[1]))),
+        MeshCat.Translation(SVector{3}(x)),
+        MeshCat.LinearMap(rotationmatrix(q)),
         )
     )
     return nothing
 end
+
+rotationmatrix(Quaternion(1, 0.0, 0.1, 0.0))
 
 ######################################################################
 # mechanism

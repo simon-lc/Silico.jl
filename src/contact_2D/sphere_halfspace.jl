@@ -134,19 +134,20 @@ function residual!(e, x, θ, contact::SphereHalfSpace{T,3},
     qp3 = quaternion_increment(qp2, timestep_p[1] * ϕp25)
 
     # analytical contact position in the world frame
-    # offpw = quaternion_rotate(qp3, ) * offp
-    # contact_w = xp3 + offpw - radp[1] .* normalc # we are missing offpw
-    contact_w = xp3 - radp[1] .* normalc
+    # offpw = vector_rotate(qp3, offp)
+    # contact_w = xp3 + offpw - radp[1] .* normalc
+    contact_w = xp3 - radp[1] .* normalc # we are missing offpw
     # analytical signed distance function
     ϕ = [(contact_w - offc)' * normalc]
 
     # contact normal and tangent in the world frame
     normal_pw = normalc
-    tangent_pw1 = (1 - [1, 0, 0]'*normal_pw) * normal_pw / (1 - [1, 0, 0]'*normal_pw)
+    tangent_candidate = [1, 0, 0]
+    tangent_pw1 = (1 - tangent_candidate'*normal_pw) * tangent_candidate / (1 - tangent_candidate'*normal_pw)
     tangent_pw2 = cross(normal_pw, tangent_pw1)
-
     # rotation matrix from contact frame to world frame
     wRp = [tangent_pw1 tangent_pw2 normal_pw] # n points towards the parent body, [t,n,z] forms an oriented vector basis
+    # @show wRp
 
     # force at the contact point in the contact frame
     f = [β[1:2] - β[3:4]; γ]
@@ -159,14 +160,10 @@ function residual!(e, x, θ, contact::SphereHalfSpace{T,3},
     wrench_p = [f_pw; τ_pw]
 
     # tangential velocities at the contact point
-    tanvel_p = vp25 + skew(xp3 - contact_w) * ϕp25 # let's assume ϕp25 is the angular velocity
+    tanvel_p = vp25 + skew(xp3 - contact_w) * 2ϕp25 # let's assume ϕp25 is the angular velocity
     tanvel_p = (1 - tanvel_p' * normal_pw) * tanvel_p
     tanvel_p = [tanvel_p' * tangent_pw1, tanvel_p' * tangent_pw2]
     tanvel = tanvel_p
-
-    sγ - ϕ;
-    sψ - (friction_coefficient[1] * γ - [sum(β)]);
-    sβ - ([+tanvel; -tanvel] + ψ[1]*ones(4));
 
     slackness = [
         sγ - ϕ;
