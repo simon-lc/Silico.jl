@@ -1,4 +1,3 @@
-
 mutable struct TraceStorage{T,H}
     z::Vector{Vector{T}} # H x nz
     u::Vector{Vector{T}} # H x nu
@@ -8,6 +7,7 @@ mutable struct TraceStorage{T,H}
     normal::Vector{Vector{Vector{T}}} # H x nc x d
     tangent::Vector{Vector{Vector{T}}} # H x nc x d
     variables::Vector{Vector{T}} # H x variables
+    parameters::Vector{Vector{T}} # H x parameters
     iterations::Vector{Int} # H
 end
 
@@ -20,8 +20,10 @@ function TraceStorage(dim::MechanismDimensions, H::Int, T=Float64)
     normal = [[zeros(T, 2) for j = 1:dim.contacts] for i = 1:H]
     tangent = [[zeros(T, 2) for j = 1:dim.contacts] for i = 1:H]
     variables = [zeros(Int, dim.variables) for i = 1:H]
+    parameters = [zeros(Int, dim.parameters) for i = 1:H]
     iterations = zeros(Int, H)
-    storage = TraceStorage{T,H}(z, u, x, v, contact_point, normal, tangent, variables, iterations)
+    storage = TraceStorage{T,H}(z, u, x, v, contact_point, normal, tangent,
+        variables, parameters, iterations)
     return storage
 end
 
@@ -47,7 +49,7 @@ function record!(storage::TraceStorage{T,H}, mechanism::Mechanism{T,D,NB,NC}, i:
     end
 
     storage.variables[i] .= variables
+    storage.parameters[i] .= parameters
     storage.iterations[i] = mechanism.solver.trace.iterations
-
     return nothing
 end

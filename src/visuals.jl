@@ -62,13 +62,10 @@ end
 function set_body!(vis::Visualizer, body::AbstractBody{T,D}, pose; name=body.name) where {T,D}
     x = [0; pose[1:2]]
     q = RotX(pose[3])
-    @show D
-    @show q
     if D == 3
         x = pose[1:3]
         q = Quaternion(pose[4:7]...)
     end
-    @show q
     settransform!(vis[:bodies][name], MeshCat.compose(
         MeshCat.Translation(SVector{3}(x)),
         MeshCat.LinearMap(rotationmatrix(q)),

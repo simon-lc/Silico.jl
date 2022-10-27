@@ -251,7 +251,7 @@ function get_next_state!(z, variables, body::Body{T,3}) where T
     return nothing
 end
 
-state_dimension(body::Body{T,3}) where T = pose_dimension(body) + velocity_dimension(body)
+state_dimension(body::Body) = pose_dimension(body) + velocity_dimension(body)
 pose_dimension(body::Body{T,2}) where T = 3
 velocity_dimension(body::Body{T,2}) where T = 3
 input_dimension(body::Body{T,2}) where T = 3

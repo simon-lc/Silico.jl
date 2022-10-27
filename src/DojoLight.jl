@@ -62,6 +62,6 @@ export
 end
 
 
-# using Pkg
+using Pkg
 # Pkg.add(path="/home/simon/.julia/dev/DirectTrajectoryOptimization.jl")
-# Pkg.add(path="/home/simon/.julia/dev/Mehrotra.jl")
+# Pkg.add(url="https://github.com/simon-lc/Mehrotra.jl")

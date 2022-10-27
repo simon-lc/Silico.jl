@@ -15,10 +15,8 @@ function Mehrotra.solve!(solver)
     !warm_start && Mehrotra.initialize_slacks!(solver)
     !warm_start && Mehrotra.initialize_interior_point!(solver)
 
-    # warm_start && (solver.solution.duals .= solver.solution.duals .+ options.complementarity_backstep)
-    warm_start && (solver.solution.duals .= solver.solution.duals .+ 1e-1)
-    # warm_start && (solver.solution.slacks .= solver.solution.slacks .+ options.complementarity_backstep)
-    warm_start && (solver.solution.slacks .= solver.solution.slacks .+ 1e-1)
+    warm_start && (solver.solution.duals .= solver.solution.duals .+ options.complementarity_backstep)
+    warm_start && (solver.solution.slacks .= solver.solution.slacks .+ options.complementarity_backstep)
 
     # indices
     indices = solver.indices
