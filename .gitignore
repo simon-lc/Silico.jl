@@ -1,3 +1,4 @@
 .vscode/
 Manifest.toml
 build
+*.jld2
