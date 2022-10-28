@@ -4,6 +4,7 @@ using Flux
 using JLD2
 using CUDA
 using Flux
+using Flux
 using BSON
 CUDA.functional()
 
@@ -26,7 +27,6 @@ y_test = gpu(y_test)
 μ = gpu(μ)
 σ = gpu(σ)
 
-
 ################################################################################
 # define models
 ################################################################################
@@ -34,9 +34,9 @@ baseline_model(x) = ((x .* σ) .+ μ)[1:10,:]
 baseline_model(x_train)
 
 cpu_model = Chain(
-    Dense(n_input => 80, relu),
-    Dense(80 => 50, relu),
-    Dense(50 => 30, relu),
+    Dense(n_input => 80, tanh),
+    Dense(80 => 50, tanh),
+    Dense(50 => 30, tanh),
     Dense(30 => 10, sigmoid))
 model = fmap(cu, cpu_model)
 parameters = Flux.params(model)
@@ -55,13 +55,14 @@ baseline_loss(x_train, y_train)
 ################################################################################
 # training
 ################################################################################
-n_epoch = 21
+n_epoch = 31
 optimizer = Adam(0.001, (0.9, 0.999), 1.0e-8)
 validation_loss() = round(loss(x_val, y_val), digits=4)
 
 train_model!(train_loader, loss, parameters, optimizer, n_epoch;
     validation_loss=validation_loss,
     print_epoch=5)
+
 
 save_model(model, name="model0")
 loaded_cpu_model = load_model(name="model0")
@@ -93,9 +94,8 @@ error_distribution(x_train, y_train, m=baseline_model)[1] / size(x_train,2)
 error_distribution(x_val, y_val, m=baseline_model)[1] / size(x_val,2)
 error_distribution(x_test, y_test, m=baseline_model)[1] / size(x_test,2)
 
-binary_projection(x_train, y_train, 0.05, m=model)
-
 error_distribution(x_test,  y_test, m=model)
+binary_projection(x_train, y_train, 0.05, m=model)
 
 ######################
 # false active histogram distribution

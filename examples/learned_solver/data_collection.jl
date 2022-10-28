@@ -14,17 +14,18 @@ set_background!(vis)
 ################################################################################
 # define mechanism
 ################################################################################
-timestep = 0.05;
-gravity = -9.81;
-mass = 1.0;
-inertia = 0.2 * ones(1,1);
+timestep = 0.05
+gravity = -9.81
+mass = 1.0
+inertia = 0.2 * ones(1,1)
+friction_coefficient = 0.9
 
 mech = get_polytope_drop(;
     timestep=timestep,
     gravity=gravity,
     mass=mass,
     inertia=inertia,
-    friction_coefficient=0.9,
+    friction_coefficient=friction_coefficient,
     method_type=:symbolic,
     # method_type=:finite_difference,
     options=Mehrotra.Options(
@@ -37,7 +38,9 @@ mech = get_polytope_drop(;
         warm_start=false,
         complementarity_backstep=1e-1,
         )
-    );
+    )
+
+
 
 ################################################################################
 # test simulation
@@ -45,8 +48,6 @@ mech = get_polytope_drop(;
 xp2 = [+0.0,1.5,-0.25]
 vp15 = [-0,0,-0.0]
 z0 = [xp2; vp15]
-
-u0 = zeros(3)
 H0 = 150
 
 @elapsed storage = simulate!(mech, deepcopy(z0), H0)
@@ -63,26 +64,20 @@ plot!(hcat(storage.variables...)')
 ################################################################################
 # collect simulation data
 ################################################################################
-function ctrl(mechanism, i)
-    v = mechanism.solver.solution.primals[1:3]
-    p = mechanism.solver.parameters[1:3]
-    u_prev = mechanism.solver.parameters[7:9]
-    u = 0.8 * u_prev .+ [15, 3, 15] .* (rand(3) .- [0.5, 0.5, 0.25]) - 1v - [1, 0, 0] .* p
-    set_input!(mechanism, u)
-    update_parameters!(mechanism)
-    return nothing
-end
 
 H_train = 250000 + 1
-@elapsed storage_train = simulate!(mech, deepcopy(z0), H_train, controller=ctrl)
+@elapsed storage_train = simulate!(mech, deepcopy(z0), H_train,
+    controller=data_collection_controller)
 # visualize!(vis, mech, storage_train, build=false)
 
 H_val = 1000 + 1
-@elapsed storage_val = simulate!(mech, deepcopy(z0), H_val, controller=ctrl)
-visualize!(vis, mech, storage_val, build=false)
+@elapsed storage_val = simulate!(mech, deepcopy(z0), H_val,
+    controller=data_collection_controller)
+visualize!(vis, mech, storage_val, build=true)
 
 H_test = 5000 + 1
-@elapsed storage_test = simulate!(mech, deepcopy(z0), H_test, controller=ctrl)
+@elapsed storage_test = simulate!(mech, deepcopy(z0), H_test,
+    controller=data_collection_controller)
 # visualize!(vis, mech, storage_test, build=false)
 
 

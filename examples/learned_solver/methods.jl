@@ -2,7 +2,31 @@
 # dataset
 ################################################################################
 
+function data_collection_controller(mechanism, i)
+    v = mechanism.solver.solution.primals[1:3]
+    p = mechanism.solver.parameters[1:3]
+    u_prev = mechanism.solver.parameters[7:9]
+    u = 0.8 * u_prev .+ [15, 3, 15] .* (rand(3) .- [0.5, 0.5, 0.25]) - 1v - [1, 0, 0] .* p
+    set_input!(mechanism, u)
+    update_parameters!(mechanism)
+    return nothing
+end
+
 function extract_feature_label(mechanism, storage::TraceStorage{T,H}) where {T,H}
+    x = []
+    y = []
+    for i = 2:H
+        xi, yi = extract_feature_label(mechanism, storage, i)
+        push!(x, xi)
+        push!(y, yi)
+    end
+    x = hcat(x...)
+    y = hcat(y...)
+    return x, y
+end
+
+function extract_feature_label(mechanism, storage::TraceStorage{T,H}, i) where {T,H}
+    @assert i > 1
     solver = mechanism.solver
     data = solver.data
     problem = solver.problem
@@ -14,51 +38,43 @@ function extract_feature_label(mechanism, storage::TraceStorage{T,H}) where {T,H
     idx_duals = indices.duals
     idx_slacks = indices.slacks
 
-    y = []
-    x = []
-    for i = 2:H
-        previous_variables = storage.variables[i-1]
-        variables = storage.variables[i]
-        previous_parameters = storage.parameters[i-1]
-        parameters = storage.parameters[i]
-        solution.all .= previous_variables
+    previous_variables = storage.variables[i-1]
+    variables = storage.variables[i]
+    previous_parameters = storage.parameters[i-1]
+    parameters = storage.parameters[i]
+    solution.all .= previous_variables
 
-        Mehrotra.evaluate!(problem, methods, cone_methods, solution, parameters,
-            equality_constraint=true,
-            equality_jacobian_variables=false,
-            equality_jacobian_parameters=true,
-            cone_constraint=false,
-            cone_jacobian=false,
-            sparse_solver=false,
-            compressed=true)
-        Mehrotra.residual!(data, problem, indices,
-            residual=true,
-            jacobian_variables=true,
-            compressed=true,
-            sparse_solver=false)
+    Mehrotra.evaluate!(problem, methods, cone_methods, solution, parameters,
+        equality_constraint=true,
+        equality_jacobian_variables=false,
+        equality_jacobian_parameters=true,
+        cone_constraint=false,
+        cone_jacobian=false,
+        sparse_solver=false,
+        compressed=true)
+    Mehrotra.residual!(data, problem, indices,
+        residual=true,
+        jacobian_variables=true,
+        compressed=true,
+        sparse_solver=false)
 
-        previous_residual = deepcopy(data.residual.all)
-        # previous_jacobian = vec(deepcopy(data.jacobian_variables_compressed_dense))
-        previous_active_set = previous_variables[idx_duals] .>= previous_variables[idx_slacks]
-        active_set = variables[idx_duals] .>= variables[idx_slacks]
-        previous_log_variables = log.(10, previous_variables[[idx_duals; idx_slacks]])
-        δ_parameters = parameters - previous_parameters
-        # dd = data.jacobian_parameters * δ_parameters
+    previous_residual = deepcopy(data.residual.all)
+    # previous_jacobian = vec(deepcopy(data.jacobian_variables_compressed_dense))
+    # previous_log_variables = log.(10, previous_variables[[idx_duals; idx_slacks]])
+    previous_active_set = previous_variables[idx_duals] .>= previous_variables[idx_slacks]
+    active_set = variables[idx_duals] .>= variables[idx_slacks]
+    δ_parameters = parameters - previous_parameters
+    # dd = data.jacobian_parameters * δ_parameters
 
-        yi = [previous_active_set;
-            # previous_log_variables;
-            # previous_jacobian;
-            # dd;
-            previous_variables;
-            previous_residual;
-            δ_parameters]
-        xi = active_set
-        push!(y, yi)
-        push!(x, xi)
-    end
-    y = hcat(y...)
-    x = hcat(x...)
-    return y, x
+    xi = [previous_active_set;
+        # previous_log_variables;
+        # previous_jacobian;
+        # dd;
+        previous_variables;
+        previous_residual;
+        δ_parameters]
+    yi = active_set
+    return xi, yi
 end
 
 
@@ -116,7 +132,7 @@ end
 
 function load_model(; name="model")
     file_path = joinpath(@__DIR__, "model", "$name.bson")
-    BSON.@load file_path model
+    model = BSON.load(file_path, @__MODULE__)[:model]
     return model
 end
 
@@ -145,4 +161,72 @@ function binary_projection(x, y, threshold; m=x->x)
     opposite_rate = sum(opposite_rate, dims=1)
     indefinite_rate = sum(indefinite_rate, dims=1)
     return mean(opposite_rate .!= 0), mean(indefinite_rate .!= 0)
+end
+
+
+################################################################################
+# masking
+################################################################################
+
+
+function residual(variables, parameters, solver)
+    data = solver.data
+    problem = solver.problem
+    indices = solver.indices
+    methods = solver.methods
+    cone_methods = solver.cone_methods
+    solution = solver.solution
+
+    idx_duals = indices.duals
+    idx_slacks = indices.slacks
+
+
+    solution.all .= variables
+    solver.parameters .= parameters
+    Mehrotra.evaluate!(problem, methods, cone_methods, solution, parameters,
+        equality_constraint=true,
+        equality_jacobian_variables=false,
+        equality_jacobian_parameters=false,
+        cone_constraint=false,
+        cone_jacobian=false,
+        sparse_solver=false,
+        compressed=false)
+    Mehrotra.residual!(data, problem, indices,
+        residual=true,
+        jacobian_variables=false,
+        compressed=false,
+        sparse_solver=false)
+
+    return data.residual.all
+end
+
+function residual_jacobian(variables, parameters, solver)
+    data = solver.data
+    problem = solver.problem
+    indices = solver.indices
+    methods = solver.methods
+    cone_methods = solver.cone_methods
+    solution = solver.solution
+
+    idx_duals = indices.duals
+    idx_slacks = indices.slacks
+
+
+    solution.all .= variables
+    solver.parameters .= parameters
+    Mehrotra.evaluate!(problem, methods, cone_methods, solution, parameters,
+        equality_constraint=false,
+        equality_jacobian_variables=true,
+        equality_jacobian_parameters=false,
+        cone_constraint=false,
+        cone_jacobian=false,
+        sparse_solver=false,
+        compressed=false)
+    Mehrotra.residual!(data, problem, indices,
+        residual=false,
+        jacobian_variables=true,
+        compressed=false,
+        sparse_solver=false)
+
+    return data.jacobian_variables_dense
 end
