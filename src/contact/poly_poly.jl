@@ -60,6 +60,17 @@ function unpack_variables(x::Vector, contact::PolyPoly{T,D,NP,NC}) where {T,D,NP
     return c, ϕ, γ, ψ, β, λp, λc, sγ, sψ, sβ, sp, sc
 end
 
+function split_parameters(θ, contact::PolyPoly{T}) where T
+    friction_coefficient, parent_parameters, child_parameters = unpack_parameters(θ, contact)
+    shape_p = contact.parent_shape
+    shape_c = contact.child_shape
+    Ap, bp, op = unpack_parameters(shape_p, parent_parameters)
+    bop = bp + Ap * op
+    Ac, bc, oc = unpack_parameters(shape_c, parent_parameters)
+    boc = bc + Ac * oc
+    return friction_coefficient, Ap, bop, Ac, boc
+end
+
 function residual!(e, x, θ, contact::PolyPoly{T,D,NP,NC},
         pbody::AbstractBody, cbody::AbstractBody) where {T,D,NP,NC}
 

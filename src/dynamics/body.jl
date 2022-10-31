@@ -91,7 +91,9 @@ function set_parameters!(body::Body{T,D}, θ) where {T,D}
     if D == 2
         body.inertia .= inertia
     else
-        body.inertia[diagind(3,3)] .= inertia
+        @show size(body.inertia)
+        @show size(inertia)
+        body.inertia[diagind(3,3)] .= diag(inertia)
     end
     return nothing
 end
@@ -118,7 +120,7 @@ function unpack_parameters(θ::Vector, body::Body{T,3}) where T
     gravity = θ[off .+ (1:1)]; off += 1
     timestep = θ[off .+ (1:1)]; off += 1
     mass = θ[off .+ (1:1)]; off += 1
-    inertia = Matrix(Diagonal(θ[off .+ (1:3)])); off += 3
+    inertia = Diagonal(θ[off .+ (1:3)]); off += 3
     return pose, velocity, input, timestep, gravity, mass, inertia
 end
 
@@ -235,18 +237,11 @@ function get_next_state!(z, variables, body::Body{T,3}) where T
     q2 = body.pose[4:7]
     timestep = body.timestep
     v25, ϕ25 = unpack_variables(variables[body.index.variables], body)
-    # @show v25
-    # @show ϕ25
 
     nv = velocity_dimension(body)
     off = 0
     z[off .+ (1:3)] .= x2 + timestep[1] .* v25; off += 3
     z[off .+ (1:4)] .= quaternion_increment(q2, timestep[1] .* ϕ25); off += 4
-    @show round.(q2, digits=3)
-    @show round.(z[4:7], digits=3)
-    # @show quaternion_increment(q2, timestep[1] .* ϕ25)
-    # @show timestep[1] .* ϕ25
-
     z[off .+ (1:nv)] .= [v25; ϕ25]; off += nv
     return nothing
 end

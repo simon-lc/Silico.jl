@@ -8,7 +8,11 @@ function build_shape!(vis::Visualizer, shape::PolytopeShape{T,Ng,D};
     A = shape.A
     b = shape.b
     o = shape.o
-    build_2d_polytope!(vis, A, b + A * o, color=collider_color)
+    if D == 2
+        build_2d_polytope!(vis, A, b + A * o, color=collider_color)
+    else
+        build_polytope!(vis, A, b + A * o, color=collider_color)
+    end
     return nothing
 end
 
@@ -91,7 +95,7 @@ function build_mechanism!(vis::Visualizer, mechanism::Mechanism;
     end
     if show_contact
         for contact in mechanism.contacts
-            build_2d_frame!(vis[name], name=contact.name)
+            build_frame!(vis[name][:contacts], dimension=space_dimension(contact), name=contact.name)
         end
     end
     for contact in mechanism.contacts
@@ -111,8 +115,9 @@ function set_mechanism!(vis::Visualizer, mechanism::Mechanism, storage::TraceSto
             ii = max(1,i-1) # needed otherwise the contact frame is a one step ahead of the bodies.
             origin = storage.contact_point[ii][j]
             normal = storage.normal[ii][j]
-            tangent = storage.tangent[ii][j]
-            set_2d_frame!(vis[name], origin, normal, tangent, name=contact.name)
+            tangent_x = storage.tangent_x[ii][j]
+            tangent_y = storage.tangent_y[ii][j]
+            set_frame!(vis[name][:contacts], origin, normal, tangent_x, tangent_y, name=contact.name)
         end
     end
     return nothing
@@ -158,4 +163,54 @@ function visualize!(vis::Visualizer, mechanism::Mechanism, z;
     end
     MeshCat.setanimation!(vis, animation)
     return vis, animation
+end
+
+
+function set_frame!(vis::Visualizer, origin, normal, tangent_x, tangent_y; name::Symbol=:contact)
+    dimension = length(origin)
+    if dimension == 2
+        origin = [0; origin]
+        tangent_x = [1; tangent_x]
+        tangent_y = [0; tangent_y]
+        normal = [0; normal]
+    end
+    settransform!(vis[name][:origin],
+        MeshCat.Translation(MeshCat.SVector{3}(origin...)))
+    set_segment!(vis[name], origin, origin+normal; name=:normal)
+    set_segment!(vis[name], origin, origin+tangent_x; name=:tangent_x)
+    set_segment!(vis[name], origin, origin+tangent_y; name=:tangent_y)
+    return nothing
+end
+
+function build_frame!(vis::Visualizer;
+    dimension::Int=3,
+    name::Symbol=:contact,
+    origin_color=RGBA(0.2, 0.2, 0.2, 0.8),
+    normal_axis_color=RGBA(0, 1, 0, 0.8),
+    tangent_axis_color=RGBA(1, 0, 0, 0.8),
+    origin_radius=0.025,
+    ) where T
+
+    # axes
+    if dimension == 3
+        build_segment!(vis[name];
+            color=tangent_axis_color,
+            segment_radius=origin_radius/2,
+            name=:tangent_x)
+    end
+    build_segment!(vis[name];
+        color=tangent_axis_color,
+        segment_radius=origin_radius/2,
+        name=:tangent_y)
+
+    build_segment!(vis[name];
+        color=normal_axis_color,
+        segment_radius=origin_radius/2,
+        name=:normal)
+
+    # origin
+    setobject!(vis[name][:origin],
+        HyperSphere(GeometryBasics.Point(0,0,0.), origin_radius),
+        MeshPhongMaterial(color=origin_color));
+    return nothing
 end

@@ -79,6 +79,18 @@ function get_next_state(mechanism::Mechanism{T,D,NB}) where {T,D,NB}
     return z
 end
 
+function get_next_state(variables, body::Body)
+    z = zeros(state_dimension(body))
+    get_next_state!(z, variables, body)
+    return z
+end
+
+function get_next_pose(variables, body::Body)
+    z = zeros(state_dimension(body))
+    get_next_state!(z, variables, body)
+    return z[1:pose_dimension(body)]
+end
+
 function get_next_state!(z, mechanism::Mechanism{T,D,NB}) where {T,D,NB}
     variables = mechanism.solver.solution.all
 
@@ -95,6 +107,7 @@ function step!(mechanism::Mechanism, z0, u)
     set_input!(mechanism, u)
     update_parameters!(mechanism)
     solve!(mechanism.solver)
+    update_nodes!(mechanism)
     z1 = get_next_state(mechanism)
     return z1
 end
@@ -104,6 +117,7 @@ function step!(mechanism::Mechanism, z0; controller::Function=m->nothing)
     controller(mechanism) # sets the control inputs u
     update_parameters!(mechanism)
     Mehrotra.solve!(mechanism.solver)
+    update_nodes!(mechanism)
     z1 = get_next_state(mechanism)
     return z1
 end

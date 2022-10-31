@@ -28,7 +28,7 @@ end
 ################################################################################
 # dimensions
 ################################################################################
-struct MechanismDimensions
+struct MechanismDimensions{D}
     body_configuration::Int
     body_velocity::Int
     body_state::Int
@@ -68,7 +68,7 @@ function MechanismDimensions(bodies::Vector{<:AbstractBody{T,D}}, contacts::Vect
     # num_slacks = num_cone
     # num_equality = sum(equality_dimension.(nodes))
 
-    return MechanismDimensions(
+    return MechanismDimensions{D}(
         body_configuration,
         body_velocity,
         body_state,

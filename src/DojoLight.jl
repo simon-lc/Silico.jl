@@ -21,16 +21,17 @@ include("dynamics/body.jl")
 include("dynamics/robot.jl")
 include("dynamics/object.jl")
 
-include("contact_2D/contact.jl")
-include("contact_2D/poly_halfspace.jl")
-include("contact_2D/poly_poly.jl")
-include("contact_2D/poly_sphere.jl")
-include("contact_2D/sphere_halfspace.jl")
-include("contact_2D/sphere_sphere.jl")
+include("contact/3d_methods.jl")
+include("contact/contact.jl")
+include("contact/poly_halfspace.jl")
+include("contact/poly_poly.jl")
+include("contact/poly_sphere.jl")
+include("contact/sphere_halfspace.jl")
+include("contact/sphere_sphere.jl")
 
-include("contact_2D/bilevel/collision_detection.jl")
-include("contact_2D/bilevel/bilevel_contact.jl")
-include("contact_2D/bilevel/bilevel_methods.jl")
+include("contact/bilevel/collision_detection.jl")
+include("contact/bilevel/bilevel_contact.jl")
+include("contact/bilevel/bilevel_methods.jl")
 
 include("mechanism.jl")
 include("contact_frame.jl")
@@ -55,6 +56,8 @@ include("../environment/quasistatic_sphere_drop.jl")
 include("../environment/sphere_bundle.jl")
 include("../environment/sphere_collision.jl")
 include("../environment/sphere_drop.jl")
+include("../environment/3d_sphere_collision.jl")
+include("../environment/3d_sphere_drop.jl")
 
 export
     Mechanism
@@ -62,6 +65,6 @@ export
 end
 
 
-using Pkg
+# using Pkg
 # Pkg.add(path="/home/simon/.julia/dev/DirectTrajectoryOptimization.jl")
-# Pkg.add(url="https://github.com/simon-lc/Mehrotra.jl")
+# Pkg.add(path="/home/simon/.julia/dev/Mehrotra.jl")

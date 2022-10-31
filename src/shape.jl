@@ -72,7 +72,7 @@ struct HalfspaceShape{T,Ng,D} <: Shape{T,Ng,D}
     position_offset::Vector{T}
 end
 
-function HalfspaceShape(normal::AbstractVector{T}, position_offset=zeros(T,2)) where T
+function HalfspaceShape(normal::AbstractVector{T}, position_offset=zeros(T,length(normal))) where T
     D = length(normal)
     return HalfspaceShape{T,1,D}(normal, position_offset)
 end
