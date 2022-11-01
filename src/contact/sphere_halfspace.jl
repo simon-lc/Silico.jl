@@ -128,7 +128,7 @@ function residual!(e, x, θ, contact::SphereHalfSpace{T,3},
     γ, ψ, β, sγ, sψ, sβ = unpack_variables(x[contact.index.variables], contact)
     vp25, ϕp25 = unpack_variables(x[pbody.index.variables], pbody)
     xp3 = xp2 + timestep_p[1] * vp25
-    # qp3 = quaternion_increment(qp2, timestep_p[1] * ϕp25)
+    qp3 = quaternion_increment(qp2, timestep_p[1] * ϕp25)
 
     # analytical contact position in the world frame
     # offpw = vector_rotate(qp3, offp)
@@ -150,7 +150,8 @@ function residual!(e, x, θ, contact::SphereHalfSpace{T,3},
     τ_pw = skew(contact_w - xp3) * f_pw
     # overall wrench on both bodies in world frame
     # mapping the contact force into the generalized coordinates (at the centers of masses and in the world frame)
-    wrench_p = [f_pw; τ_pw] # we should apply Euler equation (rotational part) in the body frame, not the world frame
+    wrench_p = [f_pw; vector_rotate(qp3, τ_pw)] # we should apply Euler equation (rotational part) in the body frame, not the world frame
+    # wrench_p = [f_pw; τ_pw] # we should apply Euler equation (rotational part) in the body frame, not the world frame
 
     # tangential velocities at the contact point
     tanvel_p = vp25 + skew(xp3 - contact_w) * 2ϕp25 # let's assume ϕp25 is the angular velocity

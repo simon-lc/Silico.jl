@@ -175,24 +175,11 @@ function residual!(e, x, θ, body::Body{T,3}) where T
     Δϕ25 = Δt * ϕ25
 
     # dynamics
-    # @show x1
-    # @show x2
-    # @show x3
-    # @show x3 - 2*x2 + x1
-    # @show mass[1] * (x3 - 2*x2 + x1)/Δt
-    # @show - Δt * [0; 0; mass .* gravity]
-    # @show - u[1:3] * Δt
     linear_optimality = mass[1] * (x3 - 2*x2 + x1)/Δt - Δt * [0; 0; mass .* gravity] - u[1:3] * Δt;
     angular_optimality =
-        + sqrt(1 - Δϕ25'*Δϕ25) * inertia * Δϕ25 + cross(Δϕ25, inertia * Δϕ25) +
+        + sqrt(1 - min(0.5,Δϕ25'*Δϕ25)) * inertia * Δϕ25 + cross(Δϕ25, inertia * Δϕ25) +
         - sqrt(1 - Δϕ15'*Δϕ15) * inertia * Δϕ15 + cross(Δϕ15, inertia * Δϕ15) +
         - Δt^2 * u[4:6] / 2
-
-    # @show Δϕ15
-    # @show Δϕ25
-    # @show - Δt^2 * u[4:6] / 2
-    # @show + sqrt(1 - Δϕ25'*Δϕ25) * inertia * Δϕ25 + cross(Δϕ25, inertia * Δϕ25)
-    # @show - sqrt(1 - Δϕ15'*Δϕ15) * inertia * Δϕ15 + cross(Δϕ15, inertia * Δϕ15)
 
     e[index.optimality] .+= [linear_optimality; angular_optimality]
     return nothing
@@ -237,6 +224,18 @@ function get_next_state!(z, variables, body::Body{T,3}) where T
     q2 = body.pose[4:7]
     timestep = body.timestep
     v25, ϕ25 = unpack_variables(variables[body.index.variables], body)
+    ϕ15 = body.velocity[4:6]
+    @show ϕ15
+    @show ϕ25
+    Δt = timestep[1]
+    Δϕ15 = Δt * ϕ15
+    Δϕ25 = Δt * ϕ25
+    inertia = body.inertia
+    # @show cross(Δϕ25, inertia * Δϕ25)
+    # @show cross(Δϕ15, inertia * Δϕ15)
+
+    # @show + sqrt(1 - Δϕ25'*Δϕ25) * inertia * Δϕ25 + cross(Δϕ25, inertia * Δϕ25)
+    # @show - sqrt(1 - Δϕ15'*Δϕ15) * inertia * Δϕ15 + cross(Δϕ15, inertia * Δϕ15)
 
     nv = velocity_dimension(body)
     off = 0

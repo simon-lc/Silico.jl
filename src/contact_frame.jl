@@ -101,7 +101,7 @@ function contact_normal(contact::SphereHalfSpace{T,D}, mechanism::Mechanism) whe
         # contact normal and tangent in the world frame
         normal = normalc
     else
-        contact_point = xp3 - radp[1] .* normalc # we are missing offpw
+        contact_point = pp3[1:3] - radp[1] .* normalc # we are missing offpw
         normal = normalc
     end
 

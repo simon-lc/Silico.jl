@@ -169,6 +169,7 @@ function residual!(e, x, θ, contact::PolyHalfSpace{T,3,NP},
     τ_pw = skew(contact_w - xp3) * f_pw
     # overall wrench on both bodies in world frame
     # mapping the contact force into the generalized coordinates (at the centers of masses and in the world frame)
+    # wrench_p = [f_pw; τ_pw] # we should apply Euler equation (rotational part) in the body frame, not the world frame
     wrench_p = [f_pw; vector_rotate(dagger(qp3), τ_pw)] # we should apply Euler equation (rotational part) in the body frame, not the world frame
 
     # tangential velocities at the contact point

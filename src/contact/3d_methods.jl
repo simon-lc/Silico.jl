@@ -62,7 +62,9 @@ function tangential_plane(normal; tangent_candidate=[1,0,0.0])
     return tangent1, tangent2, wRb
 end
 
-
+#
+#
+#
 # q0 = normalize([1.0, 1, 0, 0])
 # q1 = normalize([1.05, 1.0, 0, 0])
 #

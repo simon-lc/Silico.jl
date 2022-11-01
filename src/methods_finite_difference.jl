@@ -20,7 +20,7 @@ function Mehrotra.finite_difference_methods(equality::Function, dim::Dimensions,
         f(out, x) = equality_constraint(out, x, θ)
         matrix_cache = reshape(vector_cache, (dim.equality, dim.variables))
         Mehrotra.FiniteDiff.finite_difference_jacobian!(matrix_cache, f, x)
-        matrix_cache[idx.primals, idx.primals] .+= 1e-10*Diagonal(ones(dim.primals))
+        matrix_cache[idx.primals, idx.primals] .+= 1e-2*Diagonal(ones(dim.primals))
         matrix_cache[idx.duals, idx.duals] .-= 1e-10*Diagonal(ones(dim.duals))
         return nothing
     end
