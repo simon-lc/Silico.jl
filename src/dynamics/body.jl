@@ -91,8 +91,6 @@ function set_parameters!(body::Body{T,D}, θ) where {T,D}
     if D == 2
         body.inertia .= inertia
     else
-        @show size(body.inertia)
-        @show size(inertia)
         body.inertia[diagind(3,3)] .= diag(inertia)
     end
     return nothing
@@ -225,8 +223,6 @@ function get_next_state!(z, variables, body::Body{T,3}) where T
     timestep = body.timestep
     v25, ϕ25 = unpack_variables(variables[body.index.variables], body)
     ϕ15 = body.velocity[4:6]
-    @show ϕ15
-    @show ϕ25
     Δt = timestep[1]
     Δϕ15 = Δt * ϕ15
     Δϕ25 = Δt * ϕ25

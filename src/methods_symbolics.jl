@@ -1,7 +1,7 @@
 function Mehrotra.generate_symbolic_gradients(func::Function, dim::Dimensions, ind::Indices;
         parameter_keywords=Dict{Symbol,Vector{Int}}(:all => ind.parameters),
-        primal_regularizer=[zeros(3); 1e-2ones(3)],
-        dual_regularizer=1e-10,
+        primal_regularizer=1e-3,
+        dual_regularizer=1e-6,
         checkbounds=true,
         threads=false)
 
@@ -30,8 +30,7 @@ function Mehrotra.generate_symbolic_gradients(func::Function, dim::Dimensions, i
 
     # equality jacobians
     fx = Mehrotra.Symbolics.sparsejacobian(f, x)
-    # fx[ind.primals, ind.primals] += primal_regularizer * I(dim.primals)
-    fx[ind.primals, ind.primals] += Diagonal(primal_regularizer)
+    fx[ind.primals, ind.primals] += primal_regularizer * I(dim.primals)
     fx[ind.duals, ind.duals] -= dual_regularizer * I(dim.duals)
     fθ = Mehrotra.Symbolics.sparsejacobian(f, θ)
     fk = [Mehrotra.Symbolics.sparsejacobian(f, θ[parameter_keywords[k]]) for k in eachindex(parameter_keywords)]

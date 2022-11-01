@@ -27,17 +27,17 @@ A=[
     +0 -1 +0;
     +1 +0 +0;
     -1 +0 +0;
-    # +1 +1 +1;
-    # +1 +1 -1;
-    # +1 -1 +1;
-    # +1 -1 -1;
-    # -1 +1 +1;
-    # -1 +1 -1;
-    # -1 -1 +1;
-    # -1 -1 -1;
+    +1 +1 +1;
+    +1 +1 -1;
+    +1 -1 +1;
+    +1 -1 -1;
+    -1 +1 +1;
+    -1 +1 -1;
+    -1 -1 +1;
+    -1 -1 -1;
     ]
-# b=0.45*[ones(6); 1.5ones(8)]
-b=0.45*[ones(6);]
+b=0.45*[ones(6); 1.5ones(8)]
+# b=0.45*[ones(6);]
 
 mech = get_3d_polytope_drop(;
     timestep=timestep,
@@ -67,11 +67,14 @@ mech = get_3d_polytope_drop(;
 qp2 = normalize([1,0,0,0.0])
 qp2 = normalize([0,1,1,1.0])
 xp2 =  [+0.00; +0.00; +1.00; qp2]
-# vp15 = [+0.00, -0.00, +0.00, +1,+1,+1]
-vp15 = [+0.00, -0.00, +0.00, +0.0,+0,+0.0]
+vp15 = [+2.00, -0.00, +0.00, +1.0,+1.0,+0.4]
 z0 = [xp2; vp15]
 
-H0 = 40
+H0 = 100
+
+mech.solver.solution.primals[1:6] .= deepcopy(vp15)
+mech.solver.solution.primals[7:9] .= zeros(3)
+
 @elapsed storage = simulate!(mech, deepcopy(z0), H0)
 
 ################################################################################
@@ -82,14 +85,13 @@ set_mechanism!(vis, mech, storage, 1)
 
 visualize!(vis, mech, storage, build=false)
 
-# # plot(hcat(storage.variables...)')
-# scatter(mech.solver.data.residual.primals)
-# scatter(mech.solver.data.residual.duals)
-# scatter(mech.solver.data.residual.slacks)
+
+scatter(mech.solver.data.residual.all)
+scatter(mech.solver.data.residual.primals)
+scatter(mech.solver.data.residual.duals)
+scatter(mech.solver.data.residual.slacks)
 scatter(storage.iterations)
 
-
-# RobotVisualizer.convert_frames_to_video_and_gif("polytope_drop_no_friction")
-plot(hcat([storage.v[i][1][4:6] for i=1:H0]...)')
-
 mech.solver.dimensions.primals
+
+# RobotVisualizer.convert_frames_to_video_and_gif("polytope_drop_more_stable")

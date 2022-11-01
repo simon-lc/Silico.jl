@@ -62,7 +62,6 @@ include("../environment/3d_polytope_drop.jl")
 
 export
     Mechanism
-
 end
 
 

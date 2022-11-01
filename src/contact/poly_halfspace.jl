@@ -169,15 +169,13 @@ function residual!(e, x, θ, contact::PolyHalfSpace{T,3,NP},
     τ_pw = skew(contact_w - xp3) * f_pw
     # overall wrench on both bodies in world frame
     # mapping the contact force into the generalized coordinates (at the centers of masses and in the world frame)
-    # wrench_p = [f_pw; τ_pw] # we should apply Euler equation (rotational part) in the body frame, not the world frame
-    # torsional_velocity = timestep_p[1] * 2ϕp25' * normalc * normalc
-    # torsional_drag = -torsional_velocity .* friction_coefficient
-    # wrench_p = [f_pw; vector_rotate(dagger(qp3), τ_pw + torsional_drag)] # we should apply Euler equation (rotational part) in the body frame, not the world frame
-    wrench_p = [f_pw; vector_rotate(dagger(qp3), τ_pw)] # we should apply Euler equation (rotational part) in the body frame, not the world frame
+    angular_velocity_w = vector_rotate(qp2, 2ϕp25)
+    torsional_velocity_w = angular_velocity_w' * normalc * normalc
+    torsional_drag = -torsional_velocity_w .* friction_coefficient / 20
+    wrench_p = [f_pw; vector_rotate(dagger(qp2), τ_pw + torsional_drag)] # we should apply Euler equation (rotational part) in the body frame, not the world frame
 
     # tangential velocities at the contact point
-    # tanvel_p = vp25 + skew(xp3 - contact_w) * 2ϕp25 # let's assume 2ϕp25 is the angular velocity
-    tanvel_p = vp25 + skew(xp3 - contact_w) * vector_rotate(qp3, 2ϕp25) # let's assume 2ϕp25 is the angular velocity
+    tanvel_p = vp25 + skew(xp3 - contact_w) * angular_velocity_w # let's assume 2ϕp25 is the angular velocity
     tanvel_p = (1 - tanvel_p' * normal_pw) * tanvel_p
     tanvel_p = [tanvel_p' * tangent_pw1, tanvel_p' * tangent_pw2]
     tanvel = tanvel_p
