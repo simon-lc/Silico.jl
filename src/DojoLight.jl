@@ -58,6 +58,7 @@ include("../environment/sphere_collision.jl")
 include("../environment/sphere_drop.jl")
 include("../environment/3d_sphere_collision.jl")
 include("../environment/3d_sphere_drop.jl")
+include("../environment/3d_polytope_drop.jl")
 
 export
     Mechanism

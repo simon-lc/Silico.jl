@@ -27,17 +27,17 @@ A=[
     +0 -1 +0;
     +1 +0 +0;
     -1 +0 +0;
-    +1 +1 +1;
-    +1 +1 -1;
-    +1 -1 +1;
-    +1 -1 -1;
-    -1 +1 +1;
-    -1 +1 -1;
-    -1 -1 +1;
-    -1 -1 -1;
+    # +1 +1 +1;
+    # +1 +1 -1;
+    # +1 -1 +1;
+    # +1 -1 -1;
+    # -1 +1 +1;
+    # -1 +1 -1;
+    # -1 -1 +1;
+    # -1 -1 -1;
     ]
-b=0.45*[ones(6); 1.5ones(8)]
-# b=0.45*[ones(6);]
+# b=0.45*[ones(6); 1.5ones(8)]
+b=0.45*[ones(6);]
 
 mech = get_3d_polytope_drop(;
     timestep=timestep,
@@ -51,8 +51,8 @@ mech = get_3d_polytope_drop(;
     method_type=:finite_difference,
     options=Mehrotra.Options(
         verbose=true,
-        complementarity_tolerance=1e-5,
-        residual_tolerance=1e-6,
+        complementarity_tolerance=1e-4,
+        residual_tolerance=1e-5,
         # compressed_search_direction=true,
         compressed_search_direction=false,
         sparse_solver=false,
@@ -64,10 +64,11 @@ mech = get_3d_polytope_drop(;
 ################################################################################
 # test simulation
 ################################################################################
-qp2 = normalize([1,2,3,4.0])
+qp2 = normalize([1,0,0,0.0])
+qp2 = normalize([0,1,1,1.0])
 xp2 =  [+0.00; +0.00; +1.00; qp2]
 # vp15 = [+0.00, -0.00, +0.00, +1,+1,+1]
-vp15 = [+0.00, -0.00, +0.00, +0.9,+0,+0]
+vp15 = [+0.00, -0.00, +0.00, +0.0,+0,+0.0]
 z0 = [xp2; vp15]
 
 H0 = 40

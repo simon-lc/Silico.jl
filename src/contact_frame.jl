@@ -7,7 +7,7 @@ function contact_normal(contact::PolyHalfSpace{T,D}, mechanism::Mechanism) where
     pp3 = get_next_pose(variables, pbody)
 
     # unpack variables
-    c, γ, ψ, β, ν, λp, sγ, sψ, sβ, sν, sp =
+    c, γ, ψ, β, λp, sγ, sψ, sβ, sp =
         unpack_variables(variables[contact.index.variables], contact)
 
     # unpack parameters
