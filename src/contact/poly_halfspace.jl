@@ -34,24 +34,27 @@ function PolyHalfSpace(parent_body::AbstractBody{T,D}, child_shape::Shape{T};
 end
 
 primal_dimension(contact::PolyHalfSpace{T,D}) where {T,D} = D # x
-cone_dimension(contact::PolyHalfSpace{T,D,NP}) where {T,D,NP} = 1 + 1 + 2*(D-1) + NP # γ ψ β λp
+cone_dimension(contact::PolyHalfSpace{T,D,NP}) where {T,D,NP} = 1 + 1 + 2*(D-1) + (D-2) + NP # γ ψ β ν λp
 
 function unpack_variables(x::Vector, contact::PolyHalfSpace{T,D,NP}) where {T,D,NP}
     off = 0
     nβ = (D - 1) * 2
+    nν = D - 2
 
     c = x[off .+ (1:D)]; off += D
 
     γ = x[off .+ (1:1)]; off += 1
     ψ = x[off .+ (1:1)]; off += 1
     β = x[off .+ (1:nβ)]; off += nβ
+    ν = x[off .+ (1:nν)]; off += nν
     λp = x[off .+ (1:NP)]; off += NP
 
     sγ = x[off .+ (1:1)]; off += 1
     sψ = x[off .+ (1:1)]; off += 1
     sβ = x[off .+ (1:nβ)]; off += nβ
+    sν = x[off .+ (1:nν)]; off += nν
     sp = x[off .+ (1:NP)]; off += NP
-    return c, γ, ψ, β, λp, sγ, sψ, sβ, sp
+    return c, γ, ψ, β, ν, λp, sγ, sψ, sβ, sν, sp
 end
 
 function split_parameters(θ, contact::PolyHalfSpace{T}) where T
@@ -81,7 +84,7 @@ function residual!(e, x, θ, contact::PolyHalfSpace{T,2,NP},
     pp2, timestep_p = unpack_pose_timestep(θ[pbody.index.parameters], pbody)
 
     # unpack variables
-    c, γ, ψ, β, λp, sγ, sψ, sβ, sp = unpack_variables(x[contact.index.variables], contact)
+    c, γ, ψ, β, ν, λp, sγ, sψ, sβ, sν, sp = unpack_variables(x[contact.index.variables], contact)
     vp25 = unpack_variables(x[pbody.index.variables], pbody)
     pp3 = pp2 + timestep_p[1] * vp25
 
@@ -143,7 +146,7 @@ function residual!(e, x, θ, contact::PolyHalfSpace{T,3,NP},
     xp2 = pp2[1:3]
     qp2 = pp2[4:7]
     # unpack variables
-    c, γ, ψ, β, λp, sγ, sψ, sβ, sp = unpack_variables(x[contact.index.variables], contact)
+    c, γ, ψ, β, ν, λp, sγ, sψ, sβ, sν, sp = unpack_variables(x[contact.index.variables], contact)
     vp25, ϕp25 = unpack_variables(x[pbody.index.variables], pbody)
     xp3 = xp2 + timestep_p[1] * vp25
     qp3 = quaternion_increment(qp2, timestep_p[1] * ϕp25)
