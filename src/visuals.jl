@@ -186,20 +186,21 @@ function build_frame!(vis::Visualizer;
     dimension::Int=3,
     name::Symbol=:contact,
     origin_color=RGBA(0.2, 0.2, 0.2, 0.8),
-    normal_axis_color=RGBA(0, 1, 0, 0.8),
-    tangent_axis_color=RGBA(1, 0, 0, 0.8),
+    tangent_x_axis_color=RGBA(1, 0, 0, 0.8),
+    tangent_y_axis_color=RGBA(0, 1, 0, 0.8),
+    normal_axis_color=RGBA(0, 0, 1, 0.8),
     origin_radius=0.025,
     ) where T
 
     # axes
     if dimension == 3
         build_segment!(vis[name];
-            color=tangent_axis_color,
+            color=tangent_x_axis_color,
             segment_radius=origin_radius/2,
             name=:tangent_x)
     end
     build_segment!(vis[name];
-        color=tangent_axis_color,
+        color=tangent_y_axis_color,
         segment_radius=origin_radius/2,
         name=:tangent_y)
 

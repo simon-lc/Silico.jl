@@ -54,7 +54,9 @@ end
 vector_rotate(q, x) = Vmat() * Lmat(q) * Rmat(q)' * Vmat()' * x
 
 function tangential_plane(normal; tangent_candidate=[1,0,0.0])
-    tangent1 = (1 - tangent_candidate'*normal) * tangent_candidate / (1 - tangent_candidate'*normal)
+    n = normal ./ (norm(normal) + 1e-10)
+    tangent1 = tangent_candidate - tangent_candidate'*n * n
+    tangent1 ./= norm(tangent1) + 1e-10
     tangent2 = cross(normal, tangent1)
     # rotation matrix from contact frame to world frame
     # n points towards the parent body, [t,y,n] forms an oriented vector basis

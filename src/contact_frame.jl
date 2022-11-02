@@ -47,8 +47,8 @@ function contact_normal(contact::PolyPoly{T,D}, mechanism::Mechanism) where {T,D
         contact_point = c + (pp3 + pc3)[1:2] ./ 2
         normal = -x_2d_rotation(pp3[3:3]) * Ap' * λp
     else
-        # contact_point = nothing
-        # normal = nothing
+        contact_point = c + (pp3[1:3] + pc3[1:3]) / 2
+        normal = -vector_rotate(pp3[4:7], Ap' * λp)
     end
 
     return contact_point, normal

@@ -136,12 +136,14 @@ end
 
 function residual!(e, x, θ, contact::PolyHalfSpace{T,3,NP},
         pbody::AbstractBody{T,3}) where {T,NP}
+
     # unpack parameters
     friction_coefficient, Ap, bop, normalc, offc =
         split_parameters(θ[contact.index.parameters], contact)
     pp2, timestep_p = unpack_pose_timestep(θ[pbody.index.parameters], pbody)
     xp2 = pp2[1:3]
     qp2 = pp2[4:7]
+
     # unpack variables
     c, γ, ψ, β, λp, sγ, sψ, sβ, sp = unpack_variables(x[contact.index.variables], contact)
     vp25, ϕp25 = unpack_variables(x[pbody.index.variables], pbody)
