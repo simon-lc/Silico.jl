@@ -164,7 +164,7 @@ function extend(mechanism::Mechanism, q_nearest, q_subgoal; γ=1e-5, ρ=3e-4, ϵ
     # @show round.(μu, digits=5)
     # @show round.(uBa, digits=5)
     # δu = uBa \ -(μu - qu_subgoal)
-    δu = -(uBa'*uBa + 1e-2*I) \ (uBa'*(μu - qu_subgoal))
+    δu = -(uBa'*uBa + 1e-2*I) \ (uBa'*(μu - qu_subgoal)) #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     # plt = spy(uBa, markersize=40)
     # display(plt)
     # @show norm(uBa * δu + μu - qu_subgoal)
@@ -194,13 +194,14 @@ function sample_subgoal(mechanism::Mechanism)
     qa_max = [0.30, 0.9, +1.0*π]
     q_min = [qu_min; qa_min]
     q_max = [qu_max; qa_max]
-    if rand() > 0.50
+    q_candidate = 0
+    if rand() > 0.50 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
         q_candidate = deepcopy(z1)
     else
         α = rand(nq)
         q_candidate = α .* q_min + (1 .- α) .* q_max
     end
-
+    return q_candidate
     # # project onto feasible space
     # q_subgoal = feasibility_projection(mechanism, q_candidate)
     # return q_subgoal
@@ -357,9 +358,12 @@ settransform!(vis[:new], MeshCat.Translation(-0.8,0,0))
 settransform!(vis[:nearest], MeshCat.Translation(-0.4,0,0))
 
 K0 = 150
-γ0 = 3e-3
-ρ0 = 3e-3
-tree0, vertices0 = rrt_solve!(mech, z0, z1, K0; γ=γ0, ρ=ρ0, ϵ=8e-1, goal_distance=0.05)
+# γ0 = 3e-3
+# ρ0 = 3e-3
+γ0 = 3e-2
+ρ0 = 3e-2
+ϵ0 = 8e-1
+tree0, vertices0 = rrt_solve!(mech, z0, z1, K0; γ=γ0, ρ=ρ0, ϵ=ϵ0, goal_distance=0.05)
 tree0
 vertices0
 
@@ -389,7 +393,7 @@ plot(hcat(vertices0[trace0]...)')
 scatter!(hcat(vertices0[trace0]...)')
 
 
-RobotVisualizer.convert_frames_to_video_and_gif("rrt_tilted_box")
+# RobotVisualizer.convert_frames_to_video_and_gif("rrt_tilted_box")
 
 
 # Σγ, μu, uBa = mahalanobis_metric(mech, z0, z1; γ=1e-5, ρ=3e-4)
