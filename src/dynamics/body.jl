@@ -227,11 +227,6 @@ function get_next_state!(z, variables, body::Body{T,3}) where T
     Δϕ15 = Δt * ϕ15
     Δϕ25 = Δt * ϕ25
     inertia = body.inertia
-    # @show cross(Δϕ25, inertia * Δϕ25)
-    # @show cross(Δϕ15, inertia * Δϕ15)
-
-    # @show + sqrt(1 - Δϕ25'*Δϕ25) * inertia * Δϕ25 + cross(Δϕ25, inertia * Δϕ25)
-    # @show - sqrt(1 - Δϕ15'*Δϕ15) * inertia * Δϕ15 + cross(Δϕ15, inertia * Δϕ15)
 
     nv = velocity_dimension(body)
     off = 0

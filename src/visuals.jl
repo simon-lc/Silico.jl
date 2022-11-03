@@ -117,7 +117,7 @@ function set_mechanism!(vis::Visualizer, mechanism::Mechanism, storage::TraceSto
             normal = storage.normal[ii][j]
             tangent_x = storage.tangent_x[ii][j]
             tangent_y = storage.tangent_y[ii][j]
-            set_frame!(vis[name][:contacts], origin, normal, tangent_x, tangent_y, name=contact.name)
+            set_frame!(vis[name][:contacts], origin, normal, tangent_x, tangent_y, name=contact.name, normalize=true)
         end
     end
     return nothing
@@ -165,8 +165,10 @@ function visualize!(vis::Visualizer, mechanism::Mechanism, z;
     return vis, animation
 end
 
-
-function set_frame!(vis::Visualizer, origin, normal, tangent_x, tangent_y; name::Symbol=:contact)
+function set_frame!(vis::Visualizer, origin, normal, tangent_x, tangent_y;
+        name::Symbol=:contact,
+        normalize::Bool=true,
+        axis_length=0.15)
     dimension = length(origin)
     if dimension == 2
         origin = [0; origin]
@@ -174,11 +176,17 @@ function set_frame!(vis::Visualizer, origin, normal, tangent_x, tangent_y; name:
         tangent_y = [0; tangent_y]
         normal = [0; normal]
     end
+    if normalize
+        tangent_x = axis_length .* tangent_x ./ (norm(tangent_x) + 1e-10)
+        tangent_y = axis_length .* tangent_y ./ (norm(tangent_y) + 1e-10)
+        normal = axis_length .* normal ./ (norm(normal) + 1e-10)
+    end
+
     settransform!(vis[name][:origin],
         MeshCat.Translation(MeshCat.SVector{3}(origin...)))
-    set_segment!(vis[name], origin, origin+normal; name=:normal)
     set_segment!(vis[name], origin, origin+tangent_x; name=:tangent_x)
     set_segment!(vis[name], origin, origin+tangent_y; name=:tangent_y)
+    set_segment!(vis[name], origin, origin+normal; name=:normal)
     return nothing
 end
 

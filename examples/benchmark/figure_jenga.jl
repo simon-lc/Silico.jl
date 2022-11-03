@@ -5,9 +5,13 @@ using Plots
 ################################################################################
 vis = Visualizer()
 open(vis)
-set_floor!(vis)
-set_light!(vis)
+set_floor!(vis, origin=[-0.05, 0, 0], x=0.1, color=RGBA(0.8,0.8,0.8,1))
+set_light!(vis, direction="Negative", ambient=0.60)
 set_background!(vis)
+set_camera!(vis, zoom=20.0, cam_pos=[30.0, 0, 0])
+
+green = RGBA(4/255,191/255,173/255,1.0)
+turquoise = RGBA(2/255,115/255,115/255,1.0)
 
 ################################################################################
 # define mechanisms
@@ -57,8 +61,8 @@ mech = get_polytope_collision(;
     mass=mass,
     inertia=inertia,
     friction_coefficient=friction_coefficient,
-    method_type=:symbolic,
-    # method_type=:finite_difference,
+    # method_type=:symbolic,
+    method_type=:finite_difference,
     A=A0, b=b0,
     options=Mehrotra.Options(
         verbose=true,
@@ -94,8 +98,9 @@ z0 = [x12; v115; x22; v215; x32; v315; x42; v415]
 set_gravity!(mech, gravity)
 Mehrotra.initialize_solver!(mech.solver)
 @elapsed storage = simulate!(mech, deepcopy(z0), H)
-vis, anim = visualize!(vis, mech, storage, name=:single, color=RGBA(1,1,1,0.8))
+vis, anim = visualize!(vis, mech, storage, name=:green, color=green)
+vis, anim = visualize!(vis, mech, storage, name=:turquoise, color=turquoise, animation=anim)
 scatter(storage.iterations, color=:red)
 
-
-# RobotVisualizer.convert_frames_to_video_and_gif("jenga_contact_point")
+# storage = storage[1]
+RobotVisualizer.convert_frames_to_video_and_gif("jenga_banner")

@@ -21,7 +21,7 @@
 #         matrix_cache = reshape(vector_cache, (dim.equality, dim.variables))
 #         equality_jacobian(matrix_cache, primals, duals, slacks, parameters)
 #         matrix_cache[idx.primals, idx.primals] .+= 1e-3*Diagonal(ones(dim.primals))
-#         matrix_cache[idx.duals, idx.duals] .-= 1e-3*Diagonal(ones(dim.duals))
+#         matrix_cache[idx.duals, idx.duals] .-= 1e-6*Diagonal(ones(dim.duals))
 #         return nothing
 #     end
 #

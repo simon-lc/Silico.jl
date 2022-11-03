@@ -221,8 +221,8 @@ function contact_frame_2D(contact, mechanism::Mechanism)
     contact_point, normal = contact_normal(contact, mechanism)
 
     R = [0 1; -1 0]
-    tangent_x = R * normal
-    tangent_y = [0, 0]
+    tangent_y = R * normal
+    tangent_x = [0, 0]
     return contact_point, normal, tangent_x, tangent_y
 end
 

@@ -199,14 +199,8 @@ function contact_data(parent_pose, child_pose, detector::CollisionDetector{T,D,N
     ϕ = α .- 1
     contact_w = c + (parent_pose + child_pose)[1:2] / 2
 
-    # normal_pw = +x_2d_rotation(parent_pose[3:3]) * solver.data.solution_sensitivity[3,1:2]
-    # normal_cw = -x_2d_rotation(child_pose[3:3]) * solver.data.solution_sensitivity[3,4:5]
     normal_pw = solver.data.solution_sensitivity[3,1:2]
     normal_cw = -solver.data.solution_sensitivity[3,4:5]
-    # @show solver.data.solution_sensitivity[3,1:2]
-    # @show solver.data.solution_sensitivity[3,4:5]
-    # @show normal_pw
-    # @show normal_cw
     return ϕ, contact_w, normal_pw, normal_cw
 end
 

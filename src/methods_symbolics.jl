@@ -1,7 +1,9 @@
 function Mehrotra.generate_symbolic_gradients(func::Function, dim::Dimensions, ind::Indices;
         parameter_keywords=Dict{Symbol,Vector{Int}}(:all => ind.parameters),
-        primal_regularizer=1e-3,
-        dual_regularizer=1e-6,
+        # primal_regularizer=1e-3,
+        # dual_regularizer=1e-6,
+        primal_regularizer=1e-7,
+        dual_regularizer=1e-7,
         checkbounds=true,
         threads=false)
 

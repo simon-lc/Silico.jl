@@ -60,7 +60,7 @@ mech = get_3d_polytope_collision(;
         complementarity_backstep=1e-2,
         )
     )
-
+mech.solver.options
 ################################################################################
 # test simulation
 ################################################################################
@@ -99,4 +99,4 @@ scatter(storage.iterations)
 
 mech.solver.dimensions.primals
 
-# RobotVisualizer.convert_frames_to_video_and_gif("polytope_drop_more_stable")
+RobotVisualizer.convert_frames_to_video_and_gif("polypoly_3d")
