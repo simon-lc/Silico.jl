@@ -151,7 +151,7 @@ function quasistatic_dynamics_jacobian_input(du, mechanism::Mechanism{T,D,NB}, z
     solver = mechanism.solver
     solver.options.differentiate = true
     timestep = mechanism.bodies[1].timestep[1]
-    DojoLight.solve!(solver)
+    Mehrotra.solve!(solver)
 
     idx_parameters = mechanism.indices.input
     idx_solution = mechanism.indices.solution_state

@@ -85,7 +85,7 @@ function get_next_state(variables, body::Body)
     return z
 end
 
-function get_next_pose(variables, body::Body)
+function get_next_pose(variables, body::AbstractBody)
     z = zeros(state_dimension(body))
     get_next_state!(z, variables, body)
     return z[1:pose_dimension(body)]

@@ -1,16 +1,17 @@
-using Polyhedra
-using MeshCat
-using RobotVisualizer
 using Graphs
-# using StaticArrays
-# using Quaternions
-using Plots
 using GraphRecipes
+using Plots
+using Statistics
+using Random
 
+################################################################################
+# visualization
+################################################################################
 vis = Visualizer()
 open(vis)
-
-include("../src/DojoLight.jl")
+set_floor!(vis)
+set_light!(vis)
+set_background!(vis)
 
 ################################################################################
 # demo
@@ -22,7 +23,7 @@ inertia = 0.2 * ones(1,1);
 friction_coefficient = 0.5
 
 
-mech = get_quasistatic_sphere_box2(;
+mech = get_quasistatic_sphere_box(;
     timestep=timestep,
     gravity=gravity,
     mass=mass,
@@ -31,16 +32,14 @@ mech = get_quasistatic_sphere_box2(;
     method_type=:symbolic,
     # method_type=:finite_difference,
     control_mode=:robot,
-    options=Options(
-        # verbose=true,
+    options=Mehrotra.Options(
         verbose=false,
         complementarity_tolerance=1e-4,
+        residual_tolerance=1e-5,
         compressed_search_direction=true,
-        max_iterations=30,
         sparse_solver=true,
         differentiate=false,
         warm_start=false,
-        complementarity_correction=0.5,
         # complementarity_decoupling=true
         )
     );
@@ -68,13 +67,11 @@ mech = get_quasistatic_sphere_box2(;
 #         )
 #     );
 
-# solve!(mech.solver)
-# Main.@profiler solve!(mech.solver)
 ################################################################################
 # test simulation
 ################################################################################
 x0_box = [+1.0, 0.4, -0.00]
-x0_sphere = [-0.0, 0.2, -0.00]
+x0_sphere = [-0.0, 0.4, -0.00]
 z0 = [x0_box; x0_sphere]
 
 x1_box = [+2.0, 0.4, -0.00]
@@ -83,22 +80,14 @@ z1 = [x1_box; x1_sphere]
 
 # u0 = zeros(6)
 # u0 = [0; 0; 0; 0; 0.2; 0]
+# u0 = [0; 0; 0; x1_sphere]
 u0 = [0; 0; 0; x0_sphere]
 H0 = 140
 
 ctrl = open_loop_controller([u0])
-@elapsed storage = simulate!(mech, z0, H0, controller=ctrl)
-# Main.@profiler [solve!(mech.solver) for i=1:300]
-# @benchmark $solve!($(mech.solver))
-
+@elapsed storage = simulate!(mech, deepcopy(z0), H0, controller=ctrl)
 scatter(storage.iterations)
 
-################################################################################
-# visualization
-################################################################################
-set_floor!(vis)
-set_light!(vis)
-set_background!(vis)
 visualize!(vis, mech, storage, build=true)
 
 
@@ -118,9 +107,9 @@ function mahalanobis_metric(mechanism::Mechanism, q̄, q; γ=1e-5, ρ=3e-4)
     B = zeros(nq, nu)
     μ = zeros(nq)
 
-    quasistatic_dynamics_jacobian_input(B, mechanism, q̄, ū, nothing)
+    quasistatic_dynamics_jacobian_input(B, mechanism, q̄, ū)
     # this is doubling the computation, we need to remove this or leverage the solver's internal logic
-    dynamics(μ, mechanism, q̄, ū, nothing)
+    dynamics(μ, mechanism, q̄, ū)
 
     uBa = B[1:3,4:6] # only the unactuated states, only the control of the actuated bodies
     Σγ = uBa * uBa' + γ*I
@@ -192,7 +181,7 @@ function extend(mechanism::Mechanism, q_nearest, q_subgoal; γ=1e-5, ρ=3e-4, ϵ
     q_new = zeros(nq)
 
     # @show round.(q_nearest, digits=5)
-    dynamics(q_new, mechanism, q_nearest, u, nothing)
+    dynamics(q_new, mechanism, q_nearest, u)
     return q_new
 end
 
@@ -227,7 +216,7 @@ function feasibility_projection(mechanism::Mechanism, q)
     # u = [zeros(3); qa]
     u = zeros(6)
     q_projected = zeros(nq)
-    dynamics(q_projected, mechanism, q, u, nothing)
+    dynamics(q_projected, mechanism, q, u)
     return q_projected
 end
 
@@ -307,7 +296,6 @@ end
 #
 # mech.bodies
 
-
 function rrt_solve!(mechanism::Mechanism, q_init, q_goal, K::Int; γ=1e-5, ρ=3e-4, ϵ=3e-1, goal_distance=1.0)
     tree = SimpleDiGraph(1)
     vertices = [q_init]
@@ -344,18 +332,20 @@ x0_box    = [+0.60, 0.40, -0.00π]
 x0_sphere = [+0.00, 0.40, -0.00π]
 z0 = [x0_box; x0_sphere]
 
-x1_box    = [+0.97, 0.50, -0.10π]
-x1_sphere = [+0.30, 0.40, -0.00π]
+# x1_box    = [+0.97, 0.50, -0.10π]
+# x1_sphere = [+0.30, 0.40, -0.00π]
 # x1_box    = [+0.98, 0.57, -0.25π]
 # x1_sphere = [+0.23, 0.65, -0.00π]
+x1_box    = [+1.50, 0.40, -0.5π]
+x1_sphere = [+1.50, 1.00, -0.00π]
 z1 = [x1_box; x1_sphere]
 
 set_mechanism!(vis, mech, z0, name=:start)
 set_mechanism!(vis, mech, z1, name=:goal)
 
 
-build_mechanism!(vis, mech, name=:start, color=RGBA(1,1,1,0.3))
-build_mechanism!(vis, mech, name=:goal, color=RGBA(1,1,1,0.3))
+build_mechanism!(vis, mech, name=:start, color=RGBA(1,0,0,0.3))
+build_mechanism!(vis, mech, name=:goal, color=RGBA(0,1,0,0.3))
 build_mechanism!(vis, mech, name=:subgoal, color=RGBA(1,1,1,1))
 build_mechanism!(vis, mech, name=:new, color=RGBA(0,0,0,1))
 build_mechanism!(vis, mech, name=:nearest, color=RGBA(1,0,0,1))
@@ -366,7 +356,7 @@ settransform!(vis[:subgoal], MeshCat.Translation(-1.2,0,0))
 settransform!(vis[:new], MeshCat.Translation(-0.8,0,0))
 settransform!(vis[:nearest], MeshCat.Translation(-0.4,0,0))
 
-K0 = 80
+K0 = 150
 γ0 = 3e-3
 ρ0 = 3e-3
 tree0, vertices0 = rrt_solve!(mech, z0, z1, K0; γ=γ0, ρ=ρ0, ϵ=8e-1, goal_distance=0.05)
@@ -404,7 +394,7 @@ RobotVisualizer.convert_frames_to_video_and_gif("rrt_tilted_box")
 
 # Σγ, μu, uBa = mahalanobis_metric(mech, z0, z1; γ=1e-5, ρ=3e-4)
 # μ = zeros(6)
-# dynamics(μ, mech, z0, [0;0;0; z0[4:6]], nothing)
+# dynamics(μ, mech, z0, [0;0;0; z0[4:6]])
 # μ
 #
 # qu_subgoal = z1[1:3]

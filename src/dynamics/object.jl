@@ -138,5 +138,7 @@ function get_next_state!(z, variables, body::QuasistaticObject{T}) where T
     return nothing
 end
 
-state_dimension(body::QuasistaticObject) = 3
+state_dimension(body::QuasistaticObject) = pose_dimension(body) + velocity_dimension(body)
+pose_dimension(body::QuasistaticObject) = 3
+velocity_dimension(body::QuasistaticObject) = 0
 input_dimension(body::QuasistaticObject) = 3

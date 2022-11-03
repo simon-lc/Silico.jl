@@ -149,5 +149,7 @@ function get_next_state!(z, variables, body::QuasistaticRobot{T}) where T
     return nothing
 end
 
-state_dimension(body::QuasistaticRobot) = 3
+state_dimension(body::QuasistaticRobot) = pose_dimension(body) + velocity_dimension(body)
+pose_dimension(body::QuasistaticRobot) = 3
+velocity_dimension(body::QuasistaticRobot) = 0
 input_dimension(body::QuasistaticRobot) = 3

@@ -1,4 +1,4 @@
-function get_quasistatic_sphere_box2(;
+function get_quasistatic_sphere_box(;
     timestep=0.05,
     gravity=-9.81,
     mass=1.0,
@@ -36,12 +36,10 @@ function get_quasistatic_sphere_box2(;
 
     box = QuasistaticObject(timestep, mass, inertia, parent_shapes, gravity=+gravity, name=:box)
     sphere = (control_mode == :robot) ?
-        QuasistaticRobot(timestep, mass, inertia, child_shapes, gravity=+0.000000000000000000000*gravity, name=:sphere) :
-        QuasistaticObject(timestep, mass, inertia, child_shapes, gravity=+gravity, name=:sphere)
+        QuasistaticRobot(timestep, mass, inertia, child_shapes, gravity=0.0*gravity, name=:sphere) :
+        QuasistaticObject(timestep, mass, inertia, child_shapes, gravity=gravity, name=:sphere)
     bodies = [box, sphere]
-    normal = [0.0, 1.0]
-    position_offset = [0.0, 0.0]
-    floor_shape = HalfspaceShape(normal, position_offset)
+    floor_shape = HalfspaceShape([0.0, 1.0])
     contacts = [
         PolySphere(bodies[1], bodies[2],
             friction_coefficient=friction_coefficient,
