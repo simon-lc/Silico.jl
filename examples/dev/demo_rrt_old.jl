@@ -140,10 +140,10 @@ end
 function sample_subgoal(mechanism::Mechanism)
     nq = mechanism.dimensions.state
 
-    qu_min = [0.60, 0.4, -1.0*π]
-    qu_max = [0.90, 0.7, +1.0*π]
-    qa_min = [0.00, 0.1, -1.0*π]
-    qa_max = [0.30, 0.9, +1.0*π]
+    qu_min = [0.00, 0.4, -1.0*π]
+    qu_max = [2.00, 0.7, +1.0*π]
+    qa_min = [0.00, 0.1, -0.0*π]
+    qa_max = [2.00, 1.0, +0.0*π]
     q_min = [qu_min; qa_min]
     q_max = [qu_max; qa_max]
     if rand() > 0.50
@@ -173,7 +173,8 @@ end
 
 function contact_sample(mechanism::Mechanism, q_nearest)
     q_contact = deepcopy(q_nearest)
-    q_contact[4:6] .= 0.5 * q_contact[4:6] + 0.5 * q_contact[1:3]
+    # q_contact[4:6] .= 0.5 * q_contact[4:6] + 0.5 * q_contact[1:3]
+    q_contact[4:6] .= 0.05 * q_contact[4:6] + 0.95 * q_contact[1:3]
     qa_contact = q_contact[4:6]
     u = [zeros(3); qa_contact]
     q_new = zeros(6)
@@ -193,24 +194,31 @@ function rrt_solve!(mechanism::Mechanism, q_init, q_goal, K::Int; γ=1e-5, ρ=3e
 
 
         i_nearest = index_nearest(mechanism, vertices, metrics, q_subgoal, γ=γ, ρ=ρ)
-        # @show i_nearest
         q_nearest = vertices[i_nearest]
+        metric_nearest = metrics[i_nearest]
 
-        q_new = extend(mechanism, q_nearest, metrics[i_nearest], q_subgoal)
-
+        q_new = zeros(6)
+        if rand() > 0.10
+            q_new = extend(mechanism, q_nearest, metric_nearest, q_subgoal, ϵ=ϵ)
+        else
+            q_new = contact_sample(mechanism, q_nearest)
+        end
         metric_new = mahalanobis_metric(mechanism, q_new, γ=γ, ρ=ρ)
-        push!(metrics, metric_new)
+
+
 
         # update tree
+        push!(metrics, metric_new)
         push!(vertices, q_new)
         add_vertex!(tree)
         add_edge!(tree, i_nearest, nv(tree))
 
         set_mechanism!(vis, mech, q_nearest, name=:nearest)
         set_mechanism!(vis, mech, q_new, name=:new)
-        strict_metric_new = mahalanobis_metric(mechanism, q_new, γ=1e-5, ρ=3e-4)
-        # distance = mahalanobis_evaluation(q_goal, metric_new[1], metric_new[2])
-        distance = mahalanobis_evaluation(q_goal, strict_metric_new[1], strict_metric_new[2])
+
+        # strict_metric_new = mahalanobis_metric(mechanism, q_new, γ=1e-5, ρ=3e-4)
+        distance = mahalanobis_evaluation(q_goal, metric_new[1], metric_new[2])
+        # distance = mahalanobis_evaluation(q_goal, strict_metric_new[1], strict_metric_new[2])
         if distance <= goal_distance
             return tree, vertices
         end
@@ -222,11 +230,7 @@ x0_box    = [+0.60, 0.40, -0.00π]
 x0_sphere = [+0.00, 0.40, -0.00π]
 z0 = [x0_box; x0_sphere]
 
-# x1_box    = [+0.97, 0.50, -0.10π]
-# x1_sphere = [+0.30, 0.40, -0.00π]
-# x1_box    = [+0.98, 0.57, -0.25π]
-# x1_sphere = [+0.23, 0.65, -0.00π]
-x1_box    = [+1.00, 0.40, -0.5π]
+x1_box    = [+0.00, 0.40, -0.5π]
 x1_sphere = [+1.50, 1.00, -0.00π]
 z1 = [x1_box; x1_sphere]
 
@@ -246,10 +250,11 @@ settransform!(vis[:subgoal], MeshCat.Translation(-1.2,0,0))
 settransform!(vis[:new], MeshCat.Translation(-0.8,0,0))
 settransform!(vis[:nearest], MeshCat.Translation(-0.4,0,0))
 
-K0 = 150
+K0 = 500
 γ0 = 3e-3
 ρ0 = 3e-3
-tree0, vertices0 = rrt_solve!(mech, z0, z1, K0; γ=γ0, ρ=ρ0, ϵ=8e-1, goal_distance=0.05)
+ϵ0 = 3e-1
+tree0, vertices0 = rrt_solve!(mech, z0, z1, K0; γ=γ0, ρ=ρ0, ϵ=ϵ0, goal_distance=0.05)
 tree0
 vertices0
 
@@ -269,13 +274,8 @@ while true
     end
 end
 
-
-trace0
-visualize!(vis, mech, vertices0[1:6])
 visualize!(vis, mech, vertices0[trace0])
-
-
 plot(hcat(vertices0[trace0]...)')
 scatter!(hcat(vertices0[trace0]...)')
 
-# RobotVisualizer.convert_frames_to_video_and_gif("rrt_rotate_and_push")
+# RobotVisualizer.convert_frames_to_video_and_gif("rrt_rotate_and_long_push")
