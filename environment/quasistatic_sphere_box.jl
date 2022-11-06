@@ -45,10 +45,10 @@ function get_quasistatic_sphere_box(;
             friction_coefficient=friction_coefficient,
             name=:box_sphere),
         PolyHalfSpace(bodies[1], floor_shape,
-            friction_coefficient=friction_coefficient,
+            friction_coefficient=friction_coefficient/3,
             name=:halfspace_box),
         SphereHalfSpace(bodies[2], floor_shape,
-            friction_coefficient=friction_coefficient,
+            friction_coefficient=friction_coefficient/3,
             name=:halfspace_sphere),
         ]
     indexing!([bodies; contacts])

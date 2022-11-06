@@ -3,6 +3,7 @@ using GraphRecipes
 using Plots
 using Statistics
 using Random
+using BenchmarkTools
 
 ################################################################################
 # visualization
@@ -37,7 +38,7 @@ mech = get_quasistatic_sphere_box(;
         complementarity_tolerance=1e-4,
         residual_tolerance=1e-5,
         compressed_search_direction=true,
-        sparse_solver=true,
+        sparse_solver=false,
         differentiate=false,
         warm_start=false,
         # complementarity_decoupling=true
@@ -57,6 +58,7 @@ H0 = 140
 
 ctrl = open_loop_controller([u0])
 @elapsed storage = simulate!(mech, deepcopy(z0), H0, controller=ctrl)
+# @benchmark Mehrotra.solve!(mech.solver)
 
 visualize!(vis, mech, storage, build=true)
 

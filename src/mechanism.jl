@@ -39,11 +39,6 @@ struct MechanismDimensions{D}
     contacts::Int
     variables::Int
     parameters::Int
-    # primals::Int
-    # duals::Int
-    # slacks::Int
-    # cone::Int
-    # equality::Int
 end
 
 function MechanismDimensions(bodies::Vector{<:AbstractBody{T,D}}, contacts::Vector) where {T,D}
@@ -62,11 +57,6 @@ function MechanismDimensions(bodies::Vector{<:AbstractBody{T,D}}, contacts::Vect
     nodes = [bodies; contacts]
     num_variables = sum(variable_dimension.(nodes))
     num_parameters = sum(parameter_dimension.(nodes))
-    # num_primals = sum(primal_dimension.(nodes))
-    # num_cone = sum(cone_dimension.(nodes))
-    # num_duals = num_cone
-    # num_slacks = num_cone
-    # num_equality = sum(equality_dimension.(nodes))
 
     return MechanismDimensions{D}(
         body_configuration,
@@ -79,11 +69,6 @@ function MechanismDimensions(bodies::Vector{<:AbstractBody{T,D}}, contacts::Vect
         num_contacts,
         num_variables,
         num_parameters,
-        # num_primals,
-        # num_duals,
-        # num_slacks,
-        # num_cone,
-        # num_equality
         )
 end
 
