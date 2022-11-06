@@ -52,7 +52,7 @@ function MechanismDimensions(bodies::Vector{<:AbstractBody{T,D}}, contacts::Vect
     num_contacts = length(contacts)
 
     state = sum(state_dimension.(bodies))
-    input = num_bodies * body_input
+    input = sum(input_dimension.(bodies))
 
     nodes = [bodies; contacts]
     num_variables = sum(variable_dimension.(nodes))
@@ -191,6 +191,7 @@ function get_parameters(mechanism::Mechanism)
 end
 
 get_timestep(mechanism::Mechanism) = mechanism.bodies[1].timestep[1]
+input_dimension(mechanism::Mechanism) = sum(input_dimension.(mechanism.bodies))
 
 function set_gravity!(mechanism::Mechanism, gravity=-9.81)
     for body in mechanism.bodies
