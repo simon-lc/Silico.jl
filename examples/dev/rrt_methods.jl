@@ -49,8 +49,12 @@ function mahalanobis_metric(mechanism::Mechanism, q̄; γ=1e-5, ρ=3e-4)
     μ = zeros(nq)
 
     quasistatic_dynamics_jacobian_input(B, mechanism, q̄, ū)
+    # reset the complementarity_tolerance
+    mechanism.solver.options.complementarity_tolerance = old_complementarity_tolerance
+    mechanism.solver.central_paths.tolerance_central_path .*= old_complementarity_tolerance / ρ
+
     # this is doubling the computation, we need to remove this or leverage the solver's internal logic
-    # dynamics(μ, mechanism, q̄, ū)
+    dynamics(μ, mechanism, q̄, ū)
     get_next_state!(μ, mechanism)
 
 
@@ -60,9 +64,6 @@ function mahalanobis_metric(mechanism::Mechanism, q̄; γ=1e-5, ρ=3e-4)
     Σγ_inv = inv(Σγ)
     μu = μ[unactuated_idx]
 
-    # reset the complementarity_tolerance
-    mechanism.solver.options.complementarity_tolerance = old_complementarity_tolerance
-    mechanism.solver.central_paths.tolerance_central_path .*= old_complementarity_tolerance / ρ
     return Σγ_inv, μu, uBa
 end
 

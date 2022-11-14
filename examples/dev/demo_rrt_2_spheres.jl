@@ -44,7 +44,8 @@ mech = get_quasistatic_sphere_box(;
         warm_start=false,
         # complementarity_decoupling=true
         )
-    );
+    )
+
 
 
 ################################################################################
@@ -61,7 +62,7 @@ H0 = 140
 ctrl = open_loop_controller([u0])
 @elapsed storage = simulate!(mech, deepcopy(z0), H0, controller=ctrl)
 
-visualize!(vis, mech, storage, build=true)
+visualize!(vis, mech, storage, show_contact=false)
 
 include("rrt_methods.jl")
 
@@ -75,8 +76,9 @@ z0 = [x0_box; x0_sphere_1; x0_sphere_2]
 
 x1_box    = [+0.00, 0.40, -0.5π]
 # @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-x1_box      = [+1.0, 0.40, +0.5π]
-x1_sphere_1 = [-0.0, 0.4, -0.00]
+x1_box      = [+1.0, 0.75, -0.5π] # works well
+# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+x1_sphere_1 = [-0.0, 0.4, -0.00] #
 x1_sphere_2 = [-2.0, 0.8, -0.00]
 z1 = [x1_box; x1_sphere_1; x1_sphere_2]
 
@@ -101,13 +103,13 @@ mech.bodies
 mech.contacts
 
 K0 = 1000
-γ0 = 1e-3
-ρ0 = 5e-3
-ϵ0 = 3e-1
+γ0 = 3e-3
+ρ0 = 3e-3
+ϵ0 = 2e-1
 qu_min = [0.00, 0.4, -1.0*π]
-qu_max = [2.00, 0.7, +1.0*π]
-qa_min = [0.00, 0.1, -0.0*π]
-qa_max = [2.00, 1.2, +0.0*π]
+qu_max = [2.00, 1.2, +1.0*π]
+qa_min = 0*[0, 0, 0]
+qa_max = 0*[0, 0, 0]
 q_min0 = [qu_min; qa_min; qa_min]
 q_max0 = [qu_max; qa_max; qa_max]
 
@@ -130,7 +132,7 @@ tree0, vertices0, metrics0 = rrt_solve!(mech, z0, z1, K0;
     proba_contact_sample=0.10,
     goal_distance=0.05,
     sample_method=sample_method,
-    seed=10)
+    seed=0)
 
 # names0 = [" $i " for i = 1:nv(tree0)]
 # plt = GraphRecipes.graphplot(tree0, names=names0, curvature_scalar=0.01, linewidth=3, fontsize=10)
@@ -143,3 +145,5 @@ plot(hcat(vertices0[trace0]...)')
 scatter!(hcat(vertices0[trace0]...)')
 
 # RobotVisualizer.convert_frames_to_video_and_gif("rrt_rotate_and_push_smooth")
+mech.solver.options.residual_tolerance
+mech.solver.options.complementarity_tolerance
