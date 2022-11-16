@@ -15,8 +15,8 @@ end
 function TraceStorage(dim::MechanismDimensions{D}, H::Int, T=Float64) where D
     z = [zeros(T, dim.state) for i = 1:H]
     u = [zeros(T, dim.input) for i = 1:H]
-    x = [[zeros(T, dim.body_configuration) for j = 1:dim.bodies] for i = 1:H]
-    v = [[zeros(T, dim.body_velocity) for j = 1:dim.bodies] for i = 1:H]
+    x = [[zeros(T, dim.body_pose[j]) for j = 1:dim.bodies] for i = 1:H]
+    v = [[zeros(T, dim.body_velocity[j]) for j = 1:dim.bodies] for i = 1:H]
     contact_point = [[zeros(T, D) for j = 1:dim.contacts] for i = 1:H]
     normal = [[zeros(T, D) for j = 1:dim.contacts] for i = 1:H]
     tangent_x = [[zeros(T, D) for j = 1:dim.contacts] for i = 1:H]

@@ -29,10 +29,10 @@ end
 # dimensions
 ################################################################################
 struct MechanismDimensions{D}
-    body_configuration::Int
-    body_velocity::Int
-    body_state::Int
-    body_input::Int
+    body_pose::Vector{Int}
+    body_velocity::Vector{Int}
+    body_state::Vector{Int}
+    body_input::Vector{Int}
     state::Int
     input::Int
     bodies::Int
@@ -43,10 +43,10 @@ end
 
 function MechanismDimensions(bodies::Vector{<:AbstractBody{T,D}}, contacts::Vector) where {T,D}
     # dimensions
-    body_configuration = (D==2) ? 3 : 7
-    body_velocity = (D==2) ? 3 : 6
-    body_state = (D==2) ? 6 : 13
-    body_input = (D==2) ? 3 : 6
+    body_pose = pose_dimension.(bodies)
+    body_velocity = velocity_dimension.(bodies)
+    body_state = state_dimension.(bodies)
+    body_input = input_dimension.(bodies)
 
     num_bodies = length(bodies)
     num_contacts = length(contacts)
@@ -59,7 +59,7 @@ function MechanismDimensions(bodies::Vector{<:AbstractBody{T,D}}, contacts::Vect
     num_parameters = sum(parameter_dimension.(nodes))
 
     return MechanismDimensions{D}(
-        body_configuration,
+        body_pose,
         body_velocity,
         body_state,
         body_input,

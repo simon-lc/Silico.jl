@@ -73,13 +73,8 @@ function residual!(e, x, θ, contact::PolySphere{T,D,NP},
         pbody::AbstractBody, cbody::AbstractBody) where {T,D,NP}
 
     # unpack parameters
-    friction_coefficient, parent_parameters, child_parameters =
-        unpack_parameters(θ[contact.index.parameters], contact)
-    shape_p = contact.parent_shape
-    shape_c = contact.child_shape
-    Ap, bp, op = unpack_parameters(shape_p, parent_parameters)
-    radc, offc = unpack_parameters(shape_c, child_parameters)
-    bop = bp + Ap * op
+    friction_coefficient, Ap, bop, radc, offc =
+        split_parameters(θ[contact.index.parameters], contact)
 
     pp2, timestep_p = unpack_pose_timestep(θ[pbody.index.parameters], pbody)
     pc2, timestep_c = unpack_pose_timestep(θ[cbody.index.parameters], cbody)

@@ -32,6 +32,29 @@ function build_shape!(vis::Visualizer, shape::SphereShape{T,Ng,D};
     return nothing
 end
 
+function build_shape!(vis::Visualizer, shape::CapsuleShape{T,Ng,D};
+        collider_color=RGBA(0.2, 0.2, 0.2, 0.8),
+        ) where {T,Ng,D}
+
+    δ = 5e-3 * [0, 0, 1]
+    offset = [zeros(3-D); shape.position_offset]
+    offset_left = offset + [0; -shape.segment/2; 0]
+    offset_right = offset + [0; +shape.segment/2; 0]
+    radius = shape.radius[1]
+    segment = shape.segment[1]
+
+    setobject!(vis[:cylinder],
+        MeshCat.GeometryBasics.Cylinder(Point(offset_left...), Point(offset_right...), radius),
+        MeshPhongMaterial(color=collider_color));
+    setobject!(vis[:left],
+        HyperSphere(GeometryBasics.Point(offset_left...), radius),
+        MeshPhongMaterial(color=collider_color));
+    setobject!(vis[:right],
+        HyperSphere(GeometryBasics.Point(offset_right...), radius),
+        MeshPhongMaterial(color=collider_color));
+    return nothing
+end
+
 function build_contact_shape!(vis::Visualizer, shape::Shape; collider_color=nothing)
 end
 
@@ -77,8 +100,6 @@ function set_body!(vis::Visualizer, body::AbstractBody{T,D}, pose; name=body.nam
     )
     return nothing
 end
-
-rotationmatrix(Quaternion(1, 0.0, 0.1, 0.0))
 
 ######################################################################
 # mechanism

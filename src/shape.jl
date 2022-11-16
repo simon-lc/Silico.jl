@@ -152,7 +152,7 @@ end
 function constraint(shape::SphereShape{T}, p, α, β) where {T}
     r = shape.radius[1]
     o = shape.position_offset
-    return [- (p - o)' * (p - o) + α^2 * r^2]
+    return [- (p - o)' * (p - o) + α[1]^2 * r^2]
 end
 
 function constraint_jacobian_α(shape::SphereShape, p, α, β)
@@ -169,3 +169,111 @@ function constraint_jacobian_o(shape::SphereShape, p, α, β)
     o = shape.position_offset
     return [2 * (p - o)';;]
 end
+
+
+################################################################################
+# capsule shape
+################################################################################
+struct CapsuleShape{T,Ng,D} <: Shape{T,Ng,D}
+    radius::Vector{T}
+    segment::Vector{T}
+    position_offset::Vector{T}
+end
+
+function CapsuleShape(radius::T, segment::T, position_offset=zeros(T,2)) where T
+    D = length(position_offset)
+    return CapsuleShape{T,1,D}([radius], [segment], position_offset)
+end
+
+primal_dimension(shape::CapsuleShape) = 1
+cone_dimension(shape::CapsuleShape) = 3
+parameter_dimension(shape::CapsuleShape{T,Ng,D}) where {T,Ng,D} = 1 + 1 + D
+get_parameters(shape::CapsuleShape) = [shape.radius; shape.segment; shape.position_offset]
+
+function set_parameters!(shape::CapsuleShape{T,Ng,D}, parameters) where {T,Ng,D}
+    off = 0
+    shape.radius .= parameters[off .+ (1:1)]; off += 1
+    shape.segment .= parameters[off .+ (1:1)]; off += 1
+    shape.position_offset .= parameters[off .+ (1:D)]; off += D
+    return nothing
+end
+
+function unpack_parameters(shape::CapsuleShape{T,Ng,D}, parameters) where {T,Ng,D}
+    off = 0
+    radius = parameters[off .+ (1:1)]; off += 1
+    segment = parameters[off .+ (1:1)]; off += 1
+    position_offset = parameters[off .+ (1:D)]; off += D
+    return radius, segment, position_offset
+end
+
+function constraint(shape::CapsuleShape{T}, p, α, β) where {T}
+    r = shape.radius[1]
+    l = shape.segment[1]
+    o = shape.position_offset
+    return [
+        - (p - o - β .* [1,0])' * (p - o - β .* [1,0]) + α[1]^2 * r^2;
+        -β .+ α * l/2;
+        +β .+ α * l/2;
+        ]
+end
+
+function constraint_jacobian_α(shape::CapsuleShape, p, α, β)
+    r = shape.radius[1]
+    l = shape.segment[1]
+    return [
+        2 * α[1] * r^2
+        +l/2
+        +l/2;;
+    ]
+end
+
+function constraint_jacobian_p(shape::CapsuleShape, p, α, β)
+    o = shape.position_offset
+    return [
+        - 2 * (p - o - β .* [1,0])'
+        zeros(1,2)
+        zeros(1,2)
+    ]
+end
+
+function constraint_jacobian_o(shape::CapsuleShape, p, α, β)
+    o = shape.position_offset
+    return [
+        2 * (p - o - β .* [1,0])'
+        zeros(1,2)
+        zeros(1,2)
+    ]
+end
+
+function constraint_jacobian_β(shape::CapsuleShape, p, α, β)
+    r = shape.radius[1]
+    l = shape.segment[1]
+    o = shape.position_offset
+    return [
+        2 * (p[1] - o[1] - β[1])
+        -1
+        +1;;
+        ]
+end
+#
+# p = [1,1.0]
+# α = [1.0]
+# β = [1.2]
+# shape = mech.bodies[1].shapes[1]
+#
+# constraint(shape, p, α, β)
+# J1 = constraint_jacobian_α(shape, p, α, β)
+# J0 = Mehrotra.FiniteDiff.finite_difference_jacobian(α -> constraint(shape, p, α, β), α)
+# norm(J0 - J1)
+#
+# J1 = constraint_jacobian_p(shape, p, α, β)
+# J0 = Mehrotra.FiniteDiff.finite_difference_jacobian(p -> constraint(shape, p, α, β), p)
+# norm(J0 - J1)
+#
+# J1 = constraint_jacobian_o(shape, p, α, β)
+# # J0 = Mehrotra.FiniteDiff.finite_difference_jacobian(o -> constraint(shape, p, α, β), o)
+# norm(J0 - J1)
+#
+# J1 = constraint_jacobian_β(shape, p, α, β)
+# J0 = Mehrotra.FiniteDiff.finite_difference_jacobian(β -> constraint(shape, p, α, β), β)
+# norm(J0 - J1)
