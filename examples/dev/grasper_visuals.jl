@@ -7,21 +7,21 @@ function capsule_pose(pose, segment; capsule_id::Int=1)
     p = zeros(3)
     if capsule_id == 1
         β1 = θ - α1
-        x1 = x + segment/2 * [cos(β1), sin(β1)]
+        x1 = x + segment[1]/2 * [cos(β1), sin(β1)]
         p = [x1; β1]
     elseif capsule_id == 2
         β1 = θ - α1
         β2 = θ - α1 + α2
-        x2 = x + segment * [cos(β1), sin(β1)] + segment/2 * [cos(β2), sin(β2)]
+        x2 = x + segment[1] * [cos(β1), sin(β1)] + segment[2]/2 * [cos(β2), sin(β2)]
         p = [x2; β2]
     elseif capsule_id == 3
         β3 = θ + α1
-        x3 = x + segment/2 * [cos(β3), sin(β3)]
+        x3 = x + segment[1]/2 * [cos(β3), sin(β3)]
         p = [x3; β3]
     elseif capsule_id == 4
         β3 = θ + α1
         β4 = θ + α1 - α3
-        x4 = x + segment * [cos(β3), sin(β3)] + segment/2 * [cos(β4), sin(β4)]
+        x4 = x + segment[1] * [cos(β3), sin(β3)] + segment[2]/2 * [cos(β4), sin(β4)]
         p = [x4; β4]
     end
     return p
@@ -29,7 +29,7 @@ end
 
 function set_grasper!(vis::Visualizer, pose;
         name=:grasper,
-        segment=1.00)
+        segment=[1.00, 1.00])
     for i = 1:4
         xi = capsule_pose(pose, segment; capsule_id=i)
         settransform!(vis[name][Symbol(:capsule_,i)], MeshCat.compose(
@@ -42,7 +42,7 @@ function set_grasper!(vis::Visualizer, pose;
 end
 
 function pose_cost(pose, state, pose_ref;
-        segment=1.00,
+        segment=[1.00, 1.00],
         radius=0.10,
         A=[1 0; 0 1; -1 0; 0 -1],
         b=0.4*ones(4),
@@ -59,18 +59,18 @@ function pose_cost(pose, state, pose_ref;
     α3 = pose[6]
 
     θ1 = α0 - α1
-    c1 = c0 + segment * [cos(θ1), sin(θ1)]
+    c1 = c0 + segment[1] * [cos(θ1), sin(θ1)]
 
     θ1 = α0 - α1
     θ2 = α0 - α1 + α2
-    c2 = c1 + segment * [cos(θ2), sin(θ2)]
+    c2 = c1 + segment[2] * [cos(θ2), sin(θ2)]
 
     θ3 = α0 + α1
-    c3 = c0 + segment * [cos(θ3), sin(θ3)]
+    c3 = c0 + segment[1] * [cos(θ3), sin(θ3)]
 
     θ3 = α0 + α1
     θ4 = α0 + α1 - α3
-    c4 = c3 + segment * [cos(θ4), sin(θ4)]
+    c4 = c3 + segment[2] * [cos(θ4), sin(θ4)]
 
     l = 0.0
     l += 1e0 * 0.5 * (c2 - sphere_2[1:2])' * (c2 - sphere_2[1:2])
@@ -107,7 +107,7 @@ function clamp_pose(pose;
 end
 
 function grasper_pose(pose_ref, maximal_state;
-        segment=1.00,
+        segment=[1.00, 1.00],
         radius=0.10,
         A=[1 0; 0 1; -1 0; 0 -1],
         b=0.4*ones(4),
@@ -123,7 +123,7 @@ function grasper_pose(pose_ref, maximal_state;
 
     for i = 1:100
         l = cost(pose)
-        ((l < 1e-4) || (abs(l_prev - l) < 1e-6)) && break
+        ((l < 1e-4) || (abs(l_prev - l) < 1e-8)) && break
         H = Mehrotra.FiniteDiff.finite_difference_hessian(
             pose -> cost(pose), pose)
         g = Mehrotra.FiniteDiff.finite_difference_gradient(
@@ -145,22 +145,23 @@ end
 
 function build_grasper!(vis::Visualizer;
         name=:grasper,
-        segment=1.00,
+        segment=[1.00, 1.00],
         radius=0.10,
         A=[1 0; 0 1; -1 0; 0 -1],
         b=0.4*ones(4),
         color=RGBA(0,0,0,1),
         )
 
-    shape = CapsuleShape(radius, segment)
     for i = 1:4
+        j = 1 + (i == 2 || i == 4)
+        shape = CapsuleShape(radius, segment[j])
         build_shape!(vis[name][Symbol(:capsule_,i)], shape, collider_color=color)
     end
     return nothing
 end
 
 function grasper_trajectory(state_trajectory;
-        segment=1.00,
+        segment=[1.00, 1.00],
         radius=0.10,
         A=[1 0; 0 1; -1 0; 0 -1],
         b=0.4*ones(4),
@@ -181,13 +182,13 @@ function grasper_trajectory(state_trajectory;
     return pose_trajectory
 end
 
-function visualize2!(vis::Visualizer, pose_trajectory;
-        segment=1.00,
+function visualize!(vis::Visualizer, pose_trajectory;
+        segment=[1.00, 1.00],
         radius=0.10,
         A=[1 0; 0 1; -1 0; 0 -1],
         b=0.4*ones(4),
         build=true,
-        color=RGBA(0,0,0,1),
+        color=RGBA(0.2,0.2,0.2,1),
         name::Symbol=:grasper,
         animation=MeshCat.Animation(Int(floor(1/0.05)))
         )
@@ -202,7 +203,7 @@ function visualize2!(vis::Visualizer, pose_trajectory;
             )
 
     for i = 1:length(pose_trajectory)
-        atframe(anim, i) do
+        atframe(animation, i) do
             set_grasper!(vis, pose_trajectory[i], name=name, segment=segment)
         end
     end

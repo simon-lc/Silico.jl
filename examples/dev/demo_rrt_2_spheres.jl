@@ -4,6 +4,9 @@ using Plots
 using Statistics
 using Random
 using BenchmarkTools
+using MeshCatMechanisms
+using RigidBodyDynamics
+
 
 include("rrt_methods.jl")
 include("grasper_visuals.jl")
@@ -16,7 +19,7 @@ open(vis)
 set_floor!(vis)
 set_light!(vis)
 set_background!(vis)
-
+set_camera!(vis, zoom=4.0, cam_pos=[50,0,0.0])
 ################################################################################
 # demo
 ################################################################################
@@ -138,10 +141,41 @@ end
 i_nearest0 = index_nearest(mech, vertices0, metrics0, z1; γ=γ0, ρ=ρ0)
 trace0 = get_trace(tree0, i_nearest0)
 
-vis, anim = visualize!(vis, mech, vertices0[trace0])
+_, anim = visualize!(vis[:rrt], mech, vertices0[trace0][3:end])
 plot(hcat(vertices0[trace0]...)')
 scatter!(hcat(vertices0[trace0]...)')
 
+
+################################################################################
+# grasper vis
+################################################################################
 # build_grasper!(vis, name=:pose)
-pose_trajectory = grasper_trajectory(vertices0[trace0], segment=1.00, radius=0.07)
-vis, anim = visualize2!(vis, pose_trajectory, animation=anim, segment=1.00, radius=0.07)
+# pose_trajectory = grasper_trajectory(vertices0[trace0], segment=[1.20, 0.80], radius=0.10)
+_, anim = visualize!(vis[:rrt], pose_trajectory[3:end], animation=anim, segment=[1.20, 0.80], radius=0.10)
+scale = 0.1
+scaling = MeshCat.LinearMap(I * scale)
+translation = MeshCat.Translation(0.0, -1.00, 0.0)
+transformation = MeshCat.compose(translation, scaling)
+settransform!(vis[:rrt], transformation)
+
+################################################################################
+# panda vis
+################################################################################
+urdf = joinpath(@__DIR__, "..", "deps", "panda_end_effector.urdf")
+robot = parse_urdf(urdf)
+mvis = MechanismVisualizer(robot, URDFVisuals(urdf), vis)
+q0 = [-π/2,
+    +0.60,
+    +0.00,
+    -1.80,
+    +0.00,
+    +2.40,
+    +π/2,
+    0.05,
+    0.05]
+set_configuration!(mvis, q0)
+
+state_trajectory = deepcopy(pose_trajectory)
+state_trajectory = [s[1:3] .* [scale, scale, 1.0] + [-1.0, 0.0, 0.0] for s in state_trajectory[3:end]]
+q_trajectory = panda_trajectory(state_trajectory, mvis, initial_q=q0)
+mvis, anim = visualize!(mvis, q_trajectory, animation=anim)

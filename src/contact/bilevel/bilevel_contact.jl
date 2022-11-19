@@ -2,6 +2,7 @@
 # contact
 ################################################################################
 abstract type BilevelContact{T,D,NP,NC} <: Node{T} end
+space_dimension(contact::BilevelContact{T,D}) where {T,D} = D
 
 struct BilevelContact2D{T,D,NP,NC} <: BilevelContact{T,D,NP,NC}
     name::Symbol

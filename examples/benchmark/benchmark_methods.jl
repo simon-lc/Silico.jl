@@ -210,7 +210,7 @@ function contact_violation(mechanism::Mechanism, storage::TraceStorage{T,H}) whe
         parent_shape = contact.parent_shape
         child_shape = contact.child_shape
         detector = CollisionDetector(parent_shape, child_shape)
-        if (typeof(contact)<:EnvContact2D) || (typeof(contact)<:EnvBilevelContact2D40)
+        if (typeof(contact)<:EnvContact2D) || (typeof(contact)<:EnvBilevelContact2D)
             idx = find_body_index(mechanism.bodies, contact.parent_name)
             for t = 1:H
                 ϕ = contact_data(storage.x[t][idx], zeros(3), detector)[1]

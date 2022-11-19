@@ -42,13 +42,13 @@ function get_bilevel_polytope_collision(;
         gravity=+gravity, name=Symbol(:body_, i)) for i=1:N]
 
     body_contacts = vcat([
-        [BilevelContact2D40(bodies[i], bodies[j],
+        [BilevelContact2D(bodies[i], bodies[j],
             friction_coefficient=friction_coefficient,
             name=Symbol(:contact_, i, :_, j),
             complementarity_tolerance=options.complementarity_tolerance) for i=1:j-1]
         for j=1:N]...)
     env_contacts = [
-        EnvBilevelContact2D40(bodies[i], floor_shape,
+        EnvBilevelContact2D(bodies[i], floor_shape,
             friction_coefficient=friction_coefficient,
             name=Symbol(:env_contact_, i),
             complementarity_tolerance=options.complementarity_tolerance,

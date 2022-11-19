@@ -46,8 +46,8 @@ mech = get_polytope_collision(;
     inertia=0.2 * ones(1,1),
     friction_coefficient=0.9,
     A=A0, b=b0,
-    # method_type=:symbolic,
-    method_type=:finite_difference,
+    method_type=:symbolic,
+    # method_type=:finite_difference,
     options=Mehrotra.Options(
         verbose=false,
         complementarity_tolerance=1e-3,
