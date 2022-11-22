@@ -10,13 +10,14 @@ using RigidBodyDynamics
 
 include("rrt_methods.jl")
 include("grasper_visuals.jl")
+include("panda_visuals.jl")
 
 ################################################################################
 # visualization
 ################################################################################
 vis = Visualizer()
 open(vis)
-set_floor!(vis)
+set_floor!(vis, origin=[0,0,0.0])
 set_light!(vis)
 set_background!(vis)
 set_camera!(vis, zoom=4.0, cam_pos=[5,0,0.0])
@@ -33,7 +34,16 @@ mass = 0.5;
 inertia = 0.2 * ones(1,1);
 friction_coefficient = 0.5
 
-
+s2 = 1/sqrt(2)
+s3 = sqrt(3)/2
+s4 = sin(4π/10)
+c4 = cos(4π/10)
+s4 = sin(2π/6)
+c4 = cos(2π/6)
+# A = [[0 -1; s3 0.5; -s3 0.5], [0 1; -s3 -0.5; s3 -0.5]]
+A = [[0 -1; s4 c4; -s4 c4], [0 1; -s4 -c4; s4 -c4]]
+# A = [[0 -1; 1 0; -s3 0.5], [0 1; -s3 -0.5; 1 0]]
+b = [[0.40, 0.10, 0.10], [0.40, 0.10, 0.10]]
 mech = get_quasistatic_sphere_box(;
     timestep=timestep,
     gravity=gravity,
@@ -41,11 +51,13 @@ mech = get_quasistatic_sphere_box(;
     inertia=inertia,
     friction_coefficient=friction_coefficient,
     num_sphere=2,
+    A=A,
+    b=b,
     method_type=:symbolic,
     # method_type=:finite_difference,
     control_mode=:robot,
     options=Mehrotra.Options(
-        verbose=false,
+        verbose=true,
         complementarity_tolerance=1e-4,
         residual_tolerance=1e-5,
         compressed_search_direction=true,
@@ -56,7 +68,6 @@ mech = get_quasistatic_sphere_box(;
         )
     )
 
-
 ################################################################################
 # test simulation
 ################################################################################
@@ -64,9 +75,8 @@ x0_box      = [+1.0, 0.4, +0.0π]
 x0_sphere_1 = [-0.0, 0.4, -0.00]
 x0_sphere_2 = [-0.0, 0.8, -0.00]
 z0 = [x0_box; x0_sphere_1; x0_sphere_2]
-
 u0 = [0; 0; 0; x0_sphere_1; x0_sphere_2]
-H0 = 140
+H0 = 2
 
 ctrl = open_loop_controller([u0])
 @elapsed storage = simulate!(mech, deepcopy(z0), H0, controller=ctrl)
@@ -87,16 +97,12 @@ x1_box      = [+1.0, 0.95, -0.5π] # works well
 # @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 x1_box      = [+1.5, 1.0, +0.60π] # works well
 x1_box      = [+1.5, 1.0, -0.60π] # works well
-# x1_box      = [+1.5, 1.5, -0.60π]
-# x1_box      = [+0.5, 1.0, -0.60π]
-# x1_box      = [+1.5, 1.0, -0.00π]
 x1_sphere_1 = [-0.0, 0.4, -0.00]
 x1_sphere_2 = [-2.0, 0.8, -0.00]
 z1 = [x1_box; x1_sphere_1; x1_sphere_2]
 
 set_mechanism!(vis, mech, z0, name=:start)
 set_mechanism!(vis, mech, z1, name=:goal)
-
 
 build_mechanism!(vis, mech, name=:start, show_contact=false, color=RGBA(1,0,0,0.3))
 build_mechanism!(vis, mech, name=:goal, show_contact=false, color=RGBA(0,1,0,0.3))
@@ -147,7 +153,7 @@ end
 i_nearest0 = index_nearest(mech, vertices0, metrics0, z1; γ=γ0, ρ=ρ0)
 trace0 = get_trace(tree0, i_nearest0)
 
-_, anim = visualize!(vis[:rrt], mech, vertices0[trace0][3:end])
+_, anim = visualize!(vis[:rrt], mech, vertices0[trace0][1:end])
 plot(hcat(vertices0[trace0]...)')
 scatter!(hcat(vertices0[trace0]...)')
 
@@ -155,10 +161,21 @@ scatter!(hcat(vertices0[trace0]...)')
 ################################################################################
 # grasper vis
 ################################################################################
-pose_trajectory = grasper_trajectory(vertices0[trace0], segment=[1.20, 0.80], radius=0.10)
-_, anim = visualize!(vis[:rrt], pose_trajectory[3:end],
+segment = [0.40, 0.80, 0.60]
+pose0 = [1, 2.0, -π/2, 0.8, 1.5, 1.5]
+
+pose_trajectory = grasper_trajectory(vertices0[trace0],
+    initial_pose=pose0,
+    segment=segment,
+    A=A,
+    b=b,
+    radius=0.10)
+
+_, anim = visualize!(vis[:rrt], pose_trajectory[1:end],
     animation=anim,
-    segment=[1.20, 0.80],
+    segment=segment,
+    A=A,
+    b=b,
     radius=0.10,
     color=RGBA(0.9, 0.9, 0.9, 1.0))
 scale = 0.1
@@ -187,38 +204,63 @@ set_configuration!(mvis, q0)
 
 end_effector_trajectory = deepcopy(pose_trajectory)
 end_effector_trajectory = [s[1:3] .* [scale, scale, 1.0] + [offset, 0, 0]
-    for s in end_effector_trajectory[3:end]]
+    for s in end_effector_trajectory[1:end]]
 q_trajectory = panda_trajectory(end_effector_trajectory, mvis, initial_q=q0)
 mvis, anim = visualize!(mvis, q_trajectory, animation=anim)
 
 ################################################################################
 # floor
 ################################################################################
-block_1 = MeshCat.HyperRectangle(Vec(-0.17,-0.17,-0.2), Vec(0.34,0.34,0.3))
-
-block_2 = MeshCat.HyperRectangle(Vec(-0.10,offset,-0.2), Vec(0.20,0.20,0.3))
-block_mat = MeshPhongMaterial(color=RGBA(0.3, 0.3, 0.3, 1.0))
+block_1 = MeshCat.HyperRectangle(Vec(-0.17,-0.17,-0.10), Vec(0.27,0.34,0.20))
+# block_2 = MeshCat.HyperRectangle(Vec(-0.10,offset,-0.10), Vec(0.20,0.20,0.20))
+block_2 = MeshCat.HyperRectangle(Vec(-0.005,offset,-0.10), Vec(0.01,0.20,0.20))
+# block_mat = MeshPhongMaterial(color=RGBA(0.3, 0.3, 0.3, 1.0))
+block_mat = MeshPhongMaterial(color=RGBA(0.5, 0.5, 0.5, 1.0))
 setobject!(vis[:floor][:block1], block_1, block_mat)
 setobject!(vis[:floor][:block2], block_2, block_mat)
-set_floor!(vis, origin=[0,0,-0.10])
+# set_floor!(vis, origin=[0,0,-0.10])
+set_floor!(vis, origin=[0,0,-0.10], x=0.01)
 
-box_mat = MeshPhongMaterial(color=green)
-box = MeshCat.HyperRectangle(Vec(-0.4,-0.4,-0.4), Vec(0.8,0.8,0.8))
-setobject!(vis[:rrt][:robot][:bodies][:box], box, box_mat)
+################################################################################
+# object
+################################################################################
+A3d = [
+    [[zeros(3) A[1]]; [1 0 0]; [-1 0 0]],
+    [[zeros(3) A[2]]; [1 0 0]; [-1 0 0]]
+    ]
+b3d = [
+    [b[1]; 0.30; 0.30],
+    [b[2]; 0.30; 0.30],
+    ]
+build_polytope!(vis[:rrt][:robot][:bodies][:box], A3d[1], b3d[1], name=:object_1, color=green)
+build_polytope!(vis[:rrt][:robot][:bodies][:box], A3d[2], b3d[2], name=:object_2, color=green)
 
-box_mat = MeshPhongMaterial(color=green, wireframe=true)
-box = MeshCat.HyperRectangle(Vec(-0.4,-0.4,-0.4), Vec(0.8,0.8,0.8))
-setobject!(vis[:rrt][:goal], box, box_mat)
-settransform!(vis[:rrt][:goal], MeshCat.compose(
-    MeshCat.Translation(SVector{3}(0,x1_box[1],x1_box[2])),
+box_mat = MeshPhongMaterial(color=green_α, wireframe=true)
+
+white = RGBA(1,1,1,1)
+green_α = 0.75 * white + 0.25 * green
+build_polytope!(vis[:rrt][:robot][:goal], A3d[1], b3d[1], name=:object_1, color=green_α)
+build_polytope!(vis[:rrt][:robot][:goal], A3d[2], b3d[2], name=:object_2, color=green_α)
+settransform!(vis[:rrt][:robot][:goal], MeshCat.compose(
+    MeshCat.Translation(SVector{3}(1.0,x1_box[1],x1_box[2])),
     MeshCat.LinearMap(rotationmatrix(RotX(x1_box[3]))),
     ))
-
+################################################################################
+# cleanup vis
+################################################################################
 setvisible!(vis[:desired_0], false)
 setvisible!(vis[:desired_1], false)
 setvisible!(vis[:desired_2], false)
-setvisible!(vis[:world][:link1][:link2][:link3][:link4][:link5][:link6][:link7][:after_joint7][:point_0], false)
-setvisible!(vis[:world][:link1][:link2][:link3][:link4][:link5][:link6][:link7][:after_joint7][:point_1], false)
-setvisible!(vis[:world][:link1][:link2][:link3][:link4][:link5][:link6][:link7][:after_joint7][:point_2], false)
-setvisible!(vis[:world][:link1][:link2][:link3][:link4][:link5][:link6][:link7][:finger1], false)
-setvisible!(vis[:world][:link1][:link2][:link3][:link4][:link5][:link6][:link7][:finger2], false)
+
+link7_vis = vis[:world][:link1][:link2][:link3][:link4][:link5][:link6][:link7]
+setvisible!(link7_vis[:after_joint7][:point_0], false)
+setvisible!(link7_vis[:after_joint7][:point_1], false)
+setvisible!(link7_vis[:after_joint7][:point_2], false)
+setvisible!(link7_vis[:finger1], false)
+setvisible!(link7_vis[:finger2], false)
+
+setvisible!(vis[:rrt][:robot][:bodies][:box][Symbol(1)], false)
+setvisible!(vis[:rrt][:robot][:bodies][:box][Symbol(2)], false)
+setvisible!(vis[:rrt][:robot][:bodies][:box][:com], false)
+
+# RobotVisualizer.convert_frames_to_video_and_gif("full_grasping_front_figure")

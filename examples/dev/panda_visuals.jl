@@ -55,9 +55,9 @@ end
 function panda_configuration(q, state, mvis)
     # select points on the body
     body = findbody(robot, "link7")
-    point_0 = Point3D(default_frame(body), 0.00, 0.00, 0.14)
-    point_1 = Point3D(default_frame(body), 0.10, 0.00, 0.14)
-    point_2 = Point3D(default_frame(body), 0.00, 0.00, 0.14 + 0.10)
+    point_0 = Point3D(default_frame(body), 0.00, 0.00, 0.16)
+    point_1 = Point3D(default_frame(body), 0.10, 0.00, 0.16)
+    point_2 = Point3D(default_frame(body), 0.00, 0.00, 0.16 + 0.10)
     points = [point_0, point_1, point_2]
 
     # render the points

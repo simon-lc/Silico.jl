@@ -5,6 +5,8 @@ function get_quasistatic_sphere_box(;
     inertia=0.2 * ones(1,1),
     friction_coefficient=0.9,
     num_sphere=1,
+    A=[[1 0; 0 1; -1 0; 0 -1]],
+    b=[0.4*ones(4)],
     method_type::Symbol=:finite_difference,
     control_mode::Symbol=:robot, # :robot or :object
     options=Mehrotra.Options(
@@ -17,64 +19,59 @@ function get_quasistatic_sphere_box(;
         )
     )
 
-    Ap1 = [
-        1.0  0.0;
-        0.0  1.0;
-        -1.0  0.0;
-        0.0 -1.0;
-        ]
-    bp1 = 0.4*[
-        +1,
-        +1,
-        +1,
-        +1,
-        ];
     child_radius = 0.1
 
     # nodes
-    parent_shapes = [PolytopeShape(Ap1, bp1)]
-    child_shapes = [SphereShape(child_radius)]
+    N = length(b)
+    body_shapes = [PolytopeShape(A[i], b[i]) for i=1:N]
+    manipulator_shapes = [SphereShape(child_radius)]
 
-    box = QuasistaticObject(timestep, mass, inertia, parent_shapes, gravity=+gravity, name=:box)
+    box = QuasistaticObject(timestep, mass, inertia, body_shapes, gravity=+gravity, name=:box)
     sphere_1 = (control_mode == :robot) ?
-        QuasistaticRobot(timestep, mass, inertia, child_shapes, gravity=0.0*gravity, name=:sphere_1) :
-        QuasistaticObject(timestep, mass, inertia, child_shapes, gravity=gravity, name=:sphere_1)
+        QuasistaticRobot(timestep, mass, inertia, manipulator_shapes, gravity=0.0*gravity, name=:sphere_1) :
+        QuasistaticObject(timestep, mass, inertia, manipulator_shapes, gravity=gravity, name=:sphere_1)
     sphere_2 = (control_mode == :robot) ?
-        QuasistaticRobot(timestep, mass, inertia, child_shapes, gravity=0.0*gravity, name=:sphere_2) :
-        QuasistaticObject(timestep, mass, inertia, child_shapes, gravity=gravity, name=:sphere_2)
+        QuasistaticRobot(timestep, mass, inertia, manipulator_shapes, gravity=0.0*gravity, name=:sphere_2) :
+        QuasistaticObject(timestep, mass, inertia, manipulator_shapes, gravity=gravity, name=:sphere_2)
     floor_shape = HalfspaceShape([0.0, 1.0])
 
     if num_sphere == 1
         bodies = [box, sphere_1]
-        contacts = [
-            PolySphere(bodies[1], bodies[2],
-                friction_coefficient=friction_coefficient,
-                name=:box_sphere),
-            PolyHalfSpace(bodies[1], floor_shape,
+        sphere_contacts = [PolySphere(bodies[1], bodies[2],
+            parent_shape_id=i,
+            friction_coefficient=friction_coefficient,
+            name=Symbol(:box_sphere_, i)) for i=1:N]
+        floor_contacts = [PolyHalfSpace(bodies[1], floor_shape,
+            parent_shape_id=i,
+            friction_coefficient=friction_coefficient/3,
+            name=Symbol(:box_floor_, i)) for i=1:N]
+        contacts = [SphereHalfSpace(bodies[2], floor_shape,
                 friction_coefficient=friction_coefficient/3,
-                name=:halfspace_box),
-            SphereHalfSpace(bodies[2], floor_shape,
-                friction_coefficient=friction_coefficient/3,
-                name=:halfspace_sphere),
-            ]
+                name=:halfspace_sphere); sphere_contacts; floor_contacts]
     else
         bodies = [box, sphere_1, sphere_2]
+        sphere_1_contacts = [PolySphere(bodies[1], bodies[2],
+            parent_shape_id=i,
+            friction_coefficient=friction_coefficient,
+            name=Symbol(:box_sphere_1_, i)) for i=1:N]
+        sphere_2_contacts = [PolySphere(bodies[1], bodies[3],
+            parent_shape_id=i,
+            friction_coefficient=friction_coefficient,
+            name=Symbol(:box_sphere_2_, i)) for i=1:N]
+        floor_contacts = [PolyHalfSpace(bodies[1], floor_shape,
+            parent_shape_id=i,
+            friction_coefficient=friction_coefficient/3,
+            name=Symbol(:box_floor_, i)) for i=1:N]
         contacts = [
-            PolySphere(bodies[1], bodies[2],
-                friction_coefficient=friction_coefficient,
-                name=:box_sphere_1),
-            PolySphere(bodies[1], bodies[3],
-                friction_coefficient=friction_coefficient,
-                name=:box_sphere_2),
-            PolyHalfSpace(bodies[1], floor_shape,
-                friction_coefficient=friction_coefficient/3,
-                name=:halfspace_box),
             SphereHalfSpace(bodies[2], floor_shape,
                 friction_coefficient=friction_coefficient/3,
-                name=:halfspace_sphere_1),
+                name=:halfspace_sphere_1);
             SphereHalfSpace(bodies[3], floor_shape,
                 friction_coefficient=friction_coefficient/3,
-                name=:halfspace_sphere_2),
+                name=:halfspace_sphere_2);
+            sphere_1_contacts;
+            sphere_2_contacts;
+            floor_contacts;
             ]
     end
 
