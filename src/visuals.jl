@@ -55,6 +55,48 @@ function build_shape!(vis::Visualizer, shape::CapsuleShape{T,Ng,D};
     return nothing
 end
 
+
+function build_shape!(vis::Visualizer, shape::PaddedPolytopeShape110{T,Ng,D};
+        collider_color=RGBA(0.2, 0.2, 0.2, 0.8),
+        ) where {T,Ng,D}
+
+    radius = shape.radius[1]
+    A = shape.A
+    b = shape.b
+    o = shape.o
+
+    @assert D == 2
+    build_2d_polytope!(vis, A, b + A * o, color=collider_color, thickness=2radius)
+    h = RobotVisualizer.Polyhedra.hrep(A, b + A * o)
+    p = RobotVisualizer.Polyhedra.polyhedron(h)
+    v = RobotVisualizer.Polyhedra.vrep(p)
+    nv = size(v.V, 1)
+    edges = Vector{Vector{Int}}()
+    for i = 1:nv
+        vi =  v.V[i,:]
+        for j = i+1:nv
+            vj = v.V[j,:]
+            c = 0.5 * h.A * (vi+vj) - h.b
+            (maximum(c) > -1e-5) && push!(edges, [i,j])
+        end
+    end
+
+    material = MeshPhongMaterial(color=collider_color)
+    for edge in edges
+        vi = v.V[edge[1],:]
+        vj = v.V[edge[2],:]
+        cylinder = MeshCat.Cylinder(GeometryBasics.Point(0, vi...), GeometryBasics.Point(0, vj...), radius)
+        sphere = MeshCat.HyperSphere(GeometryBasics.Point(0, vi...), radius)
+        setobject!(vis[Symbol(:cylinder_, edge[1], :_, edge[2])], cylinder, material)
+    end
+    for i = 1:nv
+        vi = v.V[i,:]
+        sphere = MeshCat.HyperSphere(GeometryBasics.Point(0, vi...), radius)
+        setobject!(vis[Symbol(:sphere_, i)], sphere, material)
+    end
+    return nothing
+end
+
 function build_contact_shape!(vis::Visualizer, shape::Shape; collider_color=nothing)
 end
 
@@ -157,10 +199,12 @@ function visualize!(vis::Visualizer, mechanism::Mechanism, storage::TraceStorage
         build::Bool=true,
         show_contact::Bool=true,
         color=RGBA(0.2, 0.2, 0.2, 0.8),
+        env_color=RGBA(0.5, 0.5, 0.5, 1.0),
         name::Symbol=:robot,
         animation=MeshCat.Animation(Int(floor(1/mechanism.bodies[1].timestep[1])))) where {T,H}
 
-    build && build_mechanism!(vis, mechanism, show_contact=show_contact, color=color, name=name)
+    build && build_mechanism!(vis, mechanism, show_contact=show_contact,
+        color=color, env_color=env_color, name=name)
     for i = 1:H
         atframe(animation, i) do
             set_mechanism!(vis, mechanism, storage, i, show_contact=show_contact, name=name)
@@ -172,11 +216,15 @@ end
 
 function visualize!(vis::Visualizer, mechanism::Mechanism, z;
         build::Bool=true,
+        show_contact::Bool=true,
+        color=RGBA(0.2, 0.2, 0.2, 0.8),
+        env_color=RGBA(0.5, 0.5, 0.5, 1.0),
         name::Symbol=:robot,
         animation=MeshCat.Animation(Int(floor(1/mechanism.bodies[1].timestep[1])))) where {T}
 
     H = length(z)
-    build && build_mechanism!(vis, mechanism, show_contact=false, name=name)
+    build && build_mechanism!(vis, mechanism, show_contact=show_contact,
+        color=color, env_color=env_color, name=name)
     for i = 1:H
         atframe(animation, i) do
             set_mechanism!(vis, mechanism, z[i], name=name)
@@ -242,5 +290,22 @@ function build_frame!(vis::Visualizer;
     setobject!(vis[name][:origin],
         HyperSphere(GeometryBasics.Point(0,0,0.), origin_radius),
         MeshPhongMaterial(color=origin_color));
+    return nothing
+end
+
+
+
+function RobotVisualizer.build_2d_polytope!(vis::Visualizer, A::Matrix{T}, b::Vector{T};
+        name::Symbol=:polytope,
+        thickness=0.10,
+        color=RGBA(0.8, 0.8, 0.8, 1.0)) where T
+
+    n = size(A)[1]
+    Ae = [zeros(n) A]
+    Ae = [Ae;
+         -1 0 0;
+          1 0 0]
+    be = [b; thickness/2; thickness/2]
+    build_polytope!(vis, Ae, be, name=name, color=color)
     return nothing
 end

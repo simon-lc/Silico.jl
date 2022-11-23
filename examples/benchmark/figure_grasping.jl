@@ -8,9 +8,9 @@ using MeshCatMechanisms
 using RigidBodyDynamics
 
 
-include("rrt_methods.jl")
-include("grasper_visuals.jl")
-include("panda_visuals.jl")
+include("../methods/rrt_methods.jl")
+include("../methods/grasper_visuals.jl")
+include("../methods/panda_visuals.jl")
 
 ################################################################################
 # visualization

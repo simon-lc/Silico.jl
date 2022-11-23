@@ -185,8 +185,10 @@ function CapsuleShape(radius::T, segment::T, position_offset=zeros(T,2)) where T
     return CapsuleShape{T,1,D}([radius], [segment], position_offset)
 end
 
-primal_dimension(shape::CapsuleShape) = 1
-cone_dimension(shape::CapsuleShape) = 3
+# primal_dimension(shape::CapsuleShape) = 1
+primal_dimension(shape::CapsuleShape) = 2
+# cone_dimension(shape::CapsuleShape) = 3
+cone_dimension(shape::CapsuleShape) = 5
 parameter_dimension(shape::CapsuleShape{T,Ng,D}) where {T,Ng,D} = 1 + 1 + D
 get_parameters(shape::CapsuleShape) = [shape.radius; shape.segment; shape.position_offset]
 
@@ -210,51 +212,181 @@ function constraint(shape::CapsuleShape{T}, p, α, β) where {T}
     r = shape.radius[1]
     l = shape.segment[1]
     o = shape.position_offset
+    A = [1 0; -1 0; 0 1; 0 -1]
+    b = [l/2, l/2, 1e-1, 1e-1]
     return [
-        - (p - o - β .* [1,0])' * (p - o - β .* [1,0]) + α[1]^2 * r^2;
-        -β .+ α * l/2;
-        +β .+ α * l/2;
+        # - (p - o - β .* [1,0])' * (p - o - β .* [1,0]) + α[1] * r^2;
+        # -β .+ α * l/2;
+        # +β .+ α * l/2;
+        - A * (p - o - β) + α[1] .* b;
+        - β' * β + α[1] * r^2;
         ]
 end
 
 function constraint_jacobian_α(shape::CapsuleShape, p, α, β)
     r = shape.radius[1]
     l = shape.segment[1]
+    b = [l/2, l/2, 0.0, 0.0]
     return [
-        2 * α[1] * r^2
-        +l/2
-        +l/2;;
+        # r^2
+        # +l/2
+        # +l/2;;
+        b;
+        r^2;;
     ]
 end
 
 function constraint_jacobian_p(shape::CapsuleShape, p, α, β)
-    o = shape.position_offset
+    # o = shape.position_offset
+    A = [1 0; -1 0; 0 1; 0 -1]
     return [
-        - 2 * (p - o - β .* [1,0])'
-        zeros(1,2)
+        # - 2 * (p - o - β .* [1,0])'
+        # zeros(1,2)
+        # zeros(1,2)
+        - A
         zeros(1,2)
     ]
 end
 
 function constraint_jacobian_o(shape::CapsuleShape, p, α, β)
-    o = shape.position_offset
+    # o = shape.position_offset
+    A = [1 0; -1 0; 0 1; 0 -1]
     return [
-        2 * (p - o - β .* [1,0])'
-        zeros(1,2)
+        # 2 * (p - o - β .* [1,0])'
+        # zeros(1,2)
+        # zeros(1,2)
+        + A
         zeros(1,2)
     ]
 end
 
 function constraint_jacobian_β(shape::CapsuleShape, p, α, β)
-    r = shape.radius[1]
-    l = shape.segment[1]
-    o = shape.position_offset
+    # r = shape.radius[1]
+    # l = shape.segment[1]
+    # o = shape.position_offset
+    A = [1 0; -1 0; 0 1; 0 -1]
     return [
-        2 * (p[1] - o[1] - β[1])
-        -1
-        +1;;
+        # 2 * (p[1] - o[1] - β[1])
+        # -1
+        # +1;;
+        + A;
+        - 2 * β';
         ]
 end
+
+
+
+################################################################################
+# padded polytope shape
+################################################################################
+struct PaddedPolytopeShape110{T,Ng,D} <: Shape{T,Ng,D}
+    radius::Vector{T}
+    A::Matrix{T}
+    b::Vector{T}
+    o::Vector{T}
+end
+
+function PaddedPolytopeShape110(radius::T, A, b::Vector{T}, o=zeros(T,size(A,2))) where T
+    Ng = length(b)
+    D = size(A, 2)
+    return PaddedPolytopeShape110{T,Ng,D}([radius], A, b, o)
+end
+
+primal_dimension(shape::PaddedPolytopeShape110) = 2
+cone_dimension(shape::PaddedPolytopeShape110{T,Ng}) where {T,Ng} = Ng + 1
+parameter_dimension(shape::PaddedPolytopeShape110{T,Ng,D}) where {T,Ng,D} = 1 + Ng + D * (Ng + 1)
+get_parameters(shape::PaddedPolytopeShape110) = [shape.radius; vec(shape.A); shape.b; shape.o]
+
+function set_parameters!(shape::PaddedPolytopeShape110{T,Ng,D}, parameters) where {T,Ng,D}
+    off = 0
+    shape.radius .= parameters[off .+ (1:1)]; off += 1
+    shape.A .= reshape(parameters[off .+ (1:D*Ng)], (Ng,D)); off += D*Ng
+    shape.b .= parameters[off .+ (1:Ng)]; off += Ng
+    shape.o .= parameters[off .+ (1:D)]; off += D
+    return nothing
+end
+
+function unpack_parameters(shape::PaddedPolytopeShape110{T,Ng,D}, parameters) where {T,Ng,D}
+    off = 0
+    radius = parameters[off .+ (1:1)]; off += 1
+    A = reshape(parameters[off .+ (1:D*Ng)], (Ng,D)); off += D*Ng
+    b = parameters[off .+ (1:Ng)]; off += Ng
+    o = parameters[off .+ (1:D)]; off += D
+    return radius, A, b, o
+end
+
+function constraint(shape::PaddedPolytopeShape110, p, α, β)
+    r = shape.radius[1]
+    A = shape.A
+    b = shape.b
+    o = shape.o
+    return [
+        - A * (p - o - β) + α[1] .* b;
+        - β' * β + α[1] * r^2;
+        ]
+end
+
+function constraint_jacobian_α(shape::PaddedPolytopeShape110, p, α, β)
+    r = shape.radius[1]
+    b = shape.b
+    return [
+        b;
+        r^2;;
+        ]
+end
+
+function constraint_jacobian_p(shape::PaddedPolytopeShape110, p, α, β)
+    A = shape.A
+    return [
+        - A
+        zeros(1,2)
+        ]
+end
+
+function constraint_jacobian_o(shape::PaddedPolytopeShape110, p, α, β)
+    A = shape.A
+    return [
+        + A
+        zeros(1,2)
+        ]
+end
+
+function constraint_jacobian_β(shape::PaddedPolytopeShape110, p, α, β)
+    A = shape.A
+    return [
+        + A;
+        - 2 * β';
+        ]
+end
+
+# radius = 0.1
+# A = [1 0; -1 0; 0 1; 0 -1.0]
+# b = [1, 1, 1, 1.0]
+# o = [0, 0.0]
+# shape = PaddedPolytopeShape110(radius, A, b, o)
+#
+# p = [1,1.0]
+# α = [1.0]
+# β = [1, 2.0]
+#
+# constraint(shape, p, α, β)
+# J1 = constraint_jacobian_α(shape, p, α, β)
+# J0 = Mehrotra.FiniteDiff.finite_difference_jacobian(α -> constraint(shape, p, α, β), α)
+# norm(J0 - J1)
+#
+# J1 = constraint_jacobian_p(shape, p, α, β)
+# J0 = Mehrotra.FiniteDiff.finite_difference_jacobian(p -> constraint(shape, p, α, β), p)
+# norm(J0 - J1)
+#
+# J1 = constraint_jacobian_o(shape, p, α, β)
+# # J0 = Mehrotra.FiniteDiff.finite_difference_jacobian(o -> constraint(shape, p, α, β), o)
+# norm(J0 - J1)
+#
+# J1 = constraint_jacobian_β(shape, p, α, β)
+# J0 = Mehrotra.FiniteDiff.finite_difference_jacobian(β -> constraint(shape, p, α, β), β)
+# norm(J0 - J1)
+#
+#
 #
 # p = [1,1.0]
 # α = [1.0]
