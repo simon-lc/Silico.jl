@@ -80,5 +80,54 @@ set_camera!(vis, zoom=10.0, cam_pos=[-33, 0, 0])
 ################################################################################
 # union and minkowski
 ################################################################################
+vis = Visualizer()
+open(vis)
+set_floor!(vis, origin=[0,0,-100])
+set_light!(vis, ambient=1.22)
+set_background!(vis)
+set_camera!(vis, zoom=10.0, cam_pos=[-33, 0, 0])
+
+minkowski_radius = 0.3
+union_radius = 0.15
+segment = 4.0
 A = [[0 1; +2.5 -1; -2.5 -1], [5 1; -5 1; 1 5; 1 -5.0]]
+normalize_A!.(A)
 b = [0.3 * ones(3), 0.3 * ones(4)]
+
+minkowski_sphere = SphereShape(minkowski_radius, [-0,0.0])
+minkowski_polytope = PolytopeShape(A[2], b[2] + A[2] * [+1.2, 0])
+minkowski_sum = PaddedPolytopeShape110(minkowski_radius, A[2], b[2] + A[2] * [-1.5, 0])
+
+scale = 3
+union_capsule = CapsuleShape(union_radius/scale, segment/scale)
+union_polytope = PolytopeShape(A[1], b[1]/scale)
+
+build_shape!(vis[:minkowski_sphere], minkowski_sphere, collider_color=turquoise)
+build_shape!(vis[:minkowski_polytope], minkowski_polytope, collider_color=turquoise)
+build_shape!(vis[:minkowski_sum], minkowski_sum, collider_color=turquoise)
+
+build_shape!(vis[:union_capsule], union_capsule, collider_color=green)
+build_shape!(vis[:union_polytope], union_polytope, collider_color=green)
+build_shape!(vis[:union][:capsule], union_capsule, collider_color=green)
+build_shape!(vis[:union][:polytope], union_polytope, collider_color=green)
+q = RotX(-0.30π)
+settransform!(vis[:union_capsule], MeshCat.compose(
+    MeshCat.Translation(SVector{3}([0,+1.4,0])),
+    MeshCat.LinearMap(rotationmatrix(q)),
+    )
+)
+settransform!(vis[:union_polytope], MeshCat.compose(
+    MeshCat.Translation(SVector{3}([0,+0,0])),
+    MeshCat.LinearMap(rotationmatrix(q)),
+    )
+)
+settransform!(vis[:union][:capsule], MeshCat.compose(
+    MeshCat.Translation(SVector{3}([0,-1.6,0])),
+    MeshCat.LinearMap(rotationmatrix(q)),
+    )
+)
+settransform!(vis[:union][:polytope], MeshCat.compose(
+    MeshCat.Translation(SVector{3}([0,-1.6,0])),
+    MeshCat.LinearMap(rotationmatrix(q)),
+    )
+)

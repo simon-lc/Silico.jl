@@ -234,78 +234,78 @@ function visualize!(vis::Visualizer, mechanism::Mechanism, z;
     return vis, animation
 end
 
-function set_frame!(vis::Visualizer, origin, normal, tangent_x, tangent_y;
-        name::Symbol=:contact,
-        normalize::Bool=true,
-        axis_length=0.15)
-    dimension = length(origin)
-    if dimension == 2
-        origin = [0; origin]
-        tangent_x = [1; tangent_x]
-        tangent_y = [0; tangent_y]
-        normal = [0; normal]
-    end
-    if normalize
-        tangent_x = axis_length .* tangent_x ./ (norm(tangent_x) + 1e-10)
-        tangent_y = axis_length .* tangent_y ./ (norm(tangent_y) + 1e-10)
-        normal = axis_length .* normal ./ (norm(normal) + 1e-10)
-    end
+# function set_frame!(vis::Visualizer, origin, normal, tangent_x, tangent_y;
+#         name::Symbol=:contact,
+#         normalize::Bool=true,
+#         axis_length=0.15)
+#     dimension = length(origin)
+#     if dimension == 2
+#         origin = [0; origin]
+#         tangent_x = [1; tangent_x]
+#         tangent_y = [0; tangent_y]
+#         normal = [0; normal]
+#     end
+#     if normalize
+#         tangent_x = axis_length .* tangent_x ./ (norm(tangent_x) + 1e-10)
+#         tangent_y = axis_length .* tangent_y ./ (norm(tangent_y) + 1e-10)
+#         normal = axis_length .* normal ./ (norm(normal) + 1e-10)
+#     end
+#
+#     settransform!(vis[name][:origin],
+#         MeshCat.Translation(MeshCat.SVector{3}(origin...)))
+#     set_segment!(vis[name], origin, origin+tangent_x; name=:tangent_x)
+#     set_segment!(vis[name], origin, origin+tangent_y; name=:tangent_y)
+#     set_segment!(vis[name], origin, origin+normal; name=:normal)
+#     return nothing
+# end
+#
+# function build_frame!(vis::Visualizer;
+#     dimension::Int=3,
+#     name::Symbol=:contact,
+#     origin_color=RGBA(0.2, 0.2, 0.2, 0.8),
+#     tangent_x_axis_color=RGBA(1, 0, 0, 0.8),
+#     tangent_y_axis_color=RGBA(0, 1, 0, 0.8),
+#     normal_axis_color=RGBA(0, 0, 1, 0.8),
+#     origin_radius=0.025,
+#     ) where T
+#
+#     # axes
+#     if dimension == 3
+#         build_segment!(vis[name];
+#             color=tangent_x_axis_color,
+#             segment_radius=origin_radius/2,
+#             name=:tangent_x)
+#     end
+#     build_segment!(vis[name];
+#         color=tangent_y_axis_color,
+#         segment_radius=origin_radius/2,
+#         name=:tangent_y)
+#
+#     build_segment!(vis[name];
+#         color=normal_axis_color,
+#         segment_radius=origin_radius/2,
+#         name=:normal)
+#
+#     # origin
+#     setobject!(vis[name][:origin],
+#         HyperSphere(GeometryBasics.Point(0,0,0.), origin_radius),
+#         MeshPhongMaterial(color=origin_color));
+#     return nothing
+# end
 
-    settransform!(vis[name][:origin],
-        MeshCat.Translation(MeshCat.SVector{3}(origin...)))
-    set_segment!(vis[name], origin, origin+tangent_x; name=:tangent_x)
-    set_segment!(vis[name], origin, origin+tangent_y; name=:tangent_y)
-    set_segment!(vis[name], origin, origin+normal; name=:normal)
-    return nothing
-end
-
-function build_frame!(vis::Visualizer;
-    dimension::Int=3,
-    name::Symbol=:contact,
-    origin_color=RGBA(0.2, 0.2, 0.2, 0.8),
-    tangent_x_axis_color=RGBA(1, 0, 0, 0.8),
-    tangent_y_axis_color=RGBA(0, 1, 0, 0.8),
-    normal_axis_color=RGBA(0, 0, 1, 0.8),
-    origin_radius=0.025,
-    ) where T
-
-    # axes
-    if dimension == 3
-        build_segment!(vis[name];
-            color=tangent_x_axis_color,
-            segment_radius=origin_radius/2,
-            name=:tangent_x)
-    end
-    build_segment!(vis[name];
-        color=tangent_y_axis_color,
-        segment_radius=origin_radius/2,
-        name=:tangent_y)
-
-    build_segment!(vis[name];
-        color=normal_axis_color,
-        segment_radius=origin_radius/2,
-        name=:normal)
-
-    # origin
-    setobject!(vis[name][:origin],
-        HyperSphere(GeometryBasics.Point(0,0,0.), origin_radius),
-        MeshPhongMaterial(color=origin_color));
-    return nothing
-end
 
 
-
-function RobotVisualizer.build_2d_polytope!(vis::Visualizer, A::Matrix{T}, b::Vector{T};
-        name::Symbol=:polytope,
-        thickness=0.10,
-        color=RGBA(0.8, 0.8, 0.8, 1.0)) where T
-
-    n = size(A)[1]
-    Ae = [zeros(n) A]
-    Ae = [Ae;
-         -1 0 0;
-          1 0 0]
-    be = [b; thickness/2; thickness/2]
-    build_polytope!(vis, Ae, be, name=name, color=color)
-    return nothing
-end
+# function RobotVisualizer.build_2d_polytope!(vis::Visualizer, A::Matrix{T}, b::Vector{T};
+#         name::Symbol=:polytope,
+#         thickness=0.10,
+#         color=RGBA(0.8, 0.8, 0.8, 1.0)) where T
+#
+#     n = size(A)[1]
+#     Ae = [zeros(n) A]
+#     Ae = [Ae;
+#          -1 0 0;
+#           1 0 0]
+#     be = [b; thickness/2; thickness/2]
+#     build_polytope!(vis, Ae, be, name=name, color=color)
+#     return nothing
+# end
