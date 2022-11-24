@@ -120,7 +120,7 @@ function contact_normal(contact::SphereSphere{T,D}, mechanism::Mechanism) where 
 
     # unpack parameters
     friction_coefficient, radp, offp, radc, offc =
-        unpack_parameters(parameters[contact.index.parameters], contact)
+        split_parameters(parameters[contact.index.parameters], contact)
 
     if D == 2
         # contact normal and tangent in the world frame

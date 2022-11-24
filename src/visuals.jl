@@ -158,7 +158,7 @@ function build_mechanism!(vis::Visualizer, mechanism::Mechanism;
     end
     if show_contact
         for contact in mechanism.contacts
-            build_frame!(vis[name][:contacts], dimension=space_dimension(contact), name=contact.name)
+            RobotVisualizer.build_frame!(vis[name][:contacts], dimension=space_dimension(contact), name=contact.name)
         end
     end
     for contact in mechanism.contacts
@@ -180,7 +180,7 @@ function set_mechanism!(vis::Visualizer, mechanism::Mechanism, storage::TraceSto
             normal = storage.normal[ii][j]
             tangent_x = storage.tangent_x[ii][j]
             tangent_y = storage.tangent_y[ii][j]
-            set_frame!(vis[name][:contacts], origin, normal, tangent_x, tangent_y, name=contact.name, normalize=true)
+            RobotVisualizer.set_frame!(vis[name][:contacts], origin, normal, tangent_x, tangent_y, name=contact.name, normalize=true)
         end
     end
     return nothing
