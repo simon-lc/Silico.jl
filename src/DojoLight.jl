@@ -10,7 +10,6 @@ using RobotVisualizer
 using StaticArrays
 using Colors
 
-include("solve.jl")
 
 include("rotate.jl")
 include("quaternion.jl")
@@ -43,12 +42,20 @@ include("visuals.jl")
 include("utils.jl")
 # include("visuals_opengl.jl")
 
+include("../environment/3d_polytope_collision.jl")
+include("../environment/3d_polytope_drop.jl")
+include("../environment/3d_sphere_collision.jl")
+include("../environment/3d_sphere_drop.jl")
+include("../environment/bilevel_polytope_collision.jl")
 include("../environment/bundle_collision.jl")
 include("../environment/bundle_drop.jl")
-include("../environment/polytope_drop.jl")
+include("../environment/capsule_collision.jl")
+include("../environment/diverse_collision.jl")
+include("../environment/padded_polytope_drop.jl")
 include("../environment/polytope_collision.jl")
+include("../environment/polytope_drop.jl")
+include("../environment/polytope_grasper.jl")
 include("../environment/polytope_insertion.jl")
-include("../environment/bilevel_polytope_collision.jl")
 include("../environment/quasistatic_manipulation.jl")
 include("../environment/quasistatic_sphere_box.jl")
 include("../environment/quasistatic_sphere_bundle.jl")
@@ -56,15 +63,12 @@ include("../environment/quasistatic_sphere_drop.jl")
 include("../environment/sphere_bundle.jl")
 include("../environment/sphere_collision.jl")
 include("../environment/sphere_drop.jl")
-include("../environment/3d_sphere_collision.jl")
-include("../environment/3d_sphere_drop.jl")
-include("../environment/3d_polytope_drop.jl")
 
 export
     Mechanism
 end
 
 
-# using Pkg
+using Pkg
 # Pkg.add(path="/home/simon/.julia/dev/DirectTrajectoryOptimization.jl")
-# Pkg.add(path="/home/simon/.julia/dev/Mehrotra.jl")
+Pkg.add(path="/home/simon/.julia/dev/Mehrotra.jl")
