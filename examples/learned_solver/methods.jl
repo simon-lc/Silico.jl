@@ -37,6 +37,7 @@ function extract_feature_label(mechanism, storage::TraceStorage{T,H}, i) where {
 
     idx_duals = indices.duals
     idx_slacks = indices.slacks
+    idx_equality = indices.equality
 
     previous_variables = storage.variables[i-1]
     variables = storage.variables[i]
@@ -44,34 +45,40 @@ function extract_feature_label(mechanism, storage::TraceStorage{T,H}, i) where {
     parameters = storage.parameters[i]
     solution.all .= previous_variables
 
+    # compute the residual of the previous solution under the current parameters
     Mehrotra.evaluate!(problem, methods, cone_methods, solution, parameters,
         equality_constraint=true,
-        equality_jacobian_variables=false,
+        equality_jacobian_variables=true,
         equality_jacobian_parameters=true,
-        cone_constraint=false,
+        cone_constraint=true,
         cone_jacobian=false,
-        sparse_solver=false,
-        compressed=true)
+        compressed=false,
+        sparse_solver=false)
     Mehrotra.residual!(data, problem, indices,
         residual=true,
         jacobian_variables=true,
-        compressed=true,
+        jacobian_parameters=true,
+        compressed=false,
         sparse_solver=false)
 
-    previous_residual = deepcopy(data.residual.all)
+    unoptimized_residual = deepcopy(data.residual.all)
     # previous_jacobian = vec(deepcopy(data.jacobian_variables_compressed_dense))
     # previous_log_variables = log.(10, previous_variables[[idx_duals; idx_slacks]])
     previous_active_set = previous_variables[idx_duals] .>= previous_variables[idx_slacks]
     active_set = variables[idx_duals] .>= variables[idx_slacks]
     δ_parameters = parameters - previous_parameters
-    # dd = data.jacobian_parameters * δ_parameters
+    δ_residual = data.jacobian_parameters * δ_parameters
+    # @show round.(δ_residual, digits=2)
+    # @show data.jacobian_parameters
+    # @show round.(δ_parameters, digits=4)
+    # @show round.(δ_residual, digits=4)
 
     xi = [previous_active_set;
         # previous_log_variables;
         # previous_jacobian;
-        # dd;
         previous_variables;
-        previous_residual;
+        unoptimized_residual[idx_equality]; # the idx_complementarity always = 0
+        δ_residual[idx_equality]; # the idx_complementarity always = 0
         δ_parameters]
     yi = active_set
     return xi, yi

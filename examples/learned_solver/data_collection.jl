@@ -1,6 +1,14 @@
-using JLD2
+using Plots
 using Statistics
 using Random
+using JLD2
+using CUDA
+using Flux
+using BSON
+using BenchmarkTools
+CUDA.functional()
+
+include("methods.jl")
 
 ################################################################################
 # visualization
@@ -32,8 +40,8 @@ mech = get_polytope_drop(;
         verbose=false,
         complementarity_tolerance=1e-4,
         residual_tolerance=1e-5,
-        compressed_search_direction=true,
-        # compressed_search_direction=false,
+        # compressed_search_direction=true,
+        compressed_search_direction=false,
         sparse_solver=false,
         warm_start=false,
         complementarity_backstep=1e-1,
@@ -70,7 +78,7 @@ H_train = 250000 + 1
     controller=data_collection_controller)
 # visualize!(vis, mech, storage_train, build=false)
 
-H_val = 1000 + 1
+H_val = 100 + 1
 @elapsed storage_val = simulate!(mech, deepcopy(z0), H_val,
     controller=data_collection_controller)
 visualize!(vis, mech, storage_val, build=true)
@@ -95,7 +103,7 @@ x_train = (x_train_raw .- μ) ./ (1e-5 .+ σ)
 x_val = (x_val_raw .- μ) ./ (1e-5 .+ σ)
 x_test = (x_test_raw .- μ) ./ (1e-5 .+ σ)
 
-save_dataset(x_train, y_train, x_val, y_val, x_test, y_test, μ, σ, name="dataset0")
+save_dataset(x_train, y_train, x_val, y_val, x_test, y_test, μ, σ, name="dataset1")
 
 
 # plot(x_train[:,1:100], legend=false)

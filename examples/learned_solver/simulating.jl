@@ -1,6 +1,6 @@
-using Plots
+# using Plots
 using Statistics
-using Flux
+using Random
 using JLD2
 using CUDA
 using Flux
@@ -38,16 +38,14 @@ mech = get_polytope_drop(;
     # method_type=:finite_difference,
     options=Mehrotra.Options(
         verbose=false,
-        complementarity_tolerance=1e-6,
-        residual_tolerance=1e-7,
-        compressed_search_direction=false,
-        # compressed_search_direction=false,
+        complementarity_tolerance=1e-4,
+        residual_tolerance=1e-5,
+        compressed_search_direction=true,
         sparse_solver=false,
         warm_start=false,
         complementarity_backstep=1e-1,
         )
     )
-
 
 xp2 = [+0.0,1.5,-0.25]
 vp15 = [-0,0,-0.0]
@@ -56,22 +54,23 @@ z0 = [xp2; vp15]
 H_ood = 5000 + 1
 @elapsed storage_ood = simulate!(mech, deepcopy(z0), H_ood,
     controller=data_collection_controller)
-visualize!(vis, mech, storage_ood, build=true)
+# visualize!(vis, mech, storage_ood, build=true)
 
 x_ood_raw, y_ood = extract_feature_label(mech, storage_ood)
-x_train, y_train, x_val, y_val, x_test, y_test, μ, σ = load_dataset(; name="dataset0")
+x_train, y_train, x_val, y_val, x_test, y_test, μ, σ = load_dataset(; name="dataset1")
 x_ood = (x_ood_raw .- μ) ./ (1e-5 .+ σ)
 
 
 ################################################################################
 # test learned model
 ################################################################################
-cpu_model = load_model(name="model0")
+cpu_model = load_model(name="model1")
 
-error_distribution(x_train, y_train, m=cpu_model) / size(x_train, 2)
-error_distribution(x_val, y_val, m=cpu_model) / size(x_val, 2)
-error_distribution(x_test, y_test, m=cpu_model) / size(x_test, 2)
-error_distribution(x_ood, y_ood, m=cpu_model) / size(x_ood, 2)
+error_train = error_distribution(x_train, y_train, m=cpu_model) / size(x_train, 2)
+error_val = error_distribution(x_val, y_val, m=cpu_model) / size(x_val, 2)
+error_test = error_distribution(x_test, y_test, m=cpu_model) / size(x_test, 2)
+error_ood = error_distribution(x_ood, y_ood, m=cpu_model) / size(x_ood, 2)
+error_ood = error_distribution(x_ood_raw, y_ood, m=cpu_model) / size(x_ood, 2)
 
 
 ################################################################################

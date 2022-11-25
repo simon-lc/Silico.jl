@@ -1,11 +1,11 @@
 using Plots
 using Statistics
-using Flux
+using Random
 using JLD2
 using CUDA
 using Flux
-using Flux
 using BSON
+using BenchmarkTools
 CUDA.functional()
 
 include("methods.jl")
@@ -14,7 +14,7 @@ include("methods.jl")
 # load data
 ################################################################################
 batch_size = 500
-x_train, y_train, x_val, y_val, x_test, y_test, μ, σ = load_dataset(; name="dataset0")
+x_train, y_train, x_val, y_val, x_test, y_test, μ, σ = load_dataset(; name="dataset1")
 n_input = size(x_train, 1)
 
 train_loader = Flux.DataLoader((x_train, y_train), batchsize=batch_size, shuffle=true)
@@ -64,8 +64,8 @@ train_model!(train_loader, loss, parameters, optimizer, n_epoch;
     print_epoch=5)
 
 
-save_model(model, name="model0")
-loaded_cpu_model = load_model(name="model0")
+save_model(model, name="model1")
+loaded_cpu_model = load_model(name="model1")
 
 
 ################################################################################
@@ -94,6 +94,7 @@ error_distribution(x_train, y_train, m=baseline_model)[1] / size(x_train,2)
 error_distribution(x_val, y_val, m=baseline_model)[1] / size(x_val,2)
 error_distribution(x_test, y_test, m=baseline_model)[1] / size(x_test,2)
 
+error_distribution(x_test,  y_test, m=baseline_model)
 error_distribution(x_test,  y_test, m=model)
 binary_projection(x_train, y_train, 0.05, m=model)
 

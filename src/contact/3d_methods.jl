@@ -43,13 +43,13 @@ function Rmat(q)
     ]
 end
 
-function Vmat()
-    [
-        0 1 0 0.0;
-        0 0 1 0.0;
-        0 0 0 1.0;
-    ]
-end
+# function Vmat()
+#     [
+#         0 1 0 0.0;
+#         0 0 1 0.0;
+#         0 0 0 1.0;
+#     ]
+# end
 
 vector_rotate(q, x) = Vmat() * Lmat(q) * Rmat(q)' * Vmat()' * x
 
