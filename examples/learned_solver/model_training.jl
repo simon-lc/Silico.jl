@@ -14,7 +14,7 @@ include("methods.jl")
 # load data
 ################################################################################
 batch_size = 500
-x_train, y_train, x_val, y_val, x_test, y_test, μ, σ = load_dataset(; name="dataset1")
+x_train, y_train, x_val, y_val, x_test, y_test, μ, σ = load_dataset(; name="dataset2")
 n_input = size(x_train, 1)
 
 train_loader = Flux.DataLoader((x_train, y_train), batchsize=batch_size, shuffle=true)
@@ -64,8 +64,8 @@ train_model!(train_loader, loss, parameters, optimizer, n_epoch;
     print_epoch=5)
 
 
-save_model(model, name="model1")
-loaded_cpu_model = load_model(name="model1")
+save_model(model, name="model2")
+loaded_cpu_model = load_model(name="model2")
 
 
 ################################################################################

@@ -40,7 +40,7 @@ mech = get_polytope_drop(;
         verbose=false,
         complementarity_tolerance=1e-4,
         residual_tolerance=1e-5,
-        compressed_search_direction=true,
+        compressed_search_direction=false,
         sparse_solver=false,
         warm_start=false,
         complementarity_backstep=1e-1,
@@ -54,23 +54,26 @@ z0 = [xp2; vp15]
 H_ood = 5000 + 1
 @elapsed storage_ood = simulate!(mech, deepcopy(z0), H_ood,
     controller=data_collection_controller)
-# visualize!(vis, mech, storage_ood, build=true)
+visualize!(vis, mech, storage_ood, build=true)
 
 x_ood_raw, y_ood = extract_feature_label(mech, storage_ood)
-x_train, y_train, x_val, y_val, x_test, y_test, μ, σ = load_dataset(; name="dataset1")
+x_train, y_train, x_val, y_val, x_test, y_test, μ, σ = load_dataset(; name="dataset2")
 x_ood = (x_ood_raw .- μ) ./ (1e-5 .+ σ)
-
+@show norm(x_ood_raw)
+@show norm(x_ood)
+@show norm(μ)
+@show norm(σ)
 
 ################################################################################
 # test learned model
 ################################################################################
-cpu_model = load_model(name="model1")
+cpu_model = load_model(name="model2")
 
 error_train = error_distribution(x_train, y_train, m=cpu_model) / size(x_train, 2)
 error_val = error_distribution(x_val, y_val, m=cpu_model) / size(x_val, 2)
 error_test = error_distribution(x_test, y_test, m=cpu_model) / size(x_test, 2)
 error_ood = error_distribution(x_ood, y_ood, m=cpu_model) / size(x_ood, 2)
-error_ood = error_distribution(x_ood_raw, y_ood, m=cpu_model) / size(x_ood, 2)
+# error_ood = error_distribution(x_ood, y_ood, m=baseline_model) / size(x_ood, 2)
 
 
 ################################################################################

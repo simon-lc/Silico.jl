@@ -40,14 +40,12 @@ mech = get_polytope_drop(;
         verbose=false,
         complementarity_tolerance=1e-4,
         residual_tolerance=1e-5,
-        # compressed_search_direction=true,
         compressed_search_direction=false,
         sparse_solver=false,
         warm_start=false,
         complementarity_backstep=1e-1,
         )
     )
-
 
 
 ################################################################################
@@ -73,12 +71,13 @@ plot!(hcat(storage.variables...)')
 # collect simulation data
 ################################################################################
 
-H_train = 250000 + 1
+# H_train = 250000 + 1
+H_train = 50000 + 1
 @elapsed storage_train = simulate!(mech, deepcopy(z0), H_train,
     controller=data_collection_controller)
 # visualize!(vis, mech, storage_train, build=false)
 
-H_val = 100 + 1
+H_val = 1000 + 1
 @elapsed storage_val = simulate!(mech, deepcopy(z0), H_val,
     controller=data_collection_controller)
 visualize!(vis, mech, storage_val, build=true)
@@ -103,11 +102,27 @@ x_train = (x_train_raw .- μ) ./ (1e-5 .+ σ)
 x_val = (x_val_raw .- μ) ./ (1e-5 .+ σ)
 x_test = (x_test_raw .- μ) ./ (1e-5 .+ σ)
 
-save_dataset(x_train, y_train, x_val, y_val, x_test, y_test, μ, σ, name="dataset1")
+save_dataset(x_train, y_train, x_val, y_val, x_test, y_test, μ, σ, name="dataset2")
 
+norm(μ)
+norm(σ)
 
 # plot(x_train[:,1:100], legend=false)
 # plot(log.(1e-5 .+ abs.(x_train[:,1:1000])), legend=false)
 # plot(x_train[:,end-100:end], legend=false)
 # plot(μ)
 # plot(σ)
+
+N = 100
+x_train[:,1:N]
+x_val[:,1:N]
+x_test[:,1:N]
+plt = plot()
+v_train = vec(sum(abs.(x_train[:,1:N]), dims=1))
+v_val = vec(sum(abs.(x_val[:,1:N]), dims=1))
+v_test = vec(sum(abs.(x_test[:,1:N]), dims=1))
+v_ood = vec(sum(abs.(x_ood[:,1:N]), dims=1))
+plot!(plt, 1:N, v_train)
+plot!(plt, 1:N, v_val)
+plot!(plt, 1:N, v_test)
+plot!(plt, 1:N, v_ood)
