@@ -2,11 +2,15 @@
 # dataset
 ################################################################################
 
-function data_collection_controller(mechanism, i)
+function data_collection_controller(mechanism, i; seed=0)
+    # Random.seed!(i+seed)
     v = mechanism.solver.solution.primals[1:3]
     p = mechanism.solver.parameters[1:3]
     u_prev = mechanism.solver.parameters[7:9]
     u = 0.8 * u_prev .+ [15, 3, 15] .* (rand(3) .- [0.5, 0.5, 0.25]) - 1v - [1, 0, 0] .* p
+    # u = 0.8 * u_prev .+ [15, 3, 15] .* (ones(3) .- [0.5, 0.5, 0.25]) - 1v - [1, 0, 0] .* p
+    # u = 0.8 * ones(3) .+ [15, 3, 15] .* (ones(3) .- [0.5, 0.5, 0.25]) - 1v - [1, 0, 0] .* p
+    # u = 0.8 * ones(3) .+ [15, 3, 15] .* (rand(3) .- [0.5, 0.5, 0.25]) - 1v - [1, 0, 0] .* p
     set_input!(mechanism, u)
     update_parameters!(mechanism)
     return nothing
@@ -174,8 +178,6 @@ end
 ################################################################################
 # masking
 ################################################################################
-
-
 function residual(variables, parameters, solver)
     data = solver.data
     problem = solver.problem

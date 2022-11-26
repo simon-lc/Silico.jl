@@ -38,8 +38,8 @@ mech = get_polytope_drop(;
     # method_type=:finite_difference,
     options=Mehrotra.Options(
         verbose=false,
-        complementarity_tolerance=1e-4,
-        residual_tolerance=1e-5,
+        complementarity_tolerance=1e-5,
+        residual_tolerance=1e-6,
         compressed_search_direction=false,
         sparse_solver=false,
         warm_start=false,
@@ -55,16 +55,17 @@ xp2 = [+0.0,1.5,-0.25]
 vp15 = [-0,0,-0.0]
 z0 = [xp2; vp15]
 H0 = 150
+u0 = zeros(3)
 
 @elapsed storage = simulate!(mech, deepcopy(z0), H0)
 
 ################################################################################
 # visualization
 ################################################################################
-visualize!(vis, mech, storage, build=false)
+visualize!(vis, mech, storage, build=true)
 
-scatter(storage.iterations)
-plot!(hcat(storage.variables...)')
+# scatter(storage.iterations)
+# plot!(hcat(storage.variables...)')
 
 
 ################################################################################
@@ -73,16 +74,25 @@ plot!(hcat(storage.variables...)')
 
 # H_train = 250000 + 1
 H_train = 50000 + 1
+Mehrotra.initialize_solver!(mech.solver)
+set_input!(mech, u0)
+update_parameters!(mech)
 @elapsed storage_train = simulate!(mech, deepcopy(z0), H_train,
     controller=data_collection_controller)
 # visualize!(vis, mech, storage_train, build=false)
 
 H_val = 1000 + 1
+Mehrotra.initialize_solver!(mech.solver)
+set_input!(mech, u0)
+update_parameters!(mech)
 @elapsed storage_val = simulate!(mech, deepcopy(z0), H_val,
     controller=data_collection_controller)
 visualize!(vis, mech, storage_val, build=true)
 
 H_test = 5000 + 1
+Mehrotra.initialize_solver!(mech.solver)
+set_input!(mech, u0)
+update_parameters!(mech)
 @elapsed storage_test = simulate!(mech, deepcopy(z0), H_test,
     controller=data_collection_controller)
 # visualize!(vis, mech, storage_test, build=false)
@@ -102,7 +112,7 @@ x_train = (x_train_raw .- μ) ./ (1e-5 .+ σ)
 x_val = (x_val_raw .- μ) ./ (1e-5 .+ σ)
 x_test = (x_test_raw .- μ) ./ (1e-5 .+ σ)
 
-save_dataset(x_train, y_train, x_val, y_val, x_test, y_test, μ, σ, name="dataset2")
+save_dataset(x_train, y_train, x_val, y_val, x_test, y_test, μ, σ, name="dataset3")
 
 norm(μ)
 norm(σ)
@@ -118,11 +128,11 @@ x_train[:,1:N]
 x_val[:,1:N]
 x_test[:,1:N]
 plt = plot()
-v_train = vec(sum(abs.(x_train[:,1:N]), dims=1))
-v_val = vec(sum(abs.(x_val[:,1:N]), dims=1))
-v_test = vec(sum(abs.(x_test[:,1:N]), dims=1))
-v_ood = vec(sum(abs.(x_ood[:,1:N]), dims=1))
+v_train = vec(mean(abs.(x_train[:,1:N]), dims=1))
+v_val = vec(mean(abs.(x_val[:,1:N]), dims=1))
+v_test = vec(mean(abs.(x_test[:,1:N]), dims=1))
+v_ood = vec(mean(abs.(x_ood[:,1:N]), dims=1))
 plot!(plt, 1:N, v_train)
 plot!(plt, 1:N, v_val)
 plot!(plt, 1:N, v_test)
-plot!(plt, 1:N, v_ood)
+# plot!(plt, 1:N, v_ood)

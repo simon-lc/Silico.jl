@@ -14,7 +14,7 @@ include("methods.jl")
 # load data
 ################################################################################
 batch_size = 500
-x_train, y_train, x_val, y_val, x_test, y_test, μ, σ = load_dataset(; name="dataset2")
+x_train, y_train, x_val, y_val, x_test, y_test, μ, σ = load_dataset(; name="dataset3")
 n_input = size(x_train, 1)
 
 train_loader = Flux.DataLoader((x_train, y_train), batchsize=batch_size, shuffle=true)
@@ -30,7 +30,7 @@ y_test = gpu(y_test)
 ################################################################################
 # define models
 ################################################################################
-baseline_model(x) = ((x .* σ) .+ μ)[1:10,:]
+baseline_model(x) = ((x .* (1e-5 .+ σ)) .+ μ)[1:10,:]
 baseline_model(x_train)
 
 cpu_model = Chain(
@@ -55,7 +55,7 @@ baseline_loss(x_train, y_train)
 ################################################################################
 # training
 ################################################################################
-n_epoch = 31
+n_epoch = 151
 optimizer = Adam(0.001, (0.9, 0.999), 1.0e-8)
 validation_loss() = round(loss(x_val, y_val), digits=4)
 
@@ -64,8 +64,8 @@ train_model!(train_loader, loss, parameters, optimizer, n_epoch;
     print_epoch=5)
 
 
-save_model(model, name="model2")
-loaded_cpu_model = load_model(name="model2")
+save_model(model, name="model3")
+loaded_cpu_model = load_model(name="model3")
 
 
 ################################################################################
