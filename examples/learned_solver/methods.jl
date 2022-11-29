@@ -1,26 +1,22 @@
 ################################################################################
 # dataset
 ################################################################################
-
 function data_collection_controller(mechanism, i; seed=0)
     # Random.seed!(i+seed)
     v = mechanism.solver.solution.primals[1:3]
     p = mechanism.solver.parameters[1:3]
     u_prev = mechanism.solver.parameters[7:9]
     u = 0.8 * u_prev .+ [15, 3, 15] .* (rand(3) .- [0.5, 0.5, 0.25]) - 1v - [1, 0, 0] .* p
-    # u = 0.8 * u_prev .+ [15, 3, 15] .* (ones(3) .- [0.5, 0.5, 0.25]) - 1v - [1, 0, 0] .* p
-    # u = 0.8 * ones(3) .+ [15, 3, 15] .* (ones(3) .- [0.5, 0.5, 0.25]) - 1v - [1, 0, 0] .* p
-    # u = 0.8 * ones(3) .+ [15, 3, 15] .* (rand(3) .- [0.5, 0.5, 0.25]) - 1v - [1, 0, 0] .* p
     set_input!(mechanism, u)
     update_parameters!(mechanism)
     return nothing
 end
 
-function extract_feature_label(mechanism, storage::TraceStorage{T,H}) where {T,H}
+function extract_feature_label(mechanism, storage::TraceStorage{T,H}, feature_extraction=x->nothing) where {T,H}
     x = []
     y = []
     for i = 2:H
-        xi, yi = extract_feature_label(mechanism, storage, i)
+        xi, yi = feature_extraction(mechanism, storage, i)
         push!(x, xi)
         push!(y, yi)
     end
@@ -29,7 +25,7 @@ function extract_feature_label(mechanism, storage::TraceStorage{T,H}) where {T,H
     return x, y
 end
 
-function extract_feature_label(mechanism, storage::TraceStorage{T,H}, i) where {T,H}
+function extract_feature_label(mechanism, storage::TraceStorage{T,H}, i::Int) where {T,H}
     @assert i > 1
     solver = mechanism.solver
     data = solver.data
@@ -72,10 +68,6 @@ function extract_feature_label(mechanism, storage::TraceStorage{T,H}, i) where {
     active_set = variables[idx_duals] .>= variables[idx_slacks]
     δ_parameters = parameters - previous_parameters
     δ_residual = data.jacobian_parameters * δ_parameters
-    # @show round.(δ_residual, digits=2)
-    # @show data.jacobian_parameters
-    # @show round.(δ_parameters, digits=4)
-    # @show round.(δ_residual, digits=4)
 
     xi = [previous_active_set;
         # previous_log_variables;
@@ -88,7 +80,6 @@ function extract_feature_label(mechanism, storage::TraceStorage{T,H}, i) where {
     yi = active_set
     return xi, yi
 end
-
 
 function save_dataset(x_train, y_train, x_val, y_val, x_test, y_test, μ, σ; name="dataset")
     jldsave(joinpath(@__DIR__, "data", "$name.jld2");
@@ -111,11 +102,24 @@ function load_dataset(; name="dataset")
         file["μ"], file["σ"]
 end
 
+function save_storage(storage_train, storage_val, storage_test; name="storage")
+    jldsave(joinpath(@__DIR__, "storage", "$name.jld2");
+        storage_train=storage_train,
+        storage_val=storage_val,
+        storage_test=storage_test,
+        )
+    return nothing
+end
+
+function load_storage(; name="storage")
+    file = jldopen(joinpath(@__DIR__, "storage", "$name.jld2"), "r")
+    return file["storage_train"], file["storage_val"], file["storage_test"]
+end
+
 
 ################################################################################
 # model
 ################################################################################
-
 function train_model!(train_loader, loss, parameters, optimizer, n_epoch;
         validation_loss=f()=0,
         print_epoch=5
@@ -152,7 +156,6 @@ end
 ################################################################################
 # performance analysis
 ################################################################################
-
 function error_distribution(x, y; m=x->x)
     n = size(y, 1)
     dist = zeros(n + 1)

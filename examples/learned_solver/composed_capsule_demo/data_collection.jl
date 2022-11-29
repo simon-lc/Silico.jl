@@ -67,7 +67,6 @@ visualize!(vis, mech, storage, build=true)
 # scatter(storage.iterations)
 # plot!(hcat(storage.variables...)')
 
-mech.solver.dimensions
 ################################################################################
 # collect simulation data
 ################################################################################
@@ -97,6 +96,8 @@ update_parameters!(mech)
     controller=data_collection_controller)
 # visualize!(vis, mech, storage_test, build=false)
 
+save_storage(storage_train, storage_val, storage_test, name="capsule_storage_0")
+storage_train, storage_val, storage_test = load_storage(name="capsule_storage_0")
 
 ################################################################################
 # build dataset
@@ -105,17 +106,20 @@ x_train_raw, y_train = extract_feature_label(mech, storage_train)
 x_val_raw, y_val = extract_feature_label(mech, storage_val)
 x_test_raw, y_test = extract_feature_label(mech, storage_test)
 
-μ = vec(mean(x_train_raw, dims=2))
-σ = vec(std(x_train_raw .- μ, dims=2))
+impact_feature_extraction
 
-x_train = (x_train_raw .- μ) ./ (1e-5 .+ σ)
-x_val = (x_val_raw .- μ) ./ (1e-5 .+ σ)
-x_test = (x_test_raw .- μ) ./ (1e-5 .+ σ)
+μ0 = vec(mean(x_train_raw, dims=2))
+σ0 = vec(std(x_train_raw .- μ0, dims=2))
+
+x_train = (x_train_raw .- μ0) ./ (1e-5 .+ σ0)
+x_val = (x_val_raw .- μ0) ./ (1e-5 .+ σ0)
+x_test = (x_test_raw .- μ0) ./ (1e-5 .+ σ0)
 
 save_dataset(x_train, y_train, x_val, y_val, x_test, y_test, μ, σ, name="composed_capsule_dataset_0")
 
-norm(μ)
-norm(σ)
+norm(μ0)
+norm(σ0)
+
 
 # plot(x_train[:,1:100], legend=false)
 # plot(log.(1e-5 .+ abs.(x_train[:,1:1000])), legend=false)

@@ -8,11 +8,11 @@ using BSON
 using BenchmarkTools
 CUDA.functional()
 
-include("methods.jl")
+include("../methods.jl")
 
 
 
-function extract_feature_label(mechanism, storage::TraceStorage{T,H}, i) where {T,H}
+function impact_feature_extraction(mechanism, storage::TraceStorage{T,H}, i::Int) where {T,H}
     @assert i > 1
     solver = mechanism.solver
     data = solver.data
@@ -54,18 +54,6 @@ function extract_feature_label(mechanism, storage::TraceStorage{T,H}, i) where {
     # previous_log_variables = log.(10, previous_variables[[idx_duals; idx_slacks]])
     previous_active_set = previous_variables[idx_duals] .>= previous_variables[idx_slacks]
     active_set = variables[idx_duals] .>= variables[idx_slacks]
-    # δ_parameters = parameters - previous_parameters
-    # δ_residual = data.jacobian_parameters * δ_parameters
-
-    # xi = [previous_active_set;
-    #     # previous_log_variables;
-    #     # previous_jacobian;
-    #     previous_variables;
-    #     parameters;
-    #     unoptimized_residual[idx_equality]; # the idx_complementarity always = 0
-    #     δ_residual[idx_equality]; # the idx_complementarity always = 0
-    #     δ_parameters]
-
 
     solution.all .= 0.0
     Mehrotra.evaluate!(problem, methods, cone_methods, solution, parameters,
@@ -95,7 +83,6 @@ function extract_feature_label(mechanism, storage::TraceStorage{T,H}, i) where {
         previous_pose;
         previous_velocity;
         input;
-        # active_set[[1,5]]; # impact only
         sdf; # sdf(current)
         anticipated_sdf; # sdf(current + Δt vel)
     ]
@@ -109,11 +96,33 @@ mech.solver.solution.duals
 mech.solver.parameters
 mech.bodies[1]
 
+
+################################################################################
+# build dataset
+################################################################################
+x_train_raw, y_train = extract_feature_label(mech, storage_train, impact_feature_extraction)
+x_val_raw, y_val = extract_feature_label(mech, storage_val, impact_feature_extraction)
+x_test_raw, y_test = extract_feature_label(mech, storage_test, impact_feature_extraction)
+
+impact_feature_extraction
+
+μ0 = vec(mean(x_train_raw, dims=2))
+σ0 = vec(std(x_train_raw .- μ, dims=2))
+
+x_train = (x_train_raw .- μ0) ./ (1e-5 .+ σ0)
+x_val = (x_val_raw .- μ0) ./ (1e-5 .+ σ0)
+x_test = (x_test_raw .- μ0) ./ (1e-5 .+ σ0)
+
+save_dataset(x_train, y_train, x_val, y_val, x_test, y_test, μ0, σ0, name="composed_capsule_dataset_0")
+
+norm(μ0)
+norm(σ0)
+
 ################################################################################
 # load data
 ################################################################################
 batch_size = 500
-x_train, y_train, x_val, y_val, x_test, y_test, μ, σ = load_dataset(; name="composed_capsule_dataset_0")
+x_train, y_train, x_val, y_val, x_test, y_test, μ0, σ0 = load_dataset(; name="composed_capsule_dataset_0")
 n_input = size(x_train, 1)
 n_output = size(y_train, 1)
 
@@ -124,13 +133,13 @@ x_val = gpu(x_val)
 y_val = gpu(y_val)
 x_test = gpu(x_test)
 y_test = gpu(y_test)
-μ = gpu(μ)
-σ = gpu(σ)
+μ0 = gpu(μ0)
+σ0 = gpu(σ0)
 
 ################################################################################
 # define models
 ################################################################################
-baseline_model(x) = ((x .* (1e-5 .+ σ)) .+ μ)[1:n_output,:]
+baseline_model(x) = ((x .* (1e-5 .+ σ0)) .+ μ0)[1:n_output,:]
 baseline_model(x_train)
 
 cpu_model = Chain(
@@ -158,7 +167,7 @@ baseline_loss(x_train, y_train)
 ################################################################################
 # training
 ################################################################################
-n_epoch = 101
+n_epoch = 51
 optimizer = Adam(0.001, (0.9, 0.999), 1.0e-8)
 validation_loss() = round(loss(x_val, y_val), digits=4)
 
