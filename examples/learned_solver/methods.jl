@@ -81,6 +81,7 @@ function extract_feature_label(mechanism, storage::TraceStorage{T,H}, i) where {
         # previous_log_variables;
         # previous_jacobian;
         previous_variables;
+        parameters;
         unoptimized_residual[idx_equality]; # the idx_complementarity always = 0
         δ_residual[idx_equality]; # the idx_complementarity always = 0
         δ_parameters]
