@@ -4,6 +4,11 @@
 # DojoLight.jl
 Lightweight and hackable version of the Dojo physics engine.
 
+
+### Friction-cone comparison
+<img src="examples/deps/banner.gif" height="150"/>
+
+
 ### CI on a private repo depending on another private repo
 - create a private and a public key using 
 `ssh-keygen -C "git@github.com:simon-lc/Mehrotra.jl.git"`
