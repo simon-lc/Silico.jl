@@ -6,8 +6,7 @@ Lightweight and hackable version of the Dojo physics engine.
 
 
 ### Contact-rich manipulation
-<img src="examples/deps/banner.gif" height="150"/>
-<img url="https://github.com/simon-lc/DojoLight.jl/blob/main/examples/deps/banner.gif">
+<img src="examples/deps/banner_720.gif" height="500"/>
 
 ### CI on a private repo depending on another private repo
 - create a private and a public key using 
