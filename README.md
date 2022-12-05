@@ -5,7 +5,7 @@
 Lightweight and hackable version of the Dojo physics engine.
 
 
-### Friction-cone comparison
+### Contact-rich manipulation
 <img src="examples/deps/banner.gif" height="150"/>
 
 
