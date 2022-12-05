@@ -121,7 +121,8 @@ end
 # model
 ################################################################################
 function train_model!(train_loader, loss, parameters, optimizer, n_epoch;
-        validation_loss=f()=0,
+        training_loss=x->0,
+        validation_loss=x->0,
         print_epoch=5
         )
 
@@ -133,6 +134,7 @@ function train_model!(train_loader, loss, parameters, optimizer, n_epoch;
         if (epoch - 1) % print_epoch == 0
             println(
                 "epoch: ", epoch,
+                "     train: ", training_loss(),
                 "     val: ", validation_loss(),
             )
         end

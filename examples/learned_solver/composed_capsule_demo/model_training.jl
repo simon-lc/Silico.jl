@@ -71,7 +71,7 @@ function impact_feature_extraction(mechanism, storage::TraceStorage{T,H}, i::Int
         compressed=false,
         sparse_solver=false)
     zero_residual = deepcopy(data.residual.all)
-    sdf = - zero_residual[idx_slackness][[1,5]]
+    previous_sdf = - zero_residual[idx_slackness][[1,5]]
 
     anticipated_sdf = - unoptimized_residual[idx_slackness][[1,5]] + previous_variables[idx_slacks][[1,5]]
     previous_pose = parameters[1:3]
@@ -79,12 +79,12 @@ function impact_feature_extraction(mechanism, storage::TraceStorage{T,H}, i::Int
     input = parameters[7:9]
     xi = [
         # active_set[[1,5]]; # impact only
-        previous_active_set[[1,5]]; # impact only
+        # previous_active_set[[1,5]]; # impact only
         previous_pose;
         previous_velocity;
         input;
-        sdf; # sdf(current)
-        anticipated_sdf; # sdf(current + Δt vel)
+        previous_sdf; # sdf(previous)
+        anticipated_sdf; # sdf(previous + Δt vel)
     ]
     yi = active_set[[1,5]]
     return xi, yi
@@ -107,7 +107,7 @@ x_test_raw, y_test = extract_feature_label(mech, storage_test, impact_feature_ex
 impact_feature_extraction
 
 μ0 = vec(mean(x_train_raw, dims=2))
-σ0 = vec(std(x_train_raw .- μ, dims=2))
+σ0 = vec(std(x_train_raw .- μ0, dims=2))
 
 x_train = (x_train_raw .- μ0) ./ (1e-5 .+ σ0)
 x_val = (x_val_raw .- μ0) ./ (1e-5 .+ σ0)
@@ -144,10 +144,10 @@ baseline_model(x_train)
 
 cpu_model = Chain(
     Dense(n_input => 80, tanh),
-    Dense(80 => 80, tanh),
+    # Dense(80 => 80, tanh),
     Dense(80 => 50, tanh),
-    Dense(50 => 50, tanh),
-    Dense(50 => 50, tanh),
+    # Dense(50 => 50, tanh),
+    # Dense(50 => 50, tanh),
     Dense(50 => 30, tanh),
     Dense(30 => n_output, sigmoid))
 model = fmap(cu, cpu_model)
@@ -167,14 +167,15 @@ baseline_loss(x_train, y_train)
 ################################################################################
 # training
 ################################################################################
-n_epoch = 51
+n_epoch = 101
 optimizer = Adam(0.001, (0.9, 0.999), 1.0e-8)
+training_loss() = round(loss(x_train, y_train), digits=4)
 validation_loss() = round(loss(x_val, y_val), digits=4)
 
 train_model!(train_loader, loss, parameters, optimizer, n_epoch;
+    training_loss=training_loss,
     validation_loss=validation_loss,
-    print_epoch=5)
-
+    print_epoch=10)
 
 save_model(model, name="composed_capsule_model_0")
 loaded_cpu_model = load_model(name="composed_capsule_model_0")

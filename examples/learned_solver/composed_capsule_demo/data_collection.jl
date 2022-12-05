@@ -99,43 +99,43 @@ update_parameters!(mech)
 save_storage(storage_train, storage_val, storage_test, name="capsule_storage_0")
 storage_train, storage_val, storage_test = load_storage(name="capsule_storage_0")
 
-################################################################################
-# build dataset
-################################################################################
-x_train_raw, y_train = extract_feature_label(mech, storage_train)
-x_val_raw, y_val = extract_feature_label(mech, storage_val)
-x_test_raw, y_test = extract_feature_label(mech, storage_test)
-
-impact_feature_extraction
-
-μ0 = vec(mean(x_train_raw, dims=2))
-σ0 = vec(std(x_train_raw .- μ0, dims=2))
-
-x_train = (x_train_raw .- μ0) ./ (1e-5 .+ σ0)
-x_val = (x_val_raw .- μ0) ./ (1e-5 .+ σ0)
-x_test = (x_test_raw .- μ0) ./ (1e-5 .+ σ0)
-
-save_dataset(x_train, y_train, x_val, y_val, x_test, y_test, μ, σ, name="composed_capsule_dataset_0")
-
-norm(μ0)
-norm(σ0)
-
-
-# plot(x_train[:,1:100], legend=false)
-# plot(log.(1e-5 .+ abs.(x_train[:,1:1000])), legend=false)
-# plot(x_train[:,end-100:end], legend=false)
-# plot(μ)
-# plot(σ)
-
-N = 100
-x_train[:,1:N]
-x_val[:,1:N]
-x_test[:,1:N]
-plt = plot()
-v_train = vec(mean(abs.(x_train[:,1:N]), dims=1))
-v_val = vec(mean(abs.(x_val[:,1:N]), dims=1))
-v_test = vec(mean(abs.(x_test[:,1:N]), dims=1))
-plot!(plt, 1:N, v_train)
-plot!(plt, 1:N, v_val)
-plot!(plt, 1:N, v_test)
-# plot!(plt, 1:N, v_ood)
+# ################################################################################
+# # build dataset
+# ################################################################################
+# x_train_raw, y_train = extract_feature_label(mech, storage_train)
+# x_val_raw, y_val = extract_feature_label(mech, storage_val)
+# x_test_raw, y_test = extract_feature_label(mech, storage_test)
+#
+# impact_feature_extraction
+#
+# μ0 = vec(mean(x_train_raw, dims=2))
+# σ0 = vec(std(x_train_raw .- μ0, dims=2))
+#
+# x_train = (x_train_raw .- μ0) ./ (1e-5 .+ σ0)
+# x_val = (x_val_raw .- μ0) ./ (1e-5 .+ σ0)
+# x_test = (x_test_raw .- μ0) ./ (1e-5 .+ σ0)
+#
+# save_dataset(x_train, y_train, x_val, y_val, x_test, y_test, μ, σ, name="composed_capsule_dataset_0")
+#
+# norm(μ0)
+# norm(σ0)
+#
+#
+# # plot(x_train[:,1:100], legend=false)
+# # plot(log.(1e-5 .+ abs.(x_train[:,1:1000])), legend=false)
+# # plot(x_train[:,end-100:end], legend=false)
+# # plot(μ)
+# # plot(σ)
+#
+# N = 100
+# x_train[:,1:N]
+# x_val[:,1:N]
+# x_test[:,1:N]
+# plt = plot()
+# v_train = vec(mean(abs.(x_train[:,1:N]), dims=1))
+# v_val = vec(mean(abs.(x_val[:,1:N]), dims=1))
+# v_test = vec(mean(abs.(x_test[:,1:N]), dims=1))
+# plot!(plt, 1:N, v_train)
+# plot!(plt, 1:N, v_val)
+# plot!(plt, 1:N, v_test)
+# # plot!(plt, 1:N, v_ood)

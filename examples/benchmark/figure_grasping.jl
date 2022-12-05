@@ -24,7 +24,7 @@ set_camera!(vis, zoom=4.0, cam_pos=[5,0,0.0])
 
 green = RGBA(4/255,191/255,173/255,1.0)
 turquoise = RGBA(2/255,115/255,115/255,1.0)
-
+black = RGBA(0.0,0.0,0.0,1.0)
 ################################################################################
 # demo
 ################################################################################
@@ -153,7 +153,7 @@ end
 i_nearest0 = index_nearest(mech, vertices0, metrics0, z1; γ=γ0, ρ=ρ0)
 trace0 = get_trace(tree0, i_nearest0)
 
-_, anim = visualize!(vis[:rrt], mech, vertices0[trace0][1:end])
+_, anim = visualize!(vis[:rrt], mech, vertices0[trace0][1:end], show_contact=false)
 plot(hcat(vertices0[trace0]...)')
 scatter!(hcat(vertices0[trace0]...)')
 
@@ -224,27 +224,50 @@ set_floor!(vis, origin=[0,0,-0.10], x=0.01)
 ################################################################################
 # object
 ################################################################################
+
+function build_custom_polytope!(vis::Visualizer, A::Matrix{T}, b::Vector{T};
+        name::Symbol=:polytope,
+        wireframe=false,
+        color=RGBA(0.8, 0.8, 0.8, 1.0)) where T
+
+    h = RobotVisualizer.Polyhedra.hrep(A, b)
+    p = RobotVisualizer.Polyhedra.polyhedron(h)
+    m = RobotVisualizer.Polyhedra.Mesh(p)
+    try
+        setobject!(vis[name], m, MeshPhongMaterial(color=color, wireframe=wireframe))
+    catch e
+    end
+    return nothing
+end
+
 A3d = [
     [[zeros(3) A[1]]; [1 0 0]; [-1 0 0]],
     [[zeros(3) A[2]]; [1 0 0]; [-1 0 0]]
     ]
 b3d = [
-    [b[1]; 0.30; 0.30],
-    [b[2]; 0.30; 0.30],
+    [b[1]; 0.300; 0.300],
+    [b[2]; 0.305; 0.305],
     ]
 build_polytope!(vis[:rrt][:robot][:bodies][:box], A3d[1], b3d[1], name=:object_1, color=green)
-build_polytope!(vis[:rrt][:robot][:bodies][:box], A3d[2], b3d[2], name=:object_2, color=green)
+build_polytope!(vis[:rrt][:robot][:bodies][:box], A3d[2], b3d[2], name=:object_2, color=turquoise)
 
-box_mat = MeshPhongMaterial(color=green_α, wireframe=true)
+box_mat = MeshPhongMaterial(color=green, wireframe=true)
 
 white = RGBA(1,1,1,1)
-green_α = 0.75 * white + 0.25 * green
-build_polytope!(vis[:rrt][:robot][:goal], A3d[1], b3d[1], name=:object_1, color=green_α)
-build_polytope!(vis[:rrt][:robot][:goal], A3d[2], b3d[2], name=:object_2, color=green_α)
-settransform!(vis[:rrt][:robot][:goal], MeshCat.compose(
-    MeshCat.Translation(SVector{3}(1.0,x1_box[1],x1_box[2])),
+build_polytope!(vis[:rrt][:robot][:goal][:plain], A3d[1], b3d[1], name=:object_1, color=RGBA(0,0,0,0.05))
+build_polytope!(vis[:rrt][:robot][:goal][:plain], A3d[2], b3d[2], name=:object_2, color=RGBA(0,0,0,0.30))
+build_custom_polytope!(vis[:rrt][:robot][:goal][:wireframe], A3d[1], b3d[1], name=:object_1, color=black, wireframe=true)
+build_custom_polytope!(vis[:rrt][:robot][:goal][:wireframe], A3d[2], b3d[2], name=:object_2, color=black, wireframe=true)
+settransform!(vis[:rrt][:robot][:goal][:plain], MeshCat.compose(
+    MeshCat.Translation(SVector{3}(-1.0,x1_box[1],x1_box[2])),
     MeshCat.LinearMap(rotationmatrix(RotX(x1_box[3]))),
     ))
+settransform!(vis[:rrt][:robot][:goal][:wireframe], MeshCat.compose(
+    MeshCat.Translation(SVector{3}(-1.0,x1_box[1],x1_box[2])),
+    MeshCat.LinearMap(rotationmatrix(RotX(x1_box[3]))),
+    ))
+
+
 ################################################################################
 # cleanup vis
 ################################################################################

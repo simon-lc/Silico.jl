@@ -81,7 +81,7 @@ update_parameters!(mech)
     controller=data_collection_controller)
 # visualize!(vis, mech, storage_train, build=false)
 
-H_val = 1000 + 1
+H_val = 300 + 1
 Mehrotra.initialize_solver!(mech.solver)
 set_input!(mech, u0)
 update_parameters!(mech)
