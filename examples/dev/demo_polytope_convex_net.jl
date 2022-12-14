@@ -11,7 +11,7 @@ using Optim
 vis = Visualizer()
 open(vis)
 
-include("../src/DojoLight.jl")
+include("../src/Silico.jl")
 
 ################################################################################
 # demo

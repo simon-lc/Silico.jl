@@ -1,7 +1,7 @@
-[![CI](https://github.com/simon-lc/DojoLight.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/simon-lc/DojoLight.jl/actions/workflows/CI.yml)
-[![codecov](https://codecov.io/gh/simon-lc/DojoLight.jl/branch/main/graph/badge.svg?token=VMLS7NNFAI)](https://codecov.io/gh/simon-lc/DojoLight.jl)
+[![CI](https://github.com/simon-lc/Silico.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/simon-lc/Silico.jl/actions/workflows/CI.yml)
+[![codecov](https://codecov.io/gh/simon-lc/Silico.jl/branch/main/graph/badge.svg?token=VMLS7NNFAI)](https://codecov.io/gh/simon-lc/Silico.jl)
 
-# DojoLight.jl
+# Silico.jl
 Lightweight and hackable version of the Dojo physics engine.
 
 
@@ -12,6 +12,6 @@ Lightweight and hackable version of the Dojo physics engine.
 - create a private and a public key using 
 `ssh-keygen -C "git@github.com:simon-lc/Mehrotra.jl.git"`
 - put the public key into the DEPLOY KEYS of `Mehrotra.jl`
-- put the private key into the secrets (action secrets) of DojoLight.jl
+- put the private key into the secrets (action secrets) of Silico.jl
 - use the `CI.yml` script given at the end of this thread:
 https://discourse.julialang.org/t/github-ci-with-private-repository-in-julia/81207/10

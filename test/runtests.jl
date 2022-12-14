@@ -6,7 +6,7 @@ using LinearAlgebra
 using Random
 using SparseArrays
 
-using DojoLight
+using Silico
 
 @testset "environment"          verbose=true begin include("environment.jl") end
 @testset "dynamics"             verbose=true begin include("dynamics.jl") end

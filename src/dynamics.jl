@@ -135,7 +135,7 @@ function quasistatic_dynamics_jacobian_state(dz, mechanism::Mechanism{T,D,NB}, z
     solver = mechanism.solver
     solver.options.differentiate = true
     timestep = mechanism.bodies[1].timestep[1]
-    DojoLight.solve!(solver)
+    Silico.solve!(solver)
 
     idx_parameters_state = mechanism.indices.parameter_state
     idx_solution_state = mechanism.indices.solution_state

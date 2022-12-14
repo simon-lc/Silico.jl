@@ -15,7 +15,7 @@ vis = Visualizer()
 open(vis)
 render(vis)
 
-include("../src/DojoLight.jl")
+include("../src/Silico.jl")
 
 include("../environment/polytope_bundle.jl")
 include("../environment/polytope_drop.jl")

@@ -27,7 +27,7 @@ function get_polytope_insertion(;
         )
     )
 
-    DojoLight.normalize_A!(A)
+    Silico.normalize_A!(A)
 
     A1 = [
         +1.0 +0.0;

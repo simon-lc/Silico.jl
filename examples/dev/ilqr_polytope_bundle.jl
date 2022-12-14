@@ -1,7 +1,7 @@
 # ## setup
 using Mehrotra
 
-include("../src/DojoLight.jl")
+include("../src/Silico.jl")
 
 # ## visualizer
 vis = Visualizer()

@@ -1,11 +1,11 @@
 ################################################################################
 # visualization
 ################################################################################
-vis = DojoLight.Visualizer()
-DojoLight.open(vis)
-DojoLight.set_floor!(vis)
-DojoLight.set_light!(vis)
-DojoLight.set_background!(vis)
+vis = Silico.Visualizer()
+Silico.open(vis)
+Silico.set_floor!(vis)
+Silico.set_light!(vis)
+Silico.set_background!(vis)
 
 ################################################################################
 # define mechanisms
@@ -26,7 +26,7 @@ mass = 1.0
 inertia = 0.2 * ones(1,1)
 friction_coefficient = 0.5
 
-mech = DojoLight.get_polytope_insertion(;
+mech = Silico.get_polytope_insertion(;
     timestep=timestep,
     gravity=gravity,
     mass=mass,
@@ -55,7 +55,7 @@ x2 = [+0.00, +1.75, +1.57]
 v15 = [-0.0, +0.0, -0.0]
 z0 = [x2; v15]
 
-DojoLight.set_gravity!(mech, gravity)
+Silico.set_gravity!(mech, gravity)
 Mehrotra.initialize_solver!(mech.solver)
 @elapsed storage = simulate!(mech, deepcopy(z0), H)
 vis, anim = visualize!(vis, mech, storage, name=:single, color=RGBA(1,1,1,0.8))
@@ -82,7 +82,7 @@ goal = [0.0, 0.25, 0.0, 0.0, 0.0, 0.0]
 # z1 = zero(z0)
 # dz0 = zeros(length(z0), length(z0))
 # du0 = zeros(length(z0), length(u0))
-# DojoLight.dynamics(z1, mech, z0, u0)
+# Silico.dynamics(z1, mech, z0, u0)
 # dynamics_jacobian_state(dz0, mech, z0, u0)
 # dynamics_jacobian_input(du0, mech, z0, u0)
 

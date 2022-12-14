@@ -1,4 +1,4 @@
-module DojoLight
+module Silico
 
 using GeometryBasics
 using LinearAlgebra
