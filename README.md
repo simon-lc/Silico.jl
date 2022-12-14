@@ -13,19 +13,21 @@ For more information, please refer to:
 ## Examples
 
 ### Contact-rich manipulation
-<img src="examples/deps/grasping.gif" height="500"/>
+<img src="examples/deps/grasping.gif" height="350"/>
 
 ### Peg-in-hole insertion
-<img src="examples/deps/peg_in_hole.gif" height="500"/>
+<img src="examples/deps/peg_in_hole.gif" height="350"/>
 
 ### Block stacking
-<img src="examples/deps/jenga.gif" height="500"/>
+<img src="examples/deps/jenga.gif" height="350"/>
 
 ### Polytope drop
-<img src="examples/deps/polytope.gif" height="500"/>
+<img src="examples/deps/polytope.gif" height="350"/>
 
 ### Convex bundle
-<img src="examples/deps/convex_bundles.gif" height="500"/>
+The light green object is the result of the union of two convex shapes, the dark green shapes results for the Minkowski sum of a polytope and a sphere. 
+
+<img src="examples/deps/convex_bundles.gif" height="350"/>
 
 
 ### Citing 
