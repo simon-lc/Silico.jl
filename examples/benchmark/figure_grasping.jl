@@ -211,15 +211,15 @@ mvis, anim = visualize!(mvis, q_trajectory, animation=anim)
 ################################################################################
 # floor
 ################################################################################
-block_1 = MeshCat.HyperRectangle(Vec(-0.17,-0.17,-0.10), Vec(0.27,0.34,0.20))
-# block_2 = MeshCat.HyperRectangle(Vec(-0.10,offset,-0.10), Vec(0.20,0.20,0.20))
-block_2 = MeshCat.HyperRectangle(Vec(-0.005,offset,-0.10), Vec(0.01,0.20,0.20))
-# block_mat = MeshPhongMaterial(color=RGBA(0.3, 0.3, 0.3, 1.0))
+# block_1 = MeshCat.HyperRectangle(Vec(-0.17,-0.17,-0.10), Vec(0.27,0.34,0.20))
+block_2 = MeshCat.HyperRectangle(Vec(-0.10,offset,-0.10), Vec(0.20,0.20,0.20))
+# block_2 = MeshCat.HyperRectangle(Vec(-0.005,offset,-0.10), Vec(0.01,0.20,0.20))
+block_mat = MeshPhongMaterial(color=RGBA(0.3, 0.3, 0.3, 1.0))
 block_mat = MeshPhongMaterial(color=RGBA(0.5, 0.5, 0.5, 1.0))
 setobject!(vis[:floor][:block1], block_1, block_mat)
 setobject!(vis[:floor][:block2], block_2, block_mat)
-# set_floor!(vis, origin=[0,0,-0.10])
-set_floor!(vis, origin=[0,0,-0.10], x=0.01)
+set_floor!(vis, origin=[0,0,-0.10])
+# set_floor!(vis, origin=[0,0,-0.10], x=0.01)
 
 ################################################################################
 # object
@@ -256,8 +256,8 @@ box_mat = MeshPhongMaterial(color=green, wireframe=true)
 white = RGBA(1,1,1,1)
 build_polytope!(vis[:rrt][:robot][:goal][:plain], A3d[1], b3d[1], name=:object_1, color=RGBA(0,0,0,0.05))
 build_polytope!(vis[:rrt][:robot][:goal][:plain], A3d[2], b3d[2], name=:object_2, color=RGBA(0,0,0,0.30))
-build_custom_polytope!(vis[:rrt][:robot][:goal][:wireframe], A3d[1], b3d[1], name=:object_1, color=black, wireframe=true)
-build_custom_polytope!(vis[:rrt][:robot][:goal][:wireframe], A3d[2], b3d[2], name=:object_2, color=black, wireframe=true)
+build_custom_polytope!(vis[:rrt][:robot][:goal][:wireframe], A3d[1], b3d[1], name=:object_1, color=RGBA(0,0,0,0.1), wireframe=true)
+build_custom_polytope!(vis[:rrt][:robot][:goal][:wireframe], A3d[2], b3d[2], name=:object_2, color=RGBA(0,0,0,0.1), wireframe=true)
 settransform!(vis[:rrt][:robot][:goal][:plain], MeshCat.compose(
     MeshCat.Translation(SVector{3}(-1.0,x1_box[1],x1_box[2])),
     MeshCat.LinearMap(rotationmatrix(RotX(x1_box[3]))),
@@ -286,4 +286,15 @@ setvisible!(vis[:rrt][:robot][:bodies][:box][Symbol(1)], false)
 setvisible!(vis[:rrt][:robot][:bodies][:box][Symbol(2)], false)
 setvisible!(vis[:rrt][:robot][:bodies][:box][:com], false)
 
-# RobotVisualizer.convert_frames_to_video_and_gif("full_grasping_front_figure")
+RobotVisualizer.convert_frames_to_video_and_gif("rrt_grasping_banner_side", opt=1)
+
+RobotVisualizer.convert_video_to_gif
+filename = "rrt_grasping_banner_side"
+
+MeshCat.convert_frames_to_video(
+    homedir() * "/Downloads/$filename.tar",
+    homedir() * "/Documents/video/$filename.mp4", overwrite=true)
+
+convert_video_to_gif(
+    homedir() * "/Documents/video/$filename.mp4",
+    homedir() * "/Documents/video/$(filename)720.gif", overwrite=true, width=720)
