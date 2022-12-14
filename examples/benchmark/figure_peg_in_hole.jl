@@ -28,7 +28,7 @@ timestep = 0.01
 gravity = -9.81
 mass = 1.0
 inertia = 0.2 * ones(1,1)
-friction_coefficient = 0.01
+friction_coefficient = 0.20
 
 mech = get_polytope_insertion(;
     timestep=timestep,
