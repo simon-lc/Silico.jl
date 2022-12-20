@@ -8,7 +8,11 @@ It handles collision between ``convex bundles''. A convex bundle is a non-convex
 
 For more information, please refer to:
 - [paper](https://arxiv.org/abs/2212.06764)
-- [slides](https://docs.google.com/presentation/d/1EINBZYLEDYZNOP2v058zQ2EYXNrR924OW6LMX8f75eY/edit?usp=sharing)
+- [video](https://youtu.be/oaGLTR13iF8)
+- [slides](https://docs.google.com/presentation/d/1dKse0byWRH7zf75ow9r1ZEnlXIdxVPFInbBVdG6DUnE/edit?usp=sharing)
+
+## Video
+[![video](http://i3.ytimg.com/vi/oaGLTR13iF8/hqdefault.jpg)](https://youtu.be/oaGLTR13iF8)
 
 ## Examples
 
