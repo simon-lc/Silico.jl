@@ -10,6 +10,8 @@ mutable struct TraceStorage{T,H}
     variables::Vector{Vector{T}} # H x variables
     parameters::Vector{Vector{T}} # H x parameters
     iterations::Vector{Int} # H
+    equality_violations::Vector{T} # H
+    cone_product_violations::Vector{T} # H
 end
 
 function TraceStorage(dim::MechanismDimensions{D}, H::Int, T=Float64) where D
@@ -24,12 +26,14 @@ function TraceStorage(dim::MechanismDimensions{D}, H::Int, T=Float64) where D
     variables = [zeros(Int, dim.variables) for i = 1:H]
     parameters = [zeros(Int, dim.parameters) for i = 1:H]
     iterations = zeros(Int, H)
+    equality_violations = zeros(T, H)
+    cone_product_violations = zeros(T, H)
     storage = TraceStorage{T,H}(z, u, x, v, contact_point, normal, tangent_x, tangent_y,
-        variables, parameters, iterations)
+        variables, parameters, iterations, equality_violations, cone_product_violations)
     return storage
 end
 
-function record!(storage::TraceStorage{T,H}, mechanism::Mechanism{T,D,NB,NC}, i::Int) where {T,H,D,NB,NC}
+function record!(storage::TraceStorage{T,H}, mechanism::Mechanism{T,D,NB,NC}, i::Int; violation=:absolute) where {T,H,D,NB,NC}
     storage.z[i] .= get_current_state(mechanism)
     storage.u[i] .= get_input(mechanism)
 
@@ -54,5 +58,12 @@ function record!(storage::TraceStorage{T,H}, mechanism::Mechanism{T,D,NB,NC}, i:
     storage.variables[i] .= variables
     storage.parameters[i] .= parameters
     storage.iterations[i] = mechanism.solver.trace.iterations
+
+    problem = mechanism.solver.problem
+    κ = mechanism.solver.central_paths
+
+    violation == :absolute && (central_path = κ.zero_central_path)
+    violation == :relative && (central_path = κ.tolerance_central_path)
+    storage.equality_violations[i], storage.cone_product_violations[i] = Mehrotra.violation(problem, central_path)
     return nothing
 end

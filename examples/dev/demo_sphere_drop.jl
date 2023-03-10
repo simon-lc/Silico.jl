@@ -1,41 +1,41 @@
-using Polyhedra
-using MeshCat
-using RobotVisualizer
-using StaticArrays
-using Quaternions
 using Plots
+using Statistics
+using Random
+using RobotVisualizer
+using MeshCat
 
+################################################################################
+# visualization
+################################################################################
 vis = Visualizer()
 open(vis)
-
-include("../src/Silico.jl")
+set_floor!(vis)
+set_light!(vis)
+set_background!(vis)
 
 ################################################################################
-# demo
+# define mechanism
 ################################################################################
-timestep = 0.05;
+timestep = 0.01;
 gravity = -9.81;
 mass = 1.0;
-inertia = 0.2 * ones(1);
-
+inertia = 0.05 * ones(1);
 
 mech = get_sphere_drop(;
     timestep=0.05,
     gravity=-9.81,
     mass=1.0,
     inertia=0.2 * ones(1,1),
-    friction_coefficient=0.1,
-    method_type=:symbolic,
-    # method_type=:finite_difference,
-    options=Options(
+    friction_coefficient=0.3,
+    # method_type=:symbolic,
+    method_type=:finite_difference,
+    options=Mehrotra.Options(
         verbose=false,
         complementarity_tolerance=1e-3,
-        compressed_search_direction=true,
-        max_iterations=30,
+        # compressed_search_direction=true,
+        compressed_search_direction=false,
         sparse_solver=false,
-        differentiate=false,
         warm_start=false,
-        complementarity_correction=0.5,
         )
     );
 
@@ -43,35 +43,42 @@ mech = get_sphere_drop(;
 ################################################################################
 # test simulation
 ################################################################################
-xp2 = [+0.0,1.5,-0.25]
-vp15 = [-0,0,5.0]
+xp2 = [-0.2,0.4,-0.30]
+vp15 = [+2,4,-3.25]
 z0 = [xp2; vp15]
 
 u0 = zeros(3)
-H0 = 150
-# solve!(mech.solver)
-# plot(hcat(storage.z[1:22]...)')
-# scatter(hcat(storage.z[1:22]...)')
+H0 = 110
 
 @elapsed storage = simulate!(mech, z0, H0)
-# Main.@profiler [solve!(mech.solver) for i=1:300]
-# @benchmark $solve!($(mech.solver))
-scatter(storage.iterations)
 
 ################################################################################
 # visualization
 ################################################################################
-set_floor!(vis)
-set_light!(vis)
-set_background!(vis)
-
 build_mechanism!(vis, mech)
-# @benchmark $build_mechanism!($vis, $mech)
 set_mechanism!(vis, mech, storage, 10)
-# @benchmark $set_mechanism!($vis, $mech, $storage, 10)
 
 visualize!(vis, mech, storage, build=false)
 
+# scatter(storage.iterations)
+# plot!(hcat(storage.variables...)')
 
-scatter(storage.iterations)
-plot!(hcat(storage.variables...)')
+
+RobotVisualizer.convert_frames_to_video_and_gif("sphere_rotate")
+RobotVisualizer.convert_frames_to_video_and_gif("gjk_long", framerate=1, width=2500)
+
+function RobotVisualizer.convert_frames_to_video_and_gif(filename, overwrite::Bool=true;
+        width=1080, framerate=5)
+    RobotVisualizer.MeshCat.convert_frames_to_video(
+        homedir() * "/Downloads/$filename.tar",
+        homedir() * "/Documents/video/$filename.mp4",
+            overwrite=overwrite,
+            framerate=framerate)
+
+    convert_video_to_gif(
+        homedir() * "/Documents/video/$filename.mp4",
+        homedir() * "/Documents/video/$filename.gif",
+            overwrite=overwrite,
+            width=width)
+    return nothing
+end

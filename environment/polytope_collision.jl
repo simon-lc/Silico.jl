@@ -47,9 +47,11 @@ function get_polytope_collision(;
             name=Symbol(:contact_, i, :_, j)) for i=1:j-1]
         for j=1:N]...)
     env_contacts = [
-        EnvContact2D(bodies[i], floor_shape,
+        PolyHalfSpace(bodies[i], floor_shape,
+        # EnvContact2D(bodies[i], floor_shape,
             friction_coefficient=friction_coefficient,
-            name=Symbol(:env_contact_, i)) for i=1:N]
+            name=Symbol(:env_contact_, i)) for i=1:N
+            ]
 
     contacts = [body_contacts; env_contacts]
     indexing!([bodies; contacts])

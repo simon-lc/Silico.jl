@@ -123,14 +123,17 @@ function step!(mechanism::Mechanism, z0; controller::Function=m->nothing)
 end
 
 function simulate!(mechanism::Mechanism{T}, z0, H::Int;
-        controller::Function=(m,i)->nothing) where T
+        controller::Function=(m,i)->nothing, violation::Symbol=:absolute, timing::Bool=false) where T
 
+    solve_time = 0.0
     storage = TraceStorage(mechanism.dimensions, H, T)
+    Mehrotra.initialize_solver!(mechanism.solver)
     z = copy(z0)
     for i = 1:H
-        z .= step!(mechanism, z, controller=m -> controller(m,i))
-        record!(storage, mechanism, i)
+        solve_time += @elapsed z .= step!(mechanism, z, controller=m -> controller(m,i))
+        record!(storage, mechanism, i, violation=violation)
     end
+    timing && (return storage, solve_time)
     return storage
 end
 

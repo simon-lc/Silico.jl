@@ -156,7 +156,9 @@ end
 
 function CollisionDetector(parent_shape::Shape{T}, child_shape::Shape{T};
         name::Symbol=:detection,
+        residual_tolerance=1e-4,
         complementarity_tolerance=1e-4,
+        compressed_search_direction=false,
         ) where {T}
 
     detection = CollisionDetection(parent_shape, child_shape; name=name)
@@ -173,8 +175,9 @@ function CollisionDetector(parent_shape::Shape{T}, child_shape::Shape{T};
         options=Mehrotra.Options(
             max_iterations=20,
             verbose=false,
+            residual_tolerance=residual_tolerance,
             complementarity_tolerance=complementarity_tolerance,
-            compressed_search_direction=false,
+            compressed_search_direction=compressed_search_direction,
             sparse_solver=false,
             warm_start=false,
             )
@@ -203,71 +206,3 @@ function contact_data(parent_pose, child_pose, detector::CollisionDetector{T,D,N
     normal_cw = -solver.data.solution_sensitivity[3,4:5]
     return ϕ, contact_w, normal_pw, normal_cw
 end
-
-# A0 = [
-#     [
-#         +1.0 -0.0;
-#         -0.1 +1.0;
-#         -1.0 -0.3;
-#         +0.0 -1.0;
-#         ],
-#     [
-#         +1.0 +0.3;
-#         +0.0 +1.0;
-#         -1.0 +0.2;
-#         +0.0 -1.0;
-#         +0.4 -0.8;
-#         ],
-#     ]
-# b0 = [
-#         0.50*[+1.0, +1.0, +1.0, +1.0],
-#         0.35*[+1.0, +1.0, +1.0, +1.0, +1.0],
-#     ]
-#
-# timestep = 0.05
-# mass = 1.0
-# inertia = [1.0;;]
-# parent_shapes = [PolytopeShape(A0[1], b0[1])]
-# child_shapes = [PolytopeShape(A0[2], b0[2])]
-# gravity = -9.81
-#
-# parent_body = Body(timestep, mass, inertia, parent_shapes,
-#     gravity=+gravity, name=:parent_body)
-#
-# child_body = Body(timestep, mass, inertia, child_shapes,
-#     gravity=+gravity, name=:child_body)
-#
-# # detection = CollisionDetection(parent_body.shapes[1], child_body.shapes[1])
-# #
-# # num_primals = primal_dimension(detection)
-# # num_cone = cone_dimension(detection)
-# #
-# # primals = zeros(num_primals)
-# # duals = ones(num_cone)
-# # slacks = ones(num_cone)
-# # parameters = get_parameters(detection)
-# # detection_residual(primals, duals, slacks, parameters, detection)
-# #
-# # local_residual(primals, duals, slacks, parameters) =
-# #     detection_residual(primals, duals, slacks, parameters, detection)
-# #
-# # solver = Mehrotra.Solver(local_residual, num_primals, num_cone,
-# #     parameters=parameters,
-# #     method_type=:symbolic,
-# #     options=Mehrotra.Options(
-# #         max_iterations=20,
-# #         verbose=false,
-# #         complementarity_tolerance=1e-4,
-# #         compressed_search_direction=false,
-# #         sparse_solver=false,
-# #         warm_start=false,
-# #         )
-# #     )
-# #
-# # Mehrotra.solve!(solver)
-#
-# detector = CollisionDetector(parent_body.shapes[1], child_body.shapes[1])
-#
-# parent_pose = 3rand(3)
-# child_pose = rand(3)
-# contact_data(parent_pose, child_pose, detector)

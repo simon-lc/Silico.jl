@@ -28,7 +28,7 @@ timestep = 0.01
 gravity = -9.81
 mass = 1.0
 inertia = 0.2 * ones(1,1)
-friction_coefficient = 0.20
+friction_coefficient = 0.03
 
 mech = get_polytope_insertion(;
     timestep=timestep,
@@ -40,11 +40,11 @@ mech = get_polytope_insertion(;
     A=A0, b=b0,
     options=Mehrotra.Options(
         verbose=true,
-        complementarity_tolerance=1e-5,
+        complementarity_tolerance=1e-9,
         compressed_search_direction=false,
         max_iterations=30,
         sparse_solver=true,
-        warm_start=true,
+        warm_start=false,
         )
     )
 
@@ -52,9 +52,10 @@ mech = get_polytope_insertion(;
 ################################################################################
 # simulation
 ################################################################################
-H = 250
+H = 500
 
-x2 = [+0.00, +1.50, +0.48]
+# x2 = [+0.00, +1.50, +0.48]
+x2 = [+0.00, +1.50, +0.30]
 v15 = [-0.0, +0.0, -0.0]
 z0 = [x2; v15]
 
@@ -64,16 +65,18 @@ Mehrotra.initialize_solver!(mech.solver)
 vis, anim = visualize!(vis, mech, storage,
     name=:robot,
     color=green,
-    show_contact=false)
+    show_contact=true)
+settransform!(vis[:robot][:contacts], MeshCat.Translation(0.05,0,0.0))
 build_mechanism!(vis, mech,
     env_color=turquoise,
     color=green,
     show_contact=false)
 set_mechanism!(vis, mech, storage, H,
-    show_contact=false,
+    show_contact=true,
     name=:robot)
 
 
+# show trace
 for i = 1:10:H
     α = (0.5H + i)/(10H)
     faded_green = RGBA(green.r, green.g, green.b, α)
@@ -86,5 +89,21 @@ for i = 1:10:H
         show_contact=false,
         name=Symbol(:robot_, i))
 end
+# convert_frames_to_video_and_gif("peg_in_hole_contact")
 
-# convert_frames_to_video_and_gif("peg_in_hole_no_friction")
+
+# Measure the forces on both sides in comparison with the force applied by the floor.
+contact_floor = mech.contacts[1]
+contact_left = mech.contacts[2]
+contact_right = mech.contacts[3]
+x = mech.variables
+
+# c, γ, ψ, β, λp, sγ, sψ, sβ, sp =
+F_floor = unpack_variables(x[contact_floor.index.variables], contact_floor)[2][1]
+# c, α, βp, βc, γ, ψ, β, λα, λp, λc, sγ, sψ, sβ, sα, sp, sc =
+F_left = unpack_variables(x[contact_left.index.variables], contact_left)[5][1]
+# c, α, βp, βc, γ, ψ, β, λα, λp, λc, sγ, sψ, sβ, sα, sp, sc =
+F_right = unpack_variables(x[contact_right.index.variables], contact_right)[5][1]
+
+F_floor / F_right
+F_floor / F_left
